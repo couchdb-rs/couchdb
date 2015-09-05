@@ -1,0 +1,1 @@
+initSidebarItems({"struct":[["GetDocument","Command to create a database."]]});

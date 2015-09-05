@@ -1,0 +1,1 @@
+initSidebarItems({"struct":[["GetAllDatabases","Command to get a vector of all database names."]]});

@@ -1,0 +1,1 @@
+initSidebarItems({"struct":[["HeadDatabase","Command to create a database."]]});
