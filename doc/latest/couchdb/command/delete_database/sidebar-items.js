@@ -1,0 +1,1 @@
+initSidebarItems({"struct":[["DeleteDatabase","Command to create a database."]]});

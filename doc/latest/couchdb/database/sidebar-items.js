@@ -1,0 +1,1 @@
+initSidebarItems({"struct":[["Database","Database information, as returned by the CouchDB server."]]});
