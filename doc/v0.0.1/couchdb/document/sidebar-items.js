@@ -1,0 +1,1 @@
+initSidebarItems({"struct":[["Document","Document information and content, as returned by the CouchDB server."],["Revision","Document revision."]]});

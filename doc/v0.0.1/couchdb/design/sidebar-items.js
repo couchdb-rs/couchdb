@@ -1,0 +1,1 @@
+initSidebarItems({"struct":[["DesignDocument","Design document."],["ViewFunction","View function."],["ViewResult","View result."],["ViewRow","View row."]]});
