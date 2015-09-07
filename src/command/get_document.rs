@@ -8,7 +8,7 @@ use document::{Document, Revision};
 use design::DesignDocument;
 use error::{self, Error};
 
-/// Command to create a database.
+/// Command to get a document.
 pub struct GetDocument<'a, T: serde::Deserialize> {
     client_state: &'a client::ClientState,
     uri: hyper::Url,
@@ -39,7 +39,20 @@ impl<'a, T: serde::Deserialize> GetDocument<'a, T> {
     }
 
     /// Send the command request and wait for the response.
-    // TODO: Document error variants.
+    ///
+    /// # Return
+    ///
+    /// Return `None` if an If-None-Match revision is given and the document
+    /// hasn't been modified since that revision. Otherwise, return `Some` with
+    /// the document meta-information and content.
+    ///
+    /// # Errors
+    ///
+    /// Note: Other errors may occur.
+    ///
+    /// * `Error::NotFound`: The document does not exist.
+    /// * `Error::Unauthorized`: The client is unauthorized.
+    ///
     pub fn run(self) -> Result<Option<Document<T>>, Error> {
 
         let mut resp = {

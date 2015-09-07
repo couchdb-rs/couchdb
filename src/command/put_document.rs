@@ -8,7 +8,7 @@ use design::DesignDocument;
 use document::Revision;
 use error::{self, Error};
 
-/// Command to create a database.
+/// Command to create a document.
 pub struct PutDocument<'a, 'b, T: 'b + serde::Serialize> {
     client_state: &'a client::ClientState,
     uri: hyper::Url,
@@ -41,7 +41,20 @@ impl<'a, 'b, T: 'b + serde::Serialize> PutDocument<'a, 'b, T> {
     }
 
     /// Send the command request and wait for the response.
-    // TODO: Document error variants.
+    ///
+    /// # Return
+    ///
+    /// Return the new revision for the document.
+    ///
+    /// # Errors
+    ///
+    /// Note: Other errors may occur.
+    ///
+    /// * `Error::DocumentConflict`: The revision is not the latest for the
+    ///   document.
+    /// * `Error::NotFound`: The document does not exist.
+    /// * `Error::Unauthorized`: The client is unauthorized.
+    ///
     pub fn run(self) -> Result<Revision, Error> {
 
         let req_body = try!(

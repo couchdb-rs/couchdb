@@ -381,21 +381,3 @@ pub fn new_because_unauthorized(resp: &mut hyper::client::Response) -> Error {
         },
     }
 }
-
-
-/*
-/// CouchDB client operation error.
-#[derive(Debug)]
-pub enum Error {
-
-    /// A document with the same id already exists and no revision was specified _or_ the document
-    /// has been updated since the specified revision.
-    DocumentConflict(CouchDbError),
-
-    /// The document does not exist.
-    DocumentDoesNotExist(CouchDbError),
-
-    /// The command is invalid—bad request body or parameters.
-    InvalidRequest(CouchDbError),
-}
-*/

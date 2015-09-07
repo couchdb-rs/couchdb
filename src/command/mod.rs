@@ -1,3 +1,5 @@
+//! Sub-module for individual command types.
+
 mod delete_database;
 mod delete_document;
 mod get_all_databases;

@@ -4,7 +4,7 @@ use client;
 use document;
 use error::{self, Error};
 
-/// Command to create a database.
+/// Command to delete a document.
 pub struct DeleteDocument<'a> {
     client_state: &'a client::ClientState,
     uri: hyper::Url,
@@ -43,7 +43,16 @@ impl<'a> DeleteDocument<'a> {
     }
 
     /// Send the command request and wait for the response.
-    // TODO: Document error variants.
+    ///
+    /// # Errors
+    ///
+    /// Note: Other errors may occur.
+    ///
+    /// * `Error::DocumentConflict`: The revision is not the latest for the
+    ///   document.
+    /// * `Error::NotFound`: The document does not exist.
+    /// * `Error::Unauthorized`: The client is unauthorized.
+    ///
     pub fn run(self) -> Result<(), Error> {
 
         let mut resp = {

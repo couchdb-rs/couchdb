@@ -7,7 +7,7 @@ use client;
 use design::{ViewResult, ViewRow};
 use error::{self, Error};
 
-/// Command to create a database.
+/// Command to run a view.
 pub struct GetView<'a, K, V> where
     K: serde::Deserialize,
     V: serde::Deserialize
@@ -69,7 +69,16 @@ impl<'a, K, V> GetView<'a, K, V> where
     }
 
     /// Send the command request and wait for the response.
-    // TODO: Document error variants.
+    ///
+    /// # Errors
+    ///
+    /// Note: Other errors may occur.
+    ///
+    /// * `Error::InternalServerError`: An error occurred when executing the
+    ///   view.
+    /// * `Error::NotFound`: The view does not exist.
+    /// * `Error::Unauthorized`: The client is unauthorized.
+    ///
     pub fn run(self) -> Result<ViewResult<K, V>, Error>
     {
         let mut uri = self.uri;

@@ -6,7 +6,7 @@ use client;
 use database::Database;
 use error::{self, Error};
 
-/// Command to create a database.
+/// Command to get a database.
 pub struct GetDatabase<'a, 'b> {
     client_state: &'a client::ClientState,
     db_name: &'b str,
@@ -22,7 +22,13 @@ impl<'a, 'b> GetDatabase<'a, 'b> {
     }
 
     /// Send the command request and wait for the response.
-    // TODO: Document error variants.
+    ///
+    /// # Errors
+    ///
+    /// Note: Other errors may occur.
+    ///
+    /// * `Error::NotFound`: The database does not exist.
+    ///
     pub fn run(self) -> Result<Database, Error> {
 
         let mut resp = {

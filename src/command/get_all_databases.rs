@@ -3,7 +3,7 @@ use hyper;
 use client;
 use error::{self, Error};
 
-/// Command to get a vector of all database names.
+/// Command to get all database names.
 pub struct GetAllDatabases<'a> {
     client_state: &'a client::ClientState,
 }
@@ -17,7 +17,13 @@ impl<'a> GetAllDatabases<'a> {
     }
 
     /// Send the command request and wait for the response.
-    // TODO: Document error variants.
+    ///
+    /// # Errors
+    ///
+    /// Note: Other errors may occur.
+    ///
+    /// This command has no specific errors.
+    ///
     pub fn run(self) -> Result<Vec<String>, Error> {
 
         let mut resp = {

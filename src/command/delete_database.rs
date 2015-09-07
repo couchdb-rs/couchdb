@@ -3,7 +3,7 @@ use hyper;
 use client;
 use error::{self, Error};
 
-/// Command to create a database.
+/// Command to delete a database.
 pub struct DeleteDatabase<'a, 'b> {
     client_state: &'a client::ClientState,
     db_name: &'b str,
@@ -19,7 +19,14 @@ impl<'a, 'b> DeleteDatabase<'a, 'b> {
     }
 
     /// Send the command request and wait for the response.
-    // TODO: Document error variants.
+    ///
+    /// # Errors
+    ///
+    /// Note: Other errors may occur.
+    ///
+    /// * `Error::NotFound`: The database does not exist.
+    /// * `Error::Unauthorized`: The client is unauthorized.
+    ///
     pub fn run(self) -> Result<(), Error> {
 
         let mut resp = {

@@ -15,6 +15,14 @@ pub struct ClientState {
 }
 
 /// CouchDB client.
+///
+/// The Client is the principal type communicating with a CouchDB server. All
+/// CouchDB commands (e.g., PUT database, GET document, etc.) go through a
+/// Client instance.
+///
+/// A Client communicates with exactly one CouchDB server, as specified by its
+/// URI during Client construction.
+///
 pub struct Client {
     state: ClientState,
 }

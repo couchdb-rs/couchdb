@@ -19,7 +19,14 @@ impl<'a, 'b> PutDatabase<'a, 'b> {
     }
 
     /// Send the command request and wait for the response.
-    // TODO: Document error variants.
+    ///
+    /// # Errors
+    ///
+    /// Note: Other errors may occur.
+    ///
+    /// * `Error::DatabaseExists`: The database already exists.
+    /// * `Error::Unauthorized`: The client is unauthorized.
+    ///
     pub fn run(self) -> Result<(), Error> {
         let mut resp = {
             use hyper::mime::{Mime, TopLevel, SubLevel};
