@@ -1,5 +1,9 @@
 # CouchDB-rs Change Log
 
+## v0.1.0 (in development)
+
+* Change name: `ServerErrorResponse` → `ErrorResponse`.
+
 ## v0.0.1
 
 * Improve documentation.

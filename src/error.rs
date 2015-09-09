@@ -15,7 +15,7 @@ pub enum Error {
 
     /// The database already exists.
     DatabaseExists {
-        response: ServerErrorResponse,
+        response: ErrorResponse,
     },
 
     /// JSON-decoding error.
@@ -26,7 +26,7 @@ pub enum Error {
 
     /// The client request conflicts with an existing document.
     DocumentConflict {
-        response: ServerErrorResponse,
+        response: ErrorResponse,
     },
 
     /// JSON-encoding error.
@@ -37,17 +37,17 @@ pub enum Error {
 
     /// An internal server error occurred.
     InternalServerError {
-        response: ServerErrorResponse,
+        response: ErrorResponse,
     },
 
     /// The database name is invalid.
     InvalidDatabaseName {
-        response: ServerErrorResponse,
+        response: ErrorResponse,
     },
 
     /// The client request is invalid.
     InvalidRequest {
-        response: ServerErrorResponse,
+        response: ErrorResponse,
     },
 
     /// I/O error with a compile-time description.
@@ -71,7 +71,7 @@ pub enum Error {
         /// In case of a HEAD request, the response value is None (because the
         /// server doesn't send response content for HEAD requests). Otherwise,
         /// the response value is Some.
-        response: Option<ServerErrorResponse>,
+        response: Option<ErrorResponse>,
     },
 
     /// Channel-receiver error with a compile-time description and thread-join
@@ -227,7 +227,7 @@ impl std::fmt::Display for Error {
 
 /// Response content from the CouchDB server in case of error.
 #[derive(Debug)]
-pub struct ServerErrorResponse {
+pub struct ErrorResponse {
 
     /// Error string returned by CouchDB Server.
     error: String,
@@ -304,7 +304,7 @@ pub fn new_because_database_exists(resp: &mut hyper::client::Response) -> Error 
     match extract_couchdb_error_and_reason(resp) {
         Err(e) => e,
         Ok((error, reason)) => Error::DatabaseExists {
-            response: ServerErrorResponse {
+            response: ErrorResponse {
                 error: error,
                 reason: reason,
             },
@@ -316,7 +316,7 @@ pub fn new_because_document_conflict(resp: &mut hyper::client::Response) -> Erro
     match extract_couchdb_error_and_reason(resp) {
         Err(e) => e,
         Ok((error, reason)) => Error::DocumentConflict {
-            response: ServerErrorResponse {
+            response: ErrorResponse {
                 error: error,
                 reason: reason,
             }
@@ -328,7 +328,7 @@ pub fn new_because_internal_server_error(resp: &mut hyper::client::Response) -> 
     match extract_couchdb_error_and_reason(resp) {
         Err(e) => e,
         Ok((error, reason)) => Error::InternalServerError {
-            response: ServerErrorResponse {
+            response: ErrorResponse {
                 error: error,
                 reason: reason,
             },
@@ -340,7 +340,7 @@ pub fn new_because_invalid_database_name(resp: &mut hyper::client::Response) -> 
     match extract_couchdb_error_and_reason(resp) {
         Err(e) => e,
         Ok((error, reason)) => Error::InvalidDatabaseName {
-            response: ServerErrorResponse {
+            response: ErrorResponse {
                 error: error,
                 reason: reason,
             },
@@ -352,7 +352,7 @@ pub fn new_because_invalid_request(resp: &mut hyper::client::Response) -> Error 
     match extract_couchdb_error_and_reason(resp) {
         Err(e) => e,
         Ok((error, reason)) => Error::InvalidRequest {
-            response: ServerErrorResponse {
+            response: ErrorResponse {
                 error: error,
                 reason: reason,
             },
@@ -364,7 +364,7 @@ pub fn new_because_not_found(resp: &mut hyper::client::Response) -> Error {
     match extract_couchdb_error_and_reason(resp) {
         Err(e) => e,
         Ok((error, reason)) => Error::NotFound {
-            response: Some(ServerErrorResponse {
+            response: Some(ErrorResponse {
                 error: error,
                 reason: reason,
             }),

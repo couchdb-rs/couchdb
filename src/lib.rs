@@ -153,5 +153,5 @@ pub use design::ViewRow;
 pub use document::Document;
 pub use document::Revision;
 pub use error::Error;
-pub use error::ServerErrorResponse;
+pub use error::ErrorResponse;
 pub use server::Server;
