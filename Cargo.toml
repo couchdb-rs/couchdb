@@ -1,6 +1,6 @@
 [package]
 name = "couchdb"
-version = "0.0.1"
+version = "0.1.0+master"
 authors = ["Craig M. Brandenburg <c.m.brandenburg@gmail.com>"]
 license = "MIT"
 description = "A simple CouchDB client"
@@ -9,12 +9,12 @@ documentation = "https://couchdb-rs.github.io/couchdb/doc/latest/couchdb/"
 keywords = ["couch", "couchdb", "database", "nosql"]
 
 [dependencies]
-hyper = "0.6"
-regex = "0.1"
-serde = "0.6"
-serde_json = "0.6"
-tempdir = "0.3"
-url = "0.2"
+hyper = "*"
+regex = "*"
+serde = "*"
+serde_json = "*"
+tempdir = "*"
+url = "*"
 
 [lib]
 name = "couchdb"
