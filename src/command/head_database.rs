@@ -4,14 +4,18 @@ use client;
 use error::{self, Error};
 
 /// Command to get database meta-information.
-pub struct HeadDatabase<'a, 'b> {
+pub struct HeadDatabase<'a> {
     client_state: &'a client::ClientState,
-    db_name: &'b str,
+    db_name: &'a str,
 }
 
-impl<'a, 'b> HeadDatabase<'a, 'b> {
+impl<'a> HeadDatabase<'a> {
 
-    pub fn new(client_state: &'a client::ClientState, db_name: &'b str) -> HeadDatabase<'a, 'b> {
+    pub fn new(
+        client_state: &'a client::ClientState,
+        db_name: &'a str)
+        -> HeadDatabase<'a>
+    {
         HeadDatabase {
             client_state: client_state,
             db_name: db_name,

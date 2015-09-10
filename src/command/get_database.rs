@@ -7,14 +7,18 @@ use database::Database;
 use error::{self, Error};
 
 /// Command to get a database.
-pub struct GetDatabase<'a, 'b> {
+pub struct GetDatabase<'a> {
     client_state: &'a client::ClientState,
-    db_name: &'b str,
+    db_name: &'a str,
 }
 
-impl<'a, 'b> GetDatabase<'a, 'b> {
+impl<'a> GetDatabase<'a> {
 
-    pub fn new(client_state: &'a client::ClientState, db_name: &'b str) -> GetDatabase<'a, 'b> {
+    pub fn new(
+        client_state: &'a client::ClientState,
+        db_name: &'a str)
+        -> GetDatabase<'a>
+    {
         GetDatabase {
             client_state: client_state,
             db_name: db_name,

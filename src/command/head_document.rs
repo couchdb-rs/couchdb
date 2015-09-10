@@ -8,27 +8,33 @@ use error::{self, Error};
 pub struct HeadDocument<'a> {
     client_state: &'a client::ClientState,
     uri: hyper::Url,
-    if_none_match: Revision,
+    if_none_match: Option<&'a Revision>,
 }
 
 impl<'a> HeadDocument<'a> {
 
-    pub fn new_db_document(client_state: &'a client::ClientState,
-                           db_name: &str,
-                           doc_id: &str) -> HeadDocument<'a> {
+    pub fn new_db_document(
+        client_state: &'a client::ClientState,
+        db_name: &str,
+        doc_id: &str)
+        -> HeadDocument<'a>
+    {
         let mut u = client_state.uri.clone();
         u.path_mut().unwrap()[0] = db_name.to_string();
         u.path_mut().unwrap().push(doc_id.to_string());
         HeadDocument {
             client_state: client_state,
             uri: u,
-            if_none_match: Revision::new(),
+            if_none_match: None,
         }
     }
 
-    pub fn new_design_document(client_state: &'a client::ClientState,
-                               db_name: &str,
-                               ddoc_id: &str) -> HeadDocument<'a> {
+    pub fn new_design_document(
+        client_state: &'a client::ClientState,
+        db_name: &str,
+        ddoc_id: &str)
+        -> HeadDocument<'a>
+    {
         let mut u = client_state.uri.clone();
         u.path_mut().unwrap()[0] = db_name.to_string();
         u.path_mut().unwrap().push("_design".to_string());
@@ -36,13 +42,13 @@ impl<'a> HeadDocument<'a> {
         HeadDocument {
             client_state: client_state,
             uri: u,
-            if_none_match: Revision::new(),
+            if_none_match: None,
         }
     }
 
     /// Set the If-None-Match header.
-    pub fn if_none_match(mut self, rev: Revision) -> HeadDocument<'a> {
-        self.if_none_match = rev;
+    pub fn if_none_match(mut self, rev: &'a Revision) -> HeadDocument<'a> {
+        self.if_none_match = Some(rev);
         self
     }
 
@@ -64,10 +70,16 @@ impl<'a> HeadDocument<'a> {
 
         let mut resp = {
             let mut req = self.client_state.http_client.head(self.uri);
-            if !self.if_none_match.is_empty() {
-                req = req.header(hyper::header::IfNoneMatch::Items(
-                        vec![hyper::header::EntityTag::new(false,
-                                                           self.if_none_match.as_str().to_string())]));
+            if self.if_none_match.is_some() {
+                req = req.header(
+                    hyper::header::IfNoneMatch::Items(
+                        vec![
+                            hyper::header::EntityTag::new(
+                                false,
+                                self.if_none_match.unwrap().as_str().to_string())
+                        ]
+                    )
+                );
             }
             try!(
                 req.send()

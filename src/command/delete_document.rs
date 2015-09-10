@@ -8,15 +8,18 @@ use error::{self, Error};
 pub struct DeleteDocument<'a> {
     client_state: &'a client::ClientState,
     uri: hyper::Url,
-    rev: document::Revision,
+    rev: &'a document::Revision,
 }
 
 impl<'a> DeleteDocument<'a> {
 
-    pub fn new_db_document(client_state: &'a client::ClientState,
-                           db_name: &str,
-                           doc_id: &str,
-                           rev: document::Revision) -> DeleteDocument<'a> {
+    pub fn new_db_document(
+        client_state: &'a client::ClientState,
+        db_name: &str,
+        doc_id: &str,
+        rev: &'a document::Revision)
+        -> DeleteDocument<'a>
+    {
         let mut u = client_state.uri.clone();
         u.path_mut().unwrap()[0] = db_name.to_string();
         u.path_mut().unwrap().push(doc_id.to_string());
@@ -27,10 +30,13 @@ impl<'a> DeleteDocument<'a> {
         }
     }
 
-    pub fn new_design_document(client_state: &'a client::ClientState,
-                           db_name: &str,
-                           ddoc_id: &str,
-                           rev: document::Revision) -> DeleteDocument<'a> {
+    pub fn new_design_document(
+        client_state: &'a client::ClientState,
+        db_name: &str,
+        ddoc_id: &str,
+        rev: &'a document::Revision)
+        -> DeleteDocument<'a>
+    {
         let mut u = client_state.uri.clone();
         u.path_mut().unwrap()[0] = db_name.to_string();
         u.path_mut().unwrap().push("_design".to_string());

@@ -12,29 +12,32 @@ use error::{self, Error};
 pub struct GetDocument<'a, T: serde::Deserialize> {
     client_state: &'a client::ClientState,
     uri: hyper::Url,
-    if_none_match: Revision,
+    if_none_match: Option<&'a Revision>,
     _phantom: std::marker::PhantomData<T>,
 }
 
 impl<'a, T: serde::Deserialize> GetDocument<'a, T> {
 
-    pub fn new_db_document(client_state: &'a client::ClientState,
-                           db_name: &str,
-                           doc_id: &str) -> GetDocument<'a, T> {
+    pub fn new_db_document(
+        client_state: &'a client::ClientState,
+        db_name: &str,
+        doc_id: &str)
+        -> GetDocument<'a, T>
+    {
         let mut u = client_state.uri.clone();
         u.path_mut().unwrap()[0] = db_name.to_string();
         u.path_mut().unwrap().push(doc_id.to_string());
         GetDocument {
             client_state: client_state,
             uri: u,
-            if_none_match: Revision::new(),
+            if_none_match: None,
             _phantom: std::marker::PhantomData,
         }
     }
 
     /// Set the If-None-Match header.
-    pub fn if_none_match(mut self, rev: Revision) -> GetDocument<'a, T> {
-        self.if_none_match = rev;
+    pub fn if_none_match(mut self, rev: &'a Revision) -> GetDocument<'a, T> {
+        self.if_none_match = Some(rev);
         self
     }
 
@@ -62,10 +65,16 @@ impl<'a, T: serde::Deserialize> GetDocument<'a, T> {
                                               hyper::header::qitem(
                                                   Mime(TopLevel::Application, SubLevel::Json, vec![]))]))
                 ;
-            if !self.if_none_match.is_empty() {
-                req = req.header(hyper::header::IfNoneMatch::Items(
-                        vec![hyper::header::EntityTag::new(false,
-                                                           self.if_none_match.as_str().to_string())]));
+            if self.if_none_match.is_some() {
+                req = req.header(
+                    hyper::header::IfNoneMatch::Items(
+                        vec![
+                            hyper::header::EntityTag::new(
+                                false,
+                                self.if_none_match.unwrap().as_str().to_string())
+                        ]
+                    )
+                );
             }
             try!(
                 req.send()
@@ -138,9 +147,12 @@ impl<'a, T: serde::Deserialize> GetDocument<'a, T> {
 }
 
 impl<'a> GetDocument<'a, DesignDocument> {
-    pub fn new_design_document(client_state: &'a client::ClientState,
-                           db_name: &str,
-                           ddoc_id: &str) -> GetDocument<'a, DesignDocument> {
+    pub fn new_design_document(
+        client_state: &'a client::ClientState,
+        db_name: &str,
+        ddoc_id: &str)
+        -> GetDocument<'a, DesignDocument>
+    {
         let mut u = client_state.uri.clone();
         u.path_mut().unwrap()[0] = db_name.to_string();
         u.path_mut().unwrap().push("_design".to_string());
@@ -148,7 +160,7 @@ impl<'a> GetDocument<'a, DesignDocument> {
         GetDocument {
             client_state: client_state,
             uri: u,
-            if_none_match: Revision::new(),
+            if_none_match: None,
             _phantom: std::marker::PhantomData,
         }
     }

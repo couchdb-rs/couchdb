@@ -27,7 +27,7 @@ pub struct Client {
     state: ClientState,
 }
 
-impl<'a, 'b, 'c, 'd> Client {
+impl<'a> Client {
 
     /// Construct a CouchDB client.
     pub fn new<U: hyper::client::IntoUrl>(uri: U) -> Result<Client, Error> {
@@ -55,22 +55,38 @@ impl<'a, 'b, 'c, 'd> Client {
     }
 
     /// Build a command to HEAD a database.
-    pub fn head_database(&'a self, db_name: &'b str) -> command::HeadDatabase<'a, 'b> {
+    pub fn head_database(
+        &'a self,
+        db_name: &'a str)
+        -> command::HeadDatabase<'a>
+    {
         command::HeadDatabase::new(&self.state, db_name)
     }
 
     /// Build a command to GET a database.
-    pub fn get_database(&'a self, db_name: &'b str) -> command::GetDatabase<'a, 'b> {
+    pub fn get_database(
+        &'a self,
+        db_name: &'a str)
+        -> command::GetDatabase<'a>
+    {
         command::GetDatabase::new(&self.state, db_name)
     }
 
     /// Build a command to PUT a database.
-    pub fn put_database(&'a self, db_name: &'b str) -> command::PutDatabase<'a, 'b> {
+    pub fn put_database(
+        &'a self,
+        db_name: &'a str)
+        -> command::PutDatabase<'a>
+    {
         command::PutDatabase::new(&self.state, db_name)
     }
 
     /// Build a command to DELETE a database.
-    pub fn delete_database(&'a self, db_name: &'b str) -> command::DeleteDatabase<'a, 'b> {
+    pub fn delete_database(
+        &'a self,
+        db_name: &'a str)
+        -> command::DeleteDatabase<'a>
+    {
         command::DeleteDatabase::new(&self.state, db_name)
     }
 
@@ -92,20 +108,25 @@ impl<'a, 'b, 'c, 'd> Client {
     }
 
     /// Build a command to PUT a document.
-    pub fn put_document<T: serde::Serialize>(
-                        &'a self,
-                        db_name: &str,
-                        doc_id: &str,
-                        doc_content: &'b T)
-                        -> command::PutDocument<'a, 'b, T> {
+    pub fn put_document<
+        T: serde::Serialize>(
+        &'a self,
+        db_name: &str,
+        doc_id: &str,
+        doc_content: &'a T)
+        -> command::PutDocument<'a, T>
+    {
         command::PutDocument::new_db_document(&self.state, db_name, doc_id, doc_content)
     }
 
     /// Build a command to DELETE a document.
-    pub fn delete_document(&'a self,
-                           db_name: &str,
-                           doc_id: &str,
-                           rev: Revision) -> command::DeleteDocument<'a> {
+    pub fn delete_document(
+        &'a self,
+        db_name: &str,
+        doc_id: &str,
+        rev: &'a Revision)
+        -> command::DeleteDocument<'a>
+    {
         command::DeleteDocument::new_db_document(&self.state, db_name, doc_id, rev)
     }
 
@@ -126,20 +147,24 @@ impl<'a, 'b, 'c, 'd> Client {
     }
 
     /// Build a command to PUT a design document.
-    pub fn put_design_document(&'a self,
-                               db_name: &str,
-                               ddoc_id: &str,
-                               ddoc_content: &'b DesignDocument)
-                               -> command::PutDocument<'a, 'b, DesignDocument> {
+    pub fn put_design_document(
+        &'a self,
+        db_name: &str,
+        ddoc_id: &str,
+        ddoc_content: &'a DesignDocument)
+        -> command::PutDocument<'a, DesignDocument>
+    {
         command::PutDocument::new_design_document(&self.state, db_name, ddoc_id, ddoc_content)
     }
 
     /// Build a command to DELETE a design document.
-    pub fn delete_design_document(&'a self,
-                                  db_name: &str,
-                                  ddoc_id: &str,
-                                  rev: Revision)
-                                  -> command::DeleteDocument<'a> {
+    pub fn delete_design_document(
+        &'a self,
+        db_name: &str,
+        ddoc_id: &str,
+        rev: &'a Revision)
+        -> command::DeleteDocument<'a>
+    {
         command::DeleteDocument::new_design_document(&self.state, db_name, ddoc_id, rev)
     }
 

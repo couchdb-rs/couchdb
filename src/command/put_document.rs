@@ -9,20 +9,22 @@ use document::Revision;
 use error::{self, Error};
 
 /// Command to create a document.
-pub struct PutDocument<'a, 'b, T: 'b + serde::Serialize> {
+pub struct PutDocument<'a, T: 'a + serde::Serialize> {
     client_state: &'a client::ClientState,
     uri: hyper::Url,
-    doc_content: &'b T,
-    if_match: Revision,
+    doc_content: &'a T,
+    if_match: Option<&'a Revision>,
 }
 
-impl<'a, 'b, T: 'b + serde::Serialize> PutDocument<'a, 'b, T> {
+impl<'a, T: 'a + serde::Serialize> PutDocument<'a, T> {
 
-    pub fn new_db_document(client_state: &'a client::ClientState,
-                           db_name: &str,
-                           doc_id: &str,
-                           doc_content: &'b T)
-                           -> PutDocument<'a, 'b, T> {
+    pub fn new_db_document(
+        client_state: &'a client::ClientState,
+        db_name: &str,
+        doc_id: &str,
+        doc_content: &'a T)
+        -> PutDocument<'a, T>
+    {
         let mut u = client_state.uri.clone();
         u.path_mut().unwrap()[0] = db_name.to_string();
         u.path_mut().unwrap().push(doc_id.to_string());
@@ -30,13 +32,13 @@ impl<'a, 'b, T: 'b + serde::Serialize> PutDocument<'a, 'b, T> {
             client_state: client_state,
             uri: u,
             doc_content: doc_content,
-            if_match: Revision::new(),
+            if_match: None,
         }
     }
 
     /// Set the If-Match header.
-    pub fn if_match(mut self, rev: Revision) -> PutDocument<'a, 'b, T> {
-        self.if_match = rev;
+    pub fn if_match(mut self, rev: &'a Revision) -> PutDocument<'a, T> {
+        self.if_match = Some(rev);
         self
     }
 
@@ -72,10 +74,16 @@ impl<'a, 'b, T: 'b + serde::Serialize> PutDocument<'a, 'b, T> {
                             Mime(TopLevel::Application, SubLevel::Json, vec![]))]))
                 .header(hyper::header::ContentType(
                         hyper::mime::Mime(TopLevel::Application, SubLevel::Json, vec![])));
-            if !self.if_match.is_empty() {
-                req = req.header(hyper::header::IfMatch::Items(
-                        vec![hyper::header::EntityTag::new(
-                            false, self.if_match.as_str().to_string())]));
+            if self.if_match.is_some() {
+                req = req.header(
+                    hyper::header::IfMatch::Items(
+                        vec![
+                            hyper::header::EntityTag::new(
+                            false,
+                            self.if_match.unwrap().as_str().to_string())
+                        ]
+                    )
+                );
             }
             try!(
                 req.body(&req_body)
@@ -122,12 +130,14 @@ impl<'a, 'b, T: 'b + serde::Serialize> PutDocument<'a, 'b, T> {
     }
 }
 
-impl<'a, 'b> PutDocument<'a, 'b, DesignDocument> {
-    pub fn new_design_document(client_state: &'a client::ClientState,
-                               db_name: &str,
-                               ddoc_id: &str,
-                               ddoc_content: &'b DesignDocument)
-                               -> PutDocument<'a, 'b, DesignDocument> {
+impl<'a> PutDocument<'a, DesignDocument> {
+    pub fn new_design_document(
+        client_state: &'a client::ClientState,
+        db_name: &str,
+        ddoc_id: &str,
+        ddoc_content: &'a DesignDocument)
+        -> PutDocument<'a, DesignDocument>
+    {
         let mut u = client_state.uri.clone();
         u.path_mut().unwrap()[0] = db_name.to_string();
         u.path_mut().unwrap().push("_design".to_string());
@@ -136,7 +146,7 @@ impl<'a, 'b> PutDocument<'a, 'b, DesignDocument> {
             client_state: client_state,
             uri: u,
             doc_content: ddoc_content,
-            if_match: Revision::new(),
+            if_match: None,
         }
     }
 }

@@ -4,14 +4,18 @@ use client;
 use error::{self, Error};
 
 /// Command to create a database.
-pub struct PutDatabase<'a, 'b> {
+pub struct PutDatabase<'a> {
     client_state: &'a client::ClientState,
-    db_name: &'b str,
+    db_name: &'a str,
 }
 
-impl<'a, 'b> PutDatabase<'a, 'b> {
+impl<'a> PutDatabase<'a> {
 
-    pub fn new(client_state: &'a client::ClientState, db_name: &'b str) -> PutDatabase<'a, 'b> {
+    pub fn new(
+        client_state: &'a client::ClientState,
+        db_name: &'a str)
+        -> PutDatabase<'a>
+    {
         PutDatabase {
             client_state: client_state,
             db_name: db_name,

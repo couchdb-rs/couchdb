@@ -4,14 +4,18 @@ use client;
 use error::{self, Error};
 
 /// Command to delete a database.
-pub struct DeleteDatabase<'a, 'b> {
+pub struct DeleteDatabase<'a> {
     client_state: &'a client::ClientState,
-    db_name: &'b str,
+    db_name: &'a str,
 }
 
-impl<'a, 'b> DeleteDatabase<'a, 'b> {
+impl<'a> DeleteDatabase<'a> {
 
-    pub fn new(client_state: &'a client::ClientState, db_name: &'b str) -> DeleteDatabase<'a, 'b> {
+    pub fn new(
+        client_state: &'a client::ClientState,
+        db_name: &'a str)
+        -> DeleteDatabase<'a>
+    {
         DeleteDatabase {
             client_state: client_state,
             db_name: db_name,

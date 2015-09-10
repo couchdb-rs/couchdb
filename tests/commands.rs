@@ -152,13 +152,13 @@ fn main() {
         // Verify: Putting an existing document with a matching revision succeeds.
         doc.as_object_mut().unwrap().insert("color".to_string(), serde_json::to_value(&"orange"));
         let rev2 = client.put_document("cats", "nutmeg", &doc)
-            .if_match(rev.clone())
+            .if_match(&rev)
             .run().unwrap();
 
         // Verify: Putting an existing document with a non-matching revision fails.
         doc.as_object_mut().unwrap().insert("color".to_string(), serde_json::to_value(&"orange"));
         let x = client.put_document("cats", "nutmeg", &doc)
-            .if_match(rev.clone())
+            .if_match(&rev)
             .run().unwrap_err();
         match x {
             couchdb::Error::DocumentConflict { .. } => (),
@@ -166,14 +166,14 @@ fn main() {
         }
 
         // Verify: Deleting an existing document with match revision succeeds.
-        client.delete_document("cats", "nutmeg", rev2.clone()).run().unwrap();
+        client.delete_document("cats", "nutmeg", &rev2).run().unwrap();
         match client.get_document::<serde_json::Value>("cats", "nutmeg").run().unwrap_err() {
             couchdb::Error::NotFound { .. } => (),
             _ => { panic!("Got error: {}", x); },
         }
 
         // Verify: Deleting a non-existing document fails.
-        match client.delete_document("cats", "nutmeg", rev2).run().unwrap_err() {
+        match client.delete_document("cats", "nutmeg", &rev2).run().unwrap_err() {
             couchdb::Error::NotFound { .. } => (),
             _ => { panic!("Got error: {}", x); },
         }
@@ -185,13 +185,13 @@ fn main() {
         let rev = client.put_document("cats", "emerald", &doc).run().unwrap();
         doc.as_object_mut().unwrap().insert("color".to_string(), serde_json::to_value(&"brown"));
         let rev2 = client.put_document("cats", "emerald", &doc)
-            .if_match(rev.clone())
+            .if_match(&rev)
             .run().unwrap();
-        match client.delete_document("cats", "emerald", rev.clone()).run().unwrap_err() {
+        match client.delete_document("cats", "emerald", &rev).run().unwrap_err() {
             couchdb::Error::DocumentConflict { .. } => (),
             _ => { panic!("Got error: {}", x); },
         }
-        client.delete_document("cats", "emerald", rev2).run().unwrap();
+        client.delete_document("cats", "emerald", &rev2).run().unwrap();
 
         client.delete_database("cats").run().unwrap();
     }
@@ -225,9 +225,10 @@ fn main() {
         // document returned.
 
         match client.get_document::<serde_json::Value>("cats", "emerald")
-            .if_none_match(rev.clone())
+            .if_none_match(&rev)
             .run()
-            .unwrap() {
+            .unwrap()
+        {
             Some(_) => { panic!("Got document, expected none"); },
             None => (),
         }
@@ -238,7 +239,7 @@ fn main() {
         // Verify: Heading an existing document with an If-None-Match header
         // succeeds.
         let x = client.head_document("cats", "emerald")
-            .if_none_match(rev.clone())
+            .if_none_match(&rev)
             .run()
             .unwrap();
         assert!(x.is_none());
@@ -290,7 +291,7 @@ fn main() {
         // Verify: Heading an existing design document with explicit revision
         // succeeds.
         let x = client.head_design_document("cats", "my_design")
-            .if_none_match(rev.clone())
+            .if_none_match(&rev)
             .run()
             .unwrap();
         assert!(x.is_none());
@@ -301,10 +302,10 @@ fn main() {
         assert_eq!(ddoc, got.content);
 
         // Verify: Deleting an existing document succeeds.
-        client.delete_design_document("cats", "my_design", rev.clone()).run().unwrap();
+        client.delete_design_document("cats", "my_design", &rev).run().unwrap();
 
         // Verify: Deleting a non-existing document fails.
-        let x = client.delete_design_document("cats", "my_design", rev.clone()).run().unwrap_err();
+        let x = client.delete_design_document("cats", "my_design", &rev).run().unwrap_err();
         match x {
             couchdb::Error::NotFound { .. } => (),
             _ => panic!("Got error: {}", x),
