@@ -2,7 +2,9 @@
 
 ## v0.1.0 (in development)
 
-* Change name: `ServerErrorResponse` → `ErrorResponse`.
+API changes:
+* Rename: `ServerErrorResponse` → `ErrorResponse`.
+* For commands, borrow `Revision` argument instead of taking ownership.
 
 ## v0.0.1
 
