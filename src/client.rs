@@ -7,6 +7,10 @@ use design::DesignDocument;
 use document::Revision;
 use error::{self, Error};
 
+/// Trait for converting some types into a URI.
+pub trait IntoUrl: hyper::client::IntoUrl {}
+impl<T: hyper::client::IntoUrl> IntoUrl for T {}
+
 // Encapsulates state borrowed by command instances. The reason this struct is separated from
 // Client is so that the struct fields aren't exposed in this crate's public API.
 pub struct ClientState {
@@ -30,7 +34,7 @@ pub struct Client {
 impl<'a> Client {
 
     /// Construct a CouchDB client.
-    pub fn new<U: hyper::client::IntoUrl>(uri: U) -> Result<Client, Error> {
+    pub fn new<U: IntoUrl>(uri: U) -> Result<Client, Error> {
         Ok(Client {
             state: ClientState {
                 http_client: hyper::Client::new(),

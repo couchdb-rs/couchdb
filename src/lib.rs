@@ -145,6 +145,7 @@ mod error;
 mod server;
 
 pub use client::Client;
+pub use client::IntoUrl;
 pub use database::Database;
 pub use design::DesignDocument;
 pub use design::ViewFunction;

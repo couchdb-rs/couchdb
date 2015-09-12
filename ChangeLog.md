@@ -6,6 +6,8 @@ API changes:
 * Rename: `ServerErrorResponse` → `ErrorResponse`.
 * For commands, borrow `Revision` argument instead of taking ownership.
 * Hide `Revision` construction from an arbitrary string.
+* Add new `IntoUrl` trait to alias the trait of the same name from the hyper
+  crate.
 
 ## v0.0.1
 
