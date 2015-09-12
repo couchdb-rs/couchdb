@@ -5,7 +5,7 @@ use std;
 
 use client;
 use design::DesignDocument;
-use document::Revision;
+use document::{self, Revision};
 use error::{self, Error};
 
 /// Command to create a document.
@@ -112,7 +112,7 @@ impl<'a, T: 'a + serde::Serialize> PutDocument<'a, T> {
                             x, String::new()),
                         _ => { return None; },
                     };
-                    let rev = Revision::from_string(rev);
+                    let rev = document::new_revision_from_string(rev);
                     Some(rev)
                 })()
                 .ok_or(Error::UnexpectedContent { got: s } )

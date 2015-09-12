@@ -67,11 +67,15 @@ impl<'a> DeleteDocument<'a> {
                     .header(hyper::header::Accept(vec![
                         hyper::header::qitem(
                             Mime(TopLevel::Application, SubLevel::Json, vec![]))]));
-            if !self.rev.is_empty() {
-                req = req.header(hyper::header::IfMatch::Items(
-                        vec![hyper::header::EntityTag::new(false,
-                                                           self.rev.as_str().to_string())]));
-            }
+            req = req.header(
+                hyper::header::IfMatch::Items(
+                    vec![
+                        hyper::header::EntityTag::new(
+                            false,
+                            self.rev.as_str().to_string())
+                    ]
+                )
+            );
             try!(
                 req.send()
                 .or_else(|e| {

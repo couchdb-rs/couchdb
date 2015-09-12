@@ -4,7 +4,7 @@ use serde_json;
 use std;
 
 use client;
-use document::{Document, Revision};
+use document::{self, Document, Revision};
 use design::DesignDocument;
 use error::{self, Error};
 
@@ -101,7 +101,7 @@ impl<'a, T: serde::Deserialize> GetDocument<'a, T> {
                                 _ => { return None; },
                             },
                         };
-                        let rev = Revision::from_string(rev);
+                        let rev = document::new_revision_from_string(rev);
                         let id = match dot.remove("_id") {
                             None => { return None; },
                             Some(x) => match x {

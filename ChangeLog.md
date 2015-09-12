@@ -5,6 +5,7 @@
 API changes:
 * Rename: `ServerErrorResponse` → `ErrorResponse`.
 * For commands, borrow `Revision` argument instead of taking ownership.
+* Hide `Revision` construction from an arbitrary string.
 
 ## v0.0.1
 
@@ -15,4 +16,4 @@ API changes:
 
 * Initial release
 * New commands for database manipulation (GET, PUT, HEAD, and DELETE), document
-  manipulation (GET, PUT, HEAD, and DELETE), and executing a view.
+  manipulation (GET, PUT, HEAD, and DELETE), and view execution (GET).

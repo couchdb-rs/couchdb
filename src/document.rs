@@ -6,32 +6,20 @@ use std;
 pub struct Revision(String);
 
 impl Revision {
-
-    /// Construct an empty revision.
-    pub fn new() -> Revision {
-        Revision(String::new())
-    }
-
-    /// Construct a revision from an arbitrary string.
-    pub fn from_string(rev: String) -> Revision {
-        Revision(rev)
-    }
-
-    pub fn is_empty(&self) -> bool {
-        let Revision(ref s) = *self;
-        s.is_empty()
-    }
-
     pub fn as_str(&self) -> &str {
         let Revision(ref s) = *self;
         s
     }
 }
 
+pub fn new_revision_from_string(rev: String) -> Revision {
+    Revision(rev)
+}
+
 impl Clone for Revision {
     fn clone(&self) -> Self {
         let Revision(ref s) = *self;
-        Revision::from_string(s.clone())
+        new_revision_from_string(s.clone())
     }
 }
 
@@ -79,16 +67,10 @@ pub struct Document<T: serde::Deserialize> {
 #[cfg(test)]
 mod tests {
 
-    use super::Revision;
-
     #[test]
     fn test_revision() {
 
-        let r1 = Revision::new();
-        assert!(r1.is_empty());
-
-        let r1 = Revision::from_string("1-1234".to_string());
-        assert!(!r1.is_empty());
+        let r1 = super::new_revision_from_string("1-1234".to_string());
 
         let r2 = r1.clone();
         assert!(r1 == r2);
@@ -97,7 +79,7 @@ mod tests {
         assert!(!(r1 < r2));
         assert!(r2 <= r1);
         assert!(!(r2 < r1));
-        let r2 = Revision::from_string("2-1234".to_string());
+        let r2 = super::new_revision_from_string("2-1234".to_string());
         assert!(!(r1 == r2));
         assert!(r1 != r2);
         assert!(r1 <= r2);
