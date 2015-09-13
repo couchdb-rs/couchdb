@@ -7,8 +7,9 @@ Backwards-incompatible API changes:
 * Hide `Revision` construction from an arbitrary string.
 * Rename `ServerErrorResponse` to `ErrorResponse` and use the type consistently
   for errors.
-* Add new `IntoUrl` trait to alias the trait of the same name from the hyper
-  crate.
+* New `IntoUrl` trait to alias the trait of the same name from the hyper crate.
+* New `ViewFunctionMap` collection type. The `views` member of the
+  `DesignDocument` struct is now publicly accessible.
 
 ## v0.0.1
 

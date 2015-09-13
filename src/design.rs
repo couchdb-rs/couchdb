@@ -1,22 +1,20 @@
 use serde;
 use std;
 
+/// Associative collection for view functions.
+pub type ViewFunctionMap = std::collections::BTreeMap<String, ViewFunction>;
+
 /// Design document.
 #[derive(Debug)]
 pub struct DesignDocument {
-    views: std::collections::BTreeMap<String, ViewFunction>,
+    pub views: ViewFunctionMap,
 }
 
 impl DesignDocument {
-
     pub fn new() -> Self{
         DesignDocument {
-            views: std::collections::BTreeMap::<String, ViewFunction>::new(),
+            views: ViewFunctionMap::new(),
         }
-    }
-
-    pub fn insert_view_function(&mut self, name: String, vf: ViewFunction) -> Option<ViewFunction> {
-        self.views.insert(name, vf)
     }
 }
 
@@ -115,7 +113,7 @@ impl serde::Deserialize for DesignDocument {
 
                 let views = match views {
                     Some(x) => x,
-                    None => std::collections::BTreeMap::<String, ViewFunction>::new(),
+                    None => ViewFunctionMap::new(),
                 };
 
                 Ok(DesignDocument {
@@ -401,14 +399,13 @@ impl<K, V> serde::Deserialize for ViewRow<K, V> where
 mod tests {
 
     use serde_json;
-    use std;
 
     use super::*;
 
     #[test]
     fn test_serialization_design() {
 
-        let views = std::collections::BTreeMap::new();
+        let views = ViewFunctionMap::new();
         let v1 = DesignDocument {
             views: views,
         };
@@ -416,7 +413,7 @@ mod tests {
         let v2 = serde_json::from_str(&s).unwrap();
         assert_eq!(v1, v2);
 
-        let mut views = std::collections::BTreeMap::new();
+        let mut views = ViewFunctionMap::new();
         views.insert("alpha".to_string(), ViewFunction {
             map: "function(doc) { emit(doc.alpha); }".to_string(),
             reduce: None,

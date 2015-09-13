@@ -149,6 +149,7 @@ pub use client::IntoUrl;
 pub use database::Database;
 pub use design::DesignDocument;
 pub use design::ViewFunction;
+pub use design::ViewFunctionMap;
 pub use design::ViewResult;
 pub use design::ViewRow;
 pub use document::Document;
