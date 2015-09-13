@@ -2,10 +2,11 @@
 
 ## v0.1.0 (in development)
 
-API changes:
-* Rename: `ServerErrorResponse` → `ErrorResponse`.
+Backwards-incompatible API changes:
 * For commands, borrow `Revision` argument instead of taking ownership.
 * Hide `Revision` construction from an arbitrary string.
+* Rename `ServerErrorResponse` to `ErrorResponse` and use the type consistently
+  for errors.
 * Add new `IntoUrl` trait to alias the trait of the same name from the hyper
   crate.
 

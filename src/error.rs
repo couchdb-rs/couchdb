@@ -90,12 +90,7 @@ pub enum Error {
 
     /// The client is unauthorized to carry out the operation.
     Unauthorized {
-
-        /// Error string returned by CouchDB Server.
-        error: String,
-
-        /// Reason string returned by CouchDB Server.
-        reason: String,
+        response: ErrorResponse,
     },
 
     /// The CouchDB server responded with content that the client did not
@@ -214,8 +209,8 @@ impl std::fmt::Display for Error {
             ReceiveFromThread { ref cause, .. } =>
                 write!(f, "{}: {}", self.description(), cause),
             Transport { ref cause } => write!(f, "{}: {}", self.description(), cause),
-            Unauthorized { ref error, ref reason } =>
-                write!(f, "{}: {}: {}", self.description(), error, reason),
+            Unauthorized { ref response } =>
+                write!(f, "{}: {}: {}", self.description(), response.error, response.reason),
             UnexpectedContent { ref got } => write!(f, "{}: Got {}", self.description(), got),
             UnexpectedContentTypeHeader { ref expected, ref got } =>
                 write!(f, "{}: Expected '{}', got '{}'", self.description(), expected, got),
@@ -230,10 +225,10 @@ impl std::fmt::Display for Error {
 pub struct ErrorResponse {
 
     /// Error string returned by CouchDB Server.
-    error: String,
+    pub error: String,
 
     /// Reason string returned by CouchDB Server.
-    reason: String,
+    pub reason: String,
 }
 
 #[derive(Debug)]
@@ -376,8 +371,10 @@ pub fn new_because_unauthorized(resp: &mut hyper::client::Response) -> Error {
     match extract_couchdb_error_and_reason(resp) {
         Err(e) => e,
         Ok((error, reason)) => Error::Unauthorized {
-            error: error,
-            reason: reason,
+            response: ErrorResponse {
+                error: error,
+                reason: reason,
+            },
         },
     }
 }
