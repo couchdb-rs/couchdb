@@ -72,7 +72,7 @@ impl<'a> DeleteDocument<'a> {
                     vec![
                         hyper::header::EntityTag::new(
                             false,
-                            self.rev.as_str().to_string())
+                            self.rev.to_string())
                     ]
                 )
             );

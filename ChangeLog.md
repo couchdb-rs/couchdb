@@ -2,14 +2,18 @@
 
 ## v0.1.0 (in development)
 
-Backwards-incompatible API changes:
-* For commands, borrow `Revision` argument instead of taking ownership.
-* Hide `Revision` construction from an arbitrary string.
-* Rename `ServerErrorResponse` to `ErrorResponse` and use the type consistently
-  for errors.
-* New `IntoUrl` trait to alias the trait of the same name from the hyper crate.
+API changes:
+* Improve `Revision` type-safety:
+  * Remove `as_str` method and instead implement the `AsRef<str>` trait.
+	* CouchDB commands that have a revision parameter now borrow the `Revision`
+	  argument instead of taking ownership.
+	* Hide `Revision` construction from an arbitrary string. Applications now may
+	  only construct revisions via the API, e.g., getting a document.
 * New `ViewFunctionMap` collection type. The `views` member of the
   `DesignDocument` struct is now publicly accessible.
+* New `IntoUrl` trait to alias the trait of the same name from the hyper crate.
+* Rename `ServerErrorResponse` to `ErrorResponse` and use the type consistently
+  for errors.
 
 ## v0.0.1
 

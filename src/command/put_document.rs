@@ -80,7 +80,7 @@ impl<'a, T: 'a + serde::Serialize> PutDocument<'a, T> {
                         vec![
                             hyper::header::EntityTag::new(
                             false,
-                            self.if_match.unwrap().as_str().to_string())
+                            self.if_match.unwrap().to_string())
                         ]
                     )
                 );

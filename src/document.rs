@@ -5,36 +5,32 @@ use std;
 #[derive(Debug)]
 pub struct Revision(String);
 
-impl Revision {
-    pub fn as_str(&self) -> &str {
+pub fn new_revision_from_string(rev: String) -> Revision {
+    Revision(rev)
+}
+
+impl AsRef<str> for Revision {
+    fn as_ref(&self) -> &str {
         let Revision(ref s) = *self;
         s
     }
 }
 
-pub fn new_revision_from_string(rev: String) -> Revision {
-    Revision(rev)
-}
-
 impl Clone for Revision {
     fn clone(&self) -> Self {
-        let Revision(ref s) = *self;
-        new_revision_from_string(s.clone())
+        new_revision_from_string(self.to_string())
     }
 }
 
 impl std::fmt::Display for Revision {
     fn fmt(&self, fmt: &mut std::fmt::Formatter) -> std::fmt::Result {
-        let Revision(ref s) = *self;
-        fmt.write_str(s)
+        fmt.write_str(self.as_ref())
     }
 }
 
 impl Ord for Revision {
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
-        let Revision(ref a) = *self;
-        let Revision(ref b) = *other;
-        a.cmp(b)
+        self.as_ref().cmp(other.as_ref())
     }
 }
 

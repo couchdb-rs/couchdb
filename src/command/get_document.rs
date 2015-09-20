@@ -71,7 +71,7 @@ impl<'a, T: serde::Deserialize> GetDocument<'a, T> {
                         vec![
                             hyper::header::EntityTag::new(
                                 false,
-                                self.if_none_match.unwrap().as_str().to_string())
+                                self.if_none_match.unwrap().to_string())
                         ]
                     )
                 );

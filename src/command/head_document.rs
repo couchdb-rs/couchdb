@@ -76,7 +76,7 @@ impl<'a> HeadDocument<'a> {
                         vec![
                             hyper::header::EntityTag::new(
                                 false,
-                                self.if_none_match.unwrap().as_str().to_string())
+                                self.if_none_match.unwrap().to_string())
                         ]
                     )
                 );
