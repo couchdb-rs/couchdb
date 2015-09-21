@@ -4,34 +4,34 @@ use std;
 /// Associative collection for view functions.
 pub type ViewFunctionMap = std::collections::BTreeMap<String, ViewFunction>;
 
-/// Design document.
+/// Design document content.
 #[derive(Debug)]
-pub struct DesignDocument {
+pub struct Design {
     pub views: ViewFunctionMap,
 }
 
-impl DesignDocument {
+impl Design {
     pub fn new() -> Self{
-        DesignDocument {
+        Design {
             views: ViewFunctionMap::new(),
         }
     }
 }
 
-impl std::cmp::Eq for DesignDocument {}
+impl std::cmp::Eq for Design {}
 
-impl std::cmp::PartialEq for DesignDocument {
-    fn eq(&self, other: &DesignDocument) -> bool {
+impl std::cmp::PartialEq for Design {
+    fn eq(&self, other: &Design) -> bool {
         self.views == other.views
     }
 }
 
-impl serde::Serialize for DesignDocument {
+impl serde::Serialize for Design {
 
     fn serialize<S: serde::Serializer>(&self, s: &mut S) -> Result<(), S::Error> {
 
         struct Visitor<'a> {
-            value: &'a DesignDocument,
+            value: &'a Design,
             state: u8,
         }
 
@@ -54,14 +54,14 @@ impl serde::Serialize for DesignDocument {
             }
         }
 
-        s.visit_struct("DesignDocument", Visitor {
+        s.visit_struct("Design", Visitor {
             value: self,
             state: 0,
         })
     }
 }
 
-impl serde::Deserialize for DesignDocument {
+impl serde::Deserialize for Design {
 
     fn deserialize<D: serde::Deserializer>(d: &mut D) -> Result<Self, D::Error> {
 
@@ -93,11 +93,11 @@ impl serde::Deserialize for DesignDocument {
         struct Visitor;
 
         impl serde::de::Visitor for Visitor {
-            type Value = DesignDocument;
+            type Value = Design;
 
             fn visit_map<V: serde::de::MapVisitor>(
                             &mut self,
-                            mut visitor: V) -> Result<DesignDocument, V::Error> {
+                            mut visitor: V) -> Result<Design, V::Error> {
 
                 let mut views = None;
                 loop {
@@ -116,14 +116,14 @@ impl serde::Deserialize for DesignDocument {
                     None => ViewFunctionMap::new(),
                 };
 
-                Ok(DesignDocument {
+                Ok(Design {
                     views: views,
                 })
             }
         }
 
         static FIELDS: &'static[&'static str] = &["views"];
-        d.visit_struct("DesignDocument", FIELDS, Visitor)
+        d.visit_struct("Design", FIELDS, Visitor)
     }
 }
 
@@ -406,7 +406,7 @@ mod tests {
     fn test_serialization_design() {
 
         let views = ViewFunctionMap::new();
-        let v1 = DesignDocument {
+        let v1 = Design {
             views: views,
         };
         let s = serde_json::to_string(&v1).unwrap();
@@ -422,7 +422,7 @@ mod tests {
             map: "function(doc) { emit(doc.bravo); }".to_string(),
             reduce: None,
         });
-        let v1 = DesignDocument {
+        let v1 = Design {
             views: views,
         };
         let s = serde_json::to_string(&v1).unwrap();

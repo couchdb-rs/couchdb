@@ -5,7 +5,7 @@ use std;
 
 use client;
 use document::{self, Document, Revision};
-use design::DesignDocument;
+use design::Design;
 use error::{self, Error};
 
 /// Command to get a document.
@@ -146,12 +146,12 @@ impl<'a, T: serde::Deserialize> GetDocument<'a, T> {
     }
 }
 
-impl<'a> GetDocument<'a, DesignDocument> {
+impl<'a> GetDocument<'a, Design> {
     pub fn new_design_document(
         client_state: &'a client::ClientState,
         db_name: &str,
         ddoc_id: &str)
-        -> GetDocument<'a, DesignDocument>
+        -> GetDocument<'a, Design>
     {
         let mut u = client_state.uri.clone();
         u.path_mut().unwrap()[0] = db_name.to_string();

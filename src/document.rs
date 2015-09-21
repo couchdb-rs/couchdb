@@ -52,7 +52,7 @@ impl PartialOrd for Revision {
     }
 }
 
-/// Document meta-information and content, as returned by the CouchDB server.
+/// Document, including meta-information and content.
 #[derive(Debug)]
 pub struct Document<T: serde::Deserialize> {
     pub id: String,

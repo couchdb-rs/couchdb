@@ -147,7 +147,7 @@ mod server;
 pub use client::Client;
 pub use client::IntoUrl;
 pub use database::Database;
-pub use design::DesignDocument;
+pub use design::Design;
 pub use design::ViewFunction;
 pub use design::ViewFunctionMap;
 pub use design::ViewResult;

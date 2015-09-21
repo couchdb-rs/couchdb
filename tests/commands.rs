@@ -276,7 +276,7 @@ fn main() {
         }
 
         // Verify: Putting a non-existing design document succeeds.
-        let mut ddoc = couchdb::DesignDocument::new();
+        let mut ddoc = couchdb::Design::new();
         ddoc.views.insert(
             "names".to_string(),
             couchdb::ViewFunction {
@@ -321,7 +321,7 @@ fn main() {
     {
         client.put_database("cats").run().unwrap();
 
-        let mut ddoc = couchdb::DesignDocument::new();
+        let mut ddoc = couchdb::Design::new();
         ddoc.views.insert(
             "names".to_string(),
             couchdb::ViewFunction {

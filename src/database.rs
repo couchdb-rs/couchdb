@@ -1,4 +1,4 @@
-/// Database meta-information, as returned by the CouchDB server.
+/// Database meta-information.
 #[derive(Debug)]
 pub struct Database {
     // TODO: Add more fields as needed.

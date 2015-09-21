@@ -3,7 +3,7 @@ use serde;
 use serde_json;
 
 use command;
-use design::DesignDocument;
+use design::Design;
 use document::Revision;
 use error::{self, Error};
 
@@ -146,7 +146,7 @@ impl<'a> Client {
     pub fn get_design_document(&'a self,
                                db_name: &str,
                                ddoc_id: &str)
-                               -> command::GetDocument<'a, DesignDocument> {
+                               -> command::GetDocument<'a, Design> {
         command::GetDocument::new_design_document(&self.state, db_name, ddoc_id)
     }
 
@@ -155,8 +155,8 @@ impl<'a> Client {
         &'a self,
         db_name: &str,
         ddoc_id: &str,
-        ddoc_content: &'a DesignDocument)
-        -> command::PutDocument<'a, DesignDocument>
+        ddoc_content: &'a Design)
+        -> command::PutDocument<'a, Design>
     {
         command::PutDocument::new_design_document(&self.state, db_name, ddoc_id, ddoc_content)
     }

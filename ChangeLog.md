@@ -14,6 +14,7 @@ API changes:
 * New `IntoUrl` trait to alias the trait of the same name from the hyper crate.
 * Rename `ServerErrorResponse` to `ErrorResponse` and use the type consistently
   for errors.
+* Rename `DesignDocument` to `Design`.
 
 ## v0.0.1
 

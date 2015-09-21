@@ -4,7 +4,7 @@ use serde_json;
 use std;
 
 use client;
-use design::DesignDocument;
+use design::Design;
 use document::{self, Revision};
 use error::{self, Error};
 
@@ -130,13 +130,13 @@ impl<'a, T: 'a + serde::Serialize> PutDocument<'a, T> {
     }
 }
 
-impl<'a> PutDocument<'a, DesignDocument> {
+impl<'a> PutDocument<'a, Design> {
     pub fn new_design_document(
         client_state: &'a client::ClientState,
         db_name: &str,
         ddoc_id: &str,
-        ddoc_content: &'a DesignDocument)
-        -> PutDocument<'a, DesignDocument>
+        ddoc_content: &'a Design)
+        -> PutDocument<'a, Design>
     {
         let mut u = client_state.uri.clone();
         u.path_mut().unwrap()[0] = db_name.to_string();
