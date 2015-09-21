@@ -1,8 +1,9 @@
 # CouchDB-rs Change Log
 
-## v0.1.0 (in development)
+## v0.1.0
 
-API changes:
+This release fixes many small problems in the API.
+
 * Improve `Revision` type-safety:
 	* Remove `as_str` method and instead implement the `AsRef<str>` trait.
 	* CouchDB commands that have a revision parameter now borrow the `Revision`
