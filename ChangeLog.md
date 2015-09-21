@@ -4,7 +4,7 @@
 
 API changes:
 * Improve `Revision` type-safety:
-  * Remove `as_str` method and instead implement the `AsRef<str>` trait.
+	* Remove `as_str` method and instead implement the `AsRef<str>` trait.
 	* CouchDB commands that have a revision parameter now borrow the `Revision`
 	  argument instead of taking ownership.
 	* Hide `Revision` construction from an arbitrary string. Applications now may
