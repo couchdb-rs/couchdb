@@ -2,423 +2,692 @@ extern crate couchdb;
 extern crate serde_json;
 
 #[test]
-#[allow(dead_code)]
-fn main() {
-
-    use std::collections::{BTreeMap, HashSet};
-    type M = BTreeMap<String, serde_json::Value>;
+fn head_database() {
 
     let server = couchdb::Server::new().unwrap();
     let client = couchdb::Client::new(server.uri()).unwrap();
 
-    let is_server_clean = || {
-        let all = client.get_all_databases().run().unwrap();
-        let mut our = all.iter().filter(|x| {
-            !x.starts_with("_")
-        });
-        our.next().is_none()
+    // Verify: Heading an existing database succeeds.
+    client.put_database("cats").run().unwrap();
+    client.head_database("cats").run().unwrap();
+
+    // Verify: Heading a non-existing database fails.
+    match client.head_database("dogs").run().unwrap_err() {
+        couchdb::Error::NotFound { .. } => (),
+        e => { panic!("Got unexpected error: {}", e); },
+    }
+}
+
+#[test]
+fn get_database() {
+
+    let server = couchdb::Server::new().unwrap();
+    let client = couchdb::Client::new(server.uri()).unwrap();
+
+    // Verify: Getting an existing database succeeds.
+    client.put_database("cats").run().unwrap();
+    client.get_database("cats").run().unwrap();
+
+    // Verify: Getting a non-existing database fails.
+    match client.get_database("dogs").run().unwrap_err() {
+        couchdb::Error::NotFound { .. } => (),
+        e => { panic!("Got unexpected error: {}", e); },
+    }
+}
+
+#[test]
+fn put_database() {
+
+    use std::collections::HashSet;
+    let server = couchdb::Server::new().unwrap();
+    let client = couchdb::Client::new(server.uri()).unwrap();
+
+    let get_all_databases = || {
+        client.get_all_databases()
+            .run()
+            .unwrap()
+            .into_iter()
+            .collect::<HashSet<_>>()
     };
 
-    assert!(is_server_clean());
+    // Verify: Putting a non-existing database succeeds.
+    let pre = get_all_databases();
+    client.put_database("cats").run().unwrap();
+    let post = get_all_databases();
+    assert_eq!(0 as usize, pre.difference(&post).count());
+    assert_eq!(
+        vec!["cats"],
+        post.difference(&pre).map(|x| x.clone()).collect::<Vec<String>>());
 
-    // = PUT and DELETE database =
-
-    {
-        // Verify: Putting a database succeeds.
-        let pre: HashSet<_> = client.get_all_databases().run()
-            .unwrap()
-            .into_iter().collect();
-        client.put_database("cats").run().unwrap();
-        let post: HashSet<_> = client.get_all_databases().run()
-            .unwrap()
-            .into_iter().collect();
-        assert_eq!(0 as usize, pre.difference(&post).count());
-        assert_eq!(vec!["cats"], post.difference(&pre).map(|x| x.clone()).collect::<Vec<String>>());
-
-        // Verify: Putting an existing database fails.
-        let x = client.put_database("cats").run().unwrap_err();
-        match x {
-            couchdb::Error::DatabaseExists { .. } => (),
-            _ => { panic!("Got error: {}", x); },
-        }
-
-        // Verify: Putting a database with an invalid name fails.
-        let x = client.put_database("_valid_names_cannot_start_with_an_underscore").run()
-            .unwrap_err();
-        match x {
-            couchdb::Error::InvalidDatabaseName { .. } => (),
-            _ => { panic!("Got error: {}", x); },
-        }
-
-        /*
-
-        The following two tests fail. The proximate problem is the CouchDB
-        server sends a 404 Not Found instead of a 400 Bad Request. However, the
-        ultimate problem is that Hyper doesn't percent-encode paths, so our
-        client sends a PUT document request ("cats/moochie"), not a PUT database
-        request ("cats%2Fmoochie").
-        
-        See this bug report for more details:
-        https://github.com/hyperium/hyper/issues/638
-        
-        // Verify: Putting a database with a slash ('/') in the name fails as an invalid database
-        // name.
-        let x = client.put_database("cats/moochie").run().unwrap_err();
-        match x {
-            couchdb::Error::InvalidDatabaseName { .. } => (),
-            _ => { panic!("Got error: {}", x); },
-        }
-
-        // Verify: Putting a database with a slash ('/') in the name fails as an invalid database
-        // name.
-        let x = client.put_database("dogs/fido").run().unwrap_err();
-        match x {
-            couchdb::Error::InvalidDatabaseName { .. } => (),
-            _ => { panic!("Got error: {}", x); },
-        }
-
-        */
-
-        // Verify: Deleting an existing database succeeds.
-        client.delete_database("cats").run().unwrap(); 
-        let post: HashSet<_> = client.get_all_databases().run().unwrap().into_iter().collect();
-        assert_eq!(pre, post);
-
-        // Verify: Deleting an non-existing database fails.
-        let x = client.delete_database("cats").run().unwrap_err();
-        match x {
-            couchdb::Error::NotFound { .. } => (),
-            _ => { panic!("Got error: {}", x); },
-        }
-
-        // Verify: Deleting a database with an invalid name fails.
-        let x = client.delete_database("_invalid_name").run().unwrap_err();
-        match x {
-            couchdb::Error::InvalidDatabaseName { .. } => (),
-            _ => { panic!("Got error: {}", x); },
-        }
+    // Verify: Putting an existing database fails.
+    match client.put_database("cats").run().unwrap_err() {
+        couchdb::Error::DatabaseExists { .. } => (),
+        e => { panic!("Got unexpected error: {}", e); },
     }
 
-    assert!(is_server_clean());
-
-    // = HEAD and GET database =
-
+    // Verify: Putting a database with an invalid name fails.
+    match client.put_database("_database_names_cannot_start_with_an_underscore")
+        .run().unwrap_err()
     {
-        // Verify: Heading a non-existing database fails.
-        let x = client.head_database("cats").run().unwrap_err();
-        match x {
-            couchdb::Error::NotFound { .. } => (),
-            _ => { panic!("Got error: {}", x); },
-        }
-
-        // Verify: Heading an existing database succeeds.
-        client.put_database("cats").run().unwrap();
-        client.head_database("cats").run().unwrap();
-
-        // Verify: Getting an existing database succeeds.
-        client.get_database("cats").run().unwrap();
-
-        // Verify: Getting a non-existing database fails.
-        let x = client.get_database("dogs").run().unwrap_err();
-        match x {
-            couchdb::Error::NotFound { .. } => (),
-            _ => { panic!("Got error: {}", x); },
-        }
-
-        client.delete_database("cats").run().unwrap();
+        couchdb::Error::InvalidDatabaseName { .. } => (),
+        e => { panic!("Got unexpected error: {}", e); },
     }
 
-    assert!(is_server_clean());
+    /*
 
-    // = PUT and DELETE document =
-
-    {
-        client.put_database("cats").run().unwrap();
-
-        // Verify: Putting a non-existing document succeeds.
-        let mut doc = serde_json::Value::Object(M::new());
-        doc.as_object_mut().unwrap().insert("name".to_string(), serde_json::to_value(&"Nutmeg"));
-        doc.as_object_mut().unwrap().insert("years_old".to_string(), serde_json::to_value(&7));
-        let rev = client.put_document("cats", "nutmeg", &doc).run().unwrap();
-
-        // Verify: Putting an existing document without a revision fails.
-        doc.as_object_mut().unwrap().insert("color".to_string(), serde_json::to_value(&"orange"));
-        let x = client.put_document("cats", "nutmeg", &doc).run().unwrap_err();
-        match x {
-            couchdb::Error::DocumentConflict { .. } => (),
-            _ => { panic!("Got error: {}", x); },
-        }
-
-        // Verify: Putting an existing document with a matching revision succeeds.
-        doc.as_object_mut().unwrap().insert("color".to_string(), serde_json::to_value(&"orange"));
-        let rev2 = client.put_document("cats", "nutmeg", &doc)
-            .if_match(&rev)
-            .run().unwrap();
-
-        // Verify: Putting an existing document with a non-matching revision fails.
-        doc.as_object_mut().unwrap().insert("color".to_string(), serde_json::to_value(&"orange"));
-        let x = client.put_document("cats", "nutmeg", &doc)
-            .if_match(&rev)
-            .run().unwrap_err();
-        match x {
-            couchdb::Error::DocumentConflict { .. } => (),
-            _ => { panic!("Got error: {}", x); },
-        }
-
-        // Verify: Deleting an existing document with match revision succeeds.
-        client.delete_document("cats", "nutmeg", &rev2).run().unwrap();
-        match client.get_document::<serde_json::Value>("cats", "nutmeg").run().unwrap_err() {
-            couchdb::Error::NotFound { .. } => (),
-            _ => { panic!("Got error: {}", x); },
-        }
-
-        // Verify: Deleting a non-existing document fails.
-        match client.delete_document("cats", "nutmeg", &rev2).run().unwrap_err() {
-            couchdb::Error::NotFound { .. } => (),
-            _ => { panic!("Got error: {}", x); },
-        }
-
-        // Verify: Deleting a document with a stale revision fails.
-        let mut doc = serde_json::Value::Object(M::new());
-        doc.as_object_mut().unwrap().insert("name".to_string(), serde_json::to_value(&"Emerald"));
-        doc.as_object_mut().unwrap().insert("years_old".to_string(), serde_json::to_value(&6));
-        let rev = client.put_document("cats", "emerald", &doc).run().unwrap();
-        doc.as_object_mut().unwrap().insert("color".to_string(), serde_json::to_value(&"brown"));
-        let rev2 = client.put_document("cats", "emerald", &doc)
-            .if_match(&rev)
-            .run().unwrap();
-        match client.delete_document("cats", "emerald", &rev).run().unwrap_err() {
-            couchdb::Error::DocumentConflict { .. } => (),
-            _ => { panic!("Got error: {}", x); },
-        }
-        client.delete_document("cats", "emerald", &rev2).run().unwrap();
-
-        client.delete_database("cats").run().unwrap();
+    The following two tests fail. The proximate problem is the CouchDB server
+    sends a 404 Not Found instead of a 400 Bad Request. However, the ultimate
+    problem is the Url type doesn't percent-encode paths, so our client sends a
+    PUT document request ("cats/moochie"), not a PUT database request
+    ("cats%2Fmoochie").
+    
+    See this bug report for more details:
+    https://github.com/hyperium/hyper/issues/638
+    
+    // Verify: Putting a database with a slash ('/') in the name fails as an
+    // invalid database name.
+    match client.put_database("cats/moochie").run().unwrap_err() {
+        couchdb::Error::InvalidDatabaseName { .. } => (),
+        e => { panic!("Got unexpected error: {}", e); },
     }
 
-    assert!(is_server_clean());
+    // Verify: Putting a database with a slash ('/') in the name fails as an
+    // invalid database name.
+    match client.put_database("dogs/fido").run().unwrap_err() {
+        couchdb::Error::InvalidDatabaseName { .. } => (),
+        e => { panic!("Got unexpected error: {}", e); },
+    }
 
-    // = HEAD and GET document =
+    */
+}
 
-    {
-        client.put_database("cats").run().unwrap();
+#[test]
+fn delete_database() {
 
-        // Verify: Getting an existing document succeeds.
-        let mut doc = serde_json::Value::Object(M::new());
-        doc.as_object_mut().unwrap().insert("name".to_string(), serde_json::to_value(&"Emerald"));
-        doc.as_object_mut().unwrap().insert("years_old".to_string(), serde_json::to_value(&6));
-        client.put_document("cats", "emerald", &doc).run().unwrap();
-        let doc = client.get_document::<serde_json::Value>("cats", "emerald")
-            .run().unwrap().unwrap();
-        assert!(doc.id == "emerald");
-        let rev = doc.revision;
+    use std::collections::HashSet;
+    let server = couchdb::Server::new().unwrap();
+    let client = couchdb::Client::new(server.uri()).unwrap();
 
-        // Verify: Getting a non-existing document fails.
-        let x = client.get_document::<serde_json::Value>("cats", "nutmeg")
-            .run().unwrap_err();
-        match x {
-            couchdb::Error::NotFound { .. } => (),
-            _ => { panic!("Got error: {}", x); },
-        }
-
-        // Verify: Getting an existing document with an If-None-Match header succeeds with no
-        // document returned.
-
-        match client.get_document::<serde_json::Value>("cats", "emerald")
-            .if_none_match(&rev)
+    let get_all_databases = || {
+        client.get_all_databases()
             .run()
             .unwrap()
-        {
-            Some(_) => { panic!("Got document, expected none"); },
-            None => (),
-        }
+            .into_iter()
+            .collect::<HashSet<_>>()
+    };
 
-        // Verify: Heading an existing document succeeds.
-        client.head_document("cats", "emerald").run().unwrap().unwrap();
+    // Verify: Deleting an existing database succeeds.
+    let pre = get_all_databases();
+    client.put_database("cats").run().unwrap();
+    client.delete_database("cats").run().unwrap();
+    let post = get_all_databases();
+    assert_eq!(pre, post);
 
-        // Verify: Heading an existing document with an If-None-Match header
-        // succeeds.
-        let x = client.head_document("cats", "emerald")
-            .if_none_match(&rev)
-            .run()
-            .unwrap();
-        assert!(x.is_none());
-
-        // Verify: Heading a non-existing document fails.
-        let x = client.head_document("cats", "nutmeg").run().unwrap_err();
-        match x {
-            couchdb::Error::NotFound { .. } => (),
-            _ => panic!("Got error: {}", x),
-        }
-
-        client.delete_database("cats").run().unwrap();
+    // Verify: Deleting an non-existing database fails.
+    match client.delete_database("cats").run().unwrap_err() {
+        couchdb::Error::NotFound { .. } => (),
+        e => { panic!("Got unexpected error: {}", e); },
     }
 
-    assert!(is_server_clean());
-
-    // = HEAD, GET, PUT, and DELETE design document =
-
+    // Verify: Deleting a database with an invalid name fails.
+    match client.delete_database("_database_names_cannot_start_with_an_underscore")
+        .run().unwrap_err()
     {
-        client.put_database("cats").run().unwrap();
+        couchdb::Error::InvalidDatabaseName { .. } => (),
+        e => { panic!("Got unexpected error: {}", e); },
+    }
+}
 
-        // Verify: Heading a non-existing design document fails.
-        let x = client.head_design_document("cats", "my_design").run().unwrap_err();
-        match x {
-            couchdb::Error::NotFound { .. } => (),
-            _ => panic!("Got error: {}", x),
-        }
+#[test]
+fn head_document() {
 
-        // Verify: Getting a non-existing design document fails.
-        let x = client.get_design_document("cats", "my_design").run().unwrap_err();
-        match x {
-            couchdb::Error::NotFound { .. } => (),
-            _ => panic!("Got error: {}", x),
-        }
+    use serde_json::Value;
+    type Object = std::collections::BTreeMap<String, Value>;
+    let server = couchdb::Server::new().unwrap();
+    let client = couchdb::Client::new(server.uri()).unwrap();
 
-        // Verify: Putting a non-existing design document succeeds.
-        let mut ddoc = couchdb::Design::new();
-        ddoc.views.insert(
-            "names".to_string(),
-            couchdb::ViewFunction {
-                map: "function(doc) { emit(doc.name); }".to_string(),
-                reduce: None
-            });
-        let rev = client.put_design_document("cats", "my_design", &ddoc).run().unwrap();
+    client.put_database("cats").run().unwrap();
+    let mut pdoc = Value::Object(Object::new());
+    pdoc.as_object_mut().unwrap().insert(
+        "color".to_string(),
+        serde_json::to_value(&"orange"));
+    let rev1 = client.put_document("cats", "nutmeg", &pdoc).run().unwrap();
 
-        // Verify: Heading an existing design document succeeds.
-        client.head_design_document("cats", "my_design").run().unwrap().unwrap();
+    // Verify: Heading an existing document succeeds.
+    client.head_document("cats", "nutmeg").run().unwrap().unwrap();
 
-        // Verify: Heading an existing design document with explicit revision
-        // succeeds.
-        let x = client.head_design_document("cats", "my_design")
-            .if_none_match(&rev)
+    // Verify: Heading an existing document with a matching If-None-Match header
+    // succeeds.
+    assert!(
+        client.head_document("cats", "nutmeg")
+            .if_none_match(&rev1)
             .run()
-            .unwrap();
-        assert!(x.is_none());
+            .unwrap()
+            .is_none());
 
-        // Verify: Getting an existing document succeeds.
-        let got = client.get_design_document("cats", "my_design").run().unwrap().unwrap();
-        assert_eq!(rev, got.revision);
-        assert_eq!(ddoc, got.content);
+    // Verify: Heading an existing document with a stale, non-matching
+    // If-None-Match header succeeds.
+    let mut pdoc = Value::Object(Object::new());
+    pdoc.as_object_mut().unwrap().insert(
+        "years_old".to_string(),
+        serde_json::to_value(&7));
+    client.put_document("cats", "nutmeg", &pdoc)
+        .if_match(&rev1)
+        .run()
+        .unwrap();
+    client.head_document("cats", "nutmeg")
+        .if_none_match(&rev1)
+        .run()
+        .unwrap()
+        .unwrap();
 
-        // Verify: Deleting an existing document succeeds.
-        client.delete_design_document("cats", "my_design", &rev).run().unwrap();
+    // Verify: Heading a non-existing document fails.
+    match client.head_document("cats", "emerald").run().unwrap_err() {
+        couchdb::Error::NotFound { .. } => (),
+        e => panic!("Got unexpected error: {}", e),
+    }
+}
 
-        // Verify: Deleting a non-existing document fails.
-        let x = client.delete_design_document("cats", "my_design", &rev).run().unwrap_err();
-        match x {
-            couchdb::Error::NotFound { .. } => (),
-            _ => panic!("Got error: {}", x),
-        }
+#[test]
+fn get_document() {
 
-        client.delete_database("cats").run().unwrap();
+    use serde_json::Value;
+    type Object = std::collections::BTreeMap<String, Value>;
+    let server = couchdb::Server::new().unwrap();
+    let client = couchdb::Client::new(server.uri()).unwrap();
+
+    client.put_database("cats").run().unwrap();
+    let mut pdoc = Value::Object(Object::new());
+    pdoc.as_object_mut().unwrap().insert(
+        "color".to_string(),
+        serde_json::to_value(&"orange"));
+    let rev1 = client.put_document("cats", "nutmeg", &pdoc).run().unwrap();
+
+    // Verify: Getting an existing document succeeds.
+    let doc1 = client.get_document::<Value>("cats", "nutmeg")
+        .run().unwrap().unwrap();
+    assert!(doc1.id == "nutmeg");
+    assert!(doc1.revision == rev1);
+    assert!(doc1.content == pdoc);
+
+    // Verify: Getting a non-existing document fails.
+    match client.get_document::<Value>("cats", "emerald").run().unwrap_err() {
+        couchdb::Error::NotFound { .. } => (),
+        e => { panic!("Got unexpected error: {}", e); },
     }
 
-    assert!(is_server_clean());
-
-    // = GET view =
-
+    // Verify: Getting an existing document with a matching If-None-Match header
+    // succeeds with no document returned.
+    match client.get_document::<Value>("cats", "nutmeg")
+        .if_none_match(&rev1)
+        .run()
+        .unwrap()
     {
-        client.put_database("cats").run().unwrap();
-
-        let mut ddoc = couchdb::Design::new();
-        ddoc.views.insert(
-            "names".to_string(),
-            couchdb::ViewFunction {
-                map: "function(doc) { emit(doc.name, doc.name.length); }".to_string(),
-                reduce: Some("function(keys, values) { return sum(values); }".to_string()),
-            });
-        client.put_design_document("cats", "my_design", &ddoc).run().unwrap();
-
-        // Verify: Getting an empty view succeeds.
-        let result = client.get_view::<String, u32>("cats", "my_design", "names").run().unwrap();
-        assert_eq!(0, result.total_rows);
-        assert_eq!(0, result.offset);
-        assert!(result.rows.is_empty());
-
-        let mut doc = serde_json::Value::Object(M::new());
-        doc.as_object_mut().unwrap().insert("name".to_string(), serde_json::to_value(&"Emerald"));
-        doc.as_object_mut().unwrap().insert("years_old".to_string(), serde_json::to_value(&6));
-        client.put_document("cats", "emerald", &doc).run().unwrap();
-
-        let mut doc = serde_json::Value::Object(M::new());
-        doc.as_object_mut().unwrap().insert("name".to_string(), serde_json::to_value(&"Nutmeg"));
-        doc.as_object_mut().unwrap().insert("years_old".to_string(), serde_json::to_value(&7));
-        client.put_document("cats", "nutmeg", &doc).run().unwrap();
-
-        // Verify: Getting a nonempty view succeeds.
-        let result = client.get_view::<String, u32>("cats", "my_design", "names")
-            .reduce(false)
-            .run().unwrap();
-        assert_eq!(2, result.total_rows);
-        assert_eq!(0, result.offset);
-        assert_eq!(
-            result.rows,
-            vec![
-                couchdb::ViewRow::<String, u32> {
-                    id: Some("emerald".to_string()),
-                    key: Some("Emerald".to_string()),
-                    value: 7,
-                },
-                couchdb::ViewRow::<String, u32> {
-                    id: Some("nutmeg".to_string()),
-                    key: Some("Nutmeg".to_string()),
-                    value: 6
-                },
-            ]);
-
-        // Verify: Getting a view with an explicit start-key succeeds.
-        let result = client.get_view::<String, u32>("cats", "my_design", "names")
-            .reduce(false)
-            .startkey("f".to_string())
-            .run().unwrap();
-        assert_eq!(2, result.total_rows);
-        assert_eq!(1, result.offset);
-        assert_eq!(
-            result.rows,
-            vec![
-                couchdb::ViewRow::<String, u32> {
-                    id: Some("nutmeg".to_string()),
-                    key: Some("Nutmeg".to_string()),
-                    value: 6
-                },
-            ]);
-
-        // Verify: Getting a view with an explicit end-key succeeds.
-        let result = client.get_view::<String, u32>("cats", "my_design", "names")
-            .reduce(false)
-            .endkey("f".to_string())
-            .run().unwrap();
-        assert_eq!(2, result.total_rows);
-        assert_eq!(0, result.offset);
-        assert_eq!(
-            result.rows,
-            vec![
-                couchdb::ViewRow::<String, u32> {
-                    id: Some("emerald".to_string()),
-                    key: Some("Emerald".to_string()),
-                    value: 7,
-                },
-            ]);
-
-        // Verify: Getting a reduced view succeeds.
-        let result = client.get_view::<String, u32>("cats", "my_design", "names")
-            .reduce(true)
-            .run().unwrap();
-        assert_eq!(0, result.total_rows);
-        assert_eq!(0, result.offset);
-        assert_eq!(
-            result.rows,
-            vec![
-                couchdb::ViewRow::<String, u32> {
-                    id: None,
-                    key: None,
-                    value: 13,
-                },
-            ]);
-
-        client.delete_database("cats").run().unwrap();
+        Some(_) => { panic!("Got document, expected none"); },
+        None => (),
     }
 
-    assert!(is_server_clean());
+    // Verify: Getting an existing document with a stale, non-matching
+    // If-None-Match header succeeds.
+    pdoc.as_object_mut().unwrap().insert(
+        "years_old".to_string(),
+        serde_json::to_value(&7));
+    let rev2 = client.put_document("cats", "nutmeg", &pdoc)
+        .if_match(&rev1)
+        .run()
+        .unwrap();
+    let doc2 = client.get_document::<Value>("cats", "nutmeg")
+        .if_none_match(&rev1)
+        .run()
+        .unwrap()
+        .unwrap();
+    assert_eq!(doc2.revision, rev2);
+}
+
+#[test]
+fn put_document() {
+
+    use serde_json::Value;
+    type Object = std::collections::BTreeMap<String, Value>;
+    let server = couchdb::Server::new().unwrap();
+    let client = couchdb::Client::new(server.uri()).unwrap();
+
+    client.put_database("cats").run().unwrap();
+
+    // Verify: Putting a non-existing document succeeds.
+    let mut pdoc = Value::Object(Object::new());
+    pdoc.as_object_mut().unwrap().insert(
+        "name".to_string(),
+        serde_json::to_value(&"Nutmeg"));
+    pdoc.as_object_mut().unwrap().insert(
+        "years_old".to_string(),
+        serde_json::to_value(&7));
+    let rev1 = client.put_document("cats", "nutmeg", &pdoc).run().unwrap();
+
+    // Verify: Putting an existing document without a revision fails.
+    pdoc.as_object_mut().unwrap().insert(
+        "color".to_string(),
+        serde_json::to_value(&"orange"));
+    match client.put_document("cats", "nutmeg", &pdoc).run().unwrap_err() {
+        couchdb::Error::DocumentConflict { .. } => (),
+        e => { panic!("Got unexpected error: {}", e); },
+    }
+
+    // Verify: Putting an existing document with a matching revision succeeds.
+    pdoc.as_object_mut().unwrap().insert(
+        "color".to_string(),
+        serde_json::to_value(&"orange"));
+    let rev2 = client.put_document("cats", "nutmeg", &pdoc)
+        .if_match(&rev1)
+        .run().unwrap();
+    pdoc.as_object_mut().unwrap().insert(
+        "years_old".to_string(),
+        serde_json::to_value(&8));
+    client.put_document("cats", "nutmeg", &pdoc)
+        .if_match(&rev2)
+        .run().unwrap();
+
+    // Verify: Putting an existing document with a non-matching revision fails.
+    pdoc.as_object_mut().unwrap().insert(
+        "color".to_string(),
+        serde_json::to_value(&"orange"));
+    match client.put_document("cats", "nutmeg", &pdoc)
+        .if_match(&rev1)
+        .run().unwrap_err()
+    {
+        couchdb::Error::DocumentConflict { .. } => (),
+        e => { panic!("Got unexpected error: {}", e); },
+    }
+}
+
+#[test]
+fn delete_document() {
+
+    use serde_json::Value;
+    type Object = std::collections::BTreeMap<String, Value>;
+    let server = couchdb::Server::new().unwrap();
+    let client = couchdb::Client::new(server.uri()).unwrap();
+
+    client.put_database("cats").run().unwrap();
+    let mut pdoc = Value::Object(Object::new());
+    pdoc.as_object_mut().unwrap().insert(
+        "color".to_string(),
+        serde_json::to_value(&"orange"));
+    let rev1 = client.put_document("cats", "nutmeg", &pdoc).run().unwrap();
+
+    // Verify: Deleting an existing document with matching revision succeeds.
+    client.delete_document("cats", "nutmeg", &rev1).run().unwrap();
+    match client.head_document("cats", "nutmeg").run().unwrap_err() {
+        couchdb::Error::NotFound { .. } => (),
+        e => { panic!("Got unexpected error: {}", e); },
+    }
+
+    // Verify: Deleting a non-existing document fails.
+    match client.delete_document("cats", "nutmeg", &rev1).run().unwrap_err() {
+        couchdb::Error::NotFound { .. } => (),
+        e => { panic!("Got unexpected error: {}", e); },
+    }
+
+    // Verify: Deleting a document with a (stale) non-matching revision fails.
+    let mut pdoc = Value::Object(Object::new());
+    pdoc.as_object_mut().unwrap().insert(
+        "color".to_string(),
+        serde_json::to_value(&"brown"));
+    let rev2 = client.put_document("cats", "emerald", &pdoc).run().unwrap();
+    pdoc.as_object_mut().unwrap().insert(
+        "eyes".to_string(),
+        serde_json::to_value(&"green"));
+    client.put_document("cats", "emerald", &pdoc)
+        .if_match(&rev2)
+        .run().unwrap();
+    match client.delete_document("cats", "emerald", &rev2).run().unwrap_err() {
+        couchdb::Error::DocumentConflict { .. } => (),
+        e => { panic!("Got unexpected error: {}", e); },
+    }
+}
+
+#[test]
+fn head_design_document() {
+
+    let server = couchdb::Server::new().unwrap();
+    let client = couchdb::Client::new(server.uri()).unwrap();
+
+    client.put_database("cats").run().unwrap();
+
+    let mut pddoc = couchdb::Design::new();
+    pddoc.views.insert(
+        "by_name".to_string(),
+        couchdb::ViewFunction {
+            map: "function(doc) { emit(doc.name); }".to_string(),
+            reduce: None,
+        });
+    let rev1 = client.put_design_document("cats", "my_design", &pddoc)
+        .run().unwrap();
+
+    // Verify: Heading an existing design document succeeds.
+    client.head_design_document("cats", "my_design")
+        .run()
+        .unwrap()
+        .unwrap();
+
+    // Verify: Heading a non-existing design document fails.
+    match client.head_design_document("cats", "does_not_exist")
+        .run()
+        .unwrap_err()
+    {
+        couchdb::Error::NotFound { .. } => (),
+        e => panic!("Got unexpected error: {}", e),
+    }
+
+    // Verify: Heading an existing design document with a matching If-None-Match
+    // header succeeds.
+    assert!(
+        client.head_design_document("cats", "my_design")
+            .if_none_match(&rev1)
+            .run()
+            .unwrap()
+            .is_none());
+}
+
+#[test]
+fn get_design_document() {
+
+    let server = couchdb::Server::new().unwrap();
+    let client = couchdb::Client::new(server.uri()).unwrap();
+
+    client.put_database("cats").run().unwrap();
+
+    let mut pddoc = couchdb::Design::new();
+    pddoc.views.insert(
+        "by_name".to_string(),
+        couchdb::ViewFunction {
+            map: "function(doc) { emit(doc.name); }".to_string(),
+            reduce: None,
+        });
+    let rev1 = client.put_design_document("cats", "my_design", &pddoc)
+        .run().unwrap();
+
+    // Verify: Getting an existing design document succeeds.
+    let ddoc = client.get_design_document("cats", "my_design")
+        .run()
+        .unwrap()
+        .unwrap();
+    assert_eq!(ddoc.id, "my_design".to_string());
+    assert_eq!(ddoc.revision, rev1);
+
+    // Verify: Getting a non-existing design document fails.
+    match client.get_design_document("cats", "my_design")
+            .run()
+            .unwrap_err()
+    {
+        couchdb::Error::NotFound { .. } => (),
+        e => panic!("Got unexpected error: {}", e),
+    }
+
+    // Verify: Getting an existing design document with a matching If-None-Match
+    // header succeeds.
+    assert!(
+        client.get_design_document("cats", "my_design")
+            .if_none_match(&rev1)
+            .run()
+            .unwrap()
+            .is_none());
+}
+
+#[test]
+fn put_design_document() {
+
+    let server = couchdb::Server::new().unwrap();
+    let client = couchdb::Client::new(server.uri()).unwrap();
+
+    client.put_database("cats").run().unwrap();
+
+    // Verify: Putting a non-existing design document succeeds.
+    let mut pddoc = couchdb::Design::new();
+    pddoc.views.insert(
+        "by_name".to_string(),
+        couchdb::ViewFunction {
+            map: "function(doc) { emit(doc.name); }".to_string(),
+            reduce: None,
+        });
+    let rev1 = client.put_design_document("cats", "my_design", &pddoc)
+        .run()
+        .unwrap();
+
+    // Verify: Putting an existing design document without an If-Match header
+    // fails.
+    pddoc.views.insert(
+        "by_age".to_string(),
+        couchdb::ViewFunction {
+            map: "function(doc) { emit(doc.years_old); }".to_string(),
+            reduce: None,
+        });
+    match client.put_design_document("cats", "my_design", &pddoc)
+        .run()
+        .unwrap_err()
+    {
+        couchdb::Error::DocumentConflict { .. } => (),
+        e => panic!("Got unexpected error: {}", e),
+    }
+
+    // Verify: Putting an existing design document with a matching If-Match
+    // header fails.
+    client.put_design_document("cats", "my_design", &pddoc)
+        .if_match(&rev1)
+        .run()
+        .unwrap();
+
+    // Verify: Putting an existing design document with a non-matching If-Match
+    // header fails.
+    match client.put_design_document("cats", "my_design", &pddoc)
+        .if_match(&rev1)
+        .run()
+        .unwrap_err()
+    {
+        couchdb::Error::DocumentConflict { .. } => (),
+        e => panic!("Got unexpected error: {}", e),
+    }
+}
+
+#[test]
+fn delete_design_document() {
+
+    let server = couchdb::Server::new().unwrap();
+    let client = couchdb::Client::new(server.uri()).unwrap();
+
+    client.put_database("cats").run().unwrap();
+
+    let mut pddoc = couchdb::Design::new();
+    pddoc.views.insert(
+        "by_name".to_string(),
+        couchdb::ViewFunction {
+            map: "function(doc) { emit(doc.name); }".to_string(),
+            reduce: None,
+        });
+    let rev1 = client.put_design_document("cats", "my_design", &pddoc)
+        .run()
+        .unwrap();
+
+    pddoc.views.insert(
+        "by_age".to_string(),
+        couchdb::ViewFunction {
+            map: "function(doc) { emit(doc.years_old); }".to_string(),
+            reduce: None,
+        });
+    let rev2 = client.put_design_document("cats", "my_design", &pddoc)
+        .if_match(&rev1)
+        .run()
+        .unwrap();
+
+    // Verify: Deleting an existing design document with a non-matching revision
+    // fails.
+    match client.delete_design_document("cats", "my_design", &rev1)
+        .run()
+        .unwrap_err()
+    {
+        couchdb::Error::DocumentConflict { .. } => (),
+        e => panic!("Got unexpected error: {}", e),
+    }
+
+    // Verify: Deleting an existing design document with a matching revision
+    // succeeds.
+    client.delete_design_document("cats", "my_design", &rev2)
+        .run()
+        .unwrap();
+
+    // Verify: Deleting a non-existing design document fails.
+    match client.delete_design_document("cats", "does_not_exist", &rev1)
+        .run()
+        .unwrap_err()
+    {
+        couchdb::Error::NotFound { .. } => (),
+        e => panic!("Got unexpected error: {}", e),
+    }
+}
+
+#[test]
+fn get_view() {
+
+    use serde_json::Value;
+    type Object = std::collections::BTreeMap<String, Value>;
+    let server = couchdb::Server::new().unwrap();
+    let client = couchdb::Client::new(server.uri()).unwrap();
+
+    client.put_database("cats").run().unwrap();
+
+    let mut pddoc = couchdb::Design::new();
+    pddoc.views.insert(
+        "name".to_string(),
+        couchdb::ViewFunction {
+            map: "function(doc) { emit(doc.name, doc.name); }".to_string(),
+            reduce: None,
+        });
+    pddoc.views.insert(
+        "age".to_string(),
+        couchdb::ViewFunction {
+            map: "function(doc) { emit(doc.name, doc.years_old); }".to_string(),
+            reduce: Some("function(keys, values) { return sum(values); }".to_string()),
+        });
+    client.put_design_document("cats", "my_design", &pddoc).run().unwrap();
+
+    // Verify: Getting an empty view succeeds.
+    let result = client.get_view::<String, u32>("cats", "my_design", "name")
+        .run()
+        .unwrap();
+    assert_eq!(0, result.total_rows);
+    assert_eq!(0, result.offset);
+    assert!(result.rows.is_empty());
+
+    // Populate the database with some documents.
+
+    let mut pdoc = Value::Object(Object::new());
+    pdoc.as_object_mut().unwrap().insert(
+        "name".to_string(),
+        serde_json::to_value(&"Nutmeg"));
+    pdoc.as_object_mut().unwrap().insert(
+        "years_old".to_string(),
+        serde_json::to_value(&7));
+    client.put_document("cats", "nutmeg", &pdoc).run().unwrap();
+
+    let mut pdoc = Value::Object(Object::new());
+    pdoc.as_object_mut().unwrap().insert(
+        "name".to_string(),
+        serde_json::to_value(&"Emerald"));
+    pdoc.as_object_mut().unwrap().insert(
+        "years_old".to_string(),
+        serde_json::to_value(&6));
+    client.put_document("cats", "emerald", &pdoc).run().unwrap();
+
+    // Verify: Getting a nonempty view without 'reduce' succeeds.
+
+    let result = client.get_view::<String, String>("cats", "my_design", "name")
+        .run().unwrap();
+    assert_eq!(2, result.total_rows);
+    assert_eq!(0, result.offset);
+    assert_eq!(
+        result.rows,
+        vec![
+            couchdb::ViewRow::<String, String> {
+                id: Some("emerald".to_string()),
+                key: Some("Emerald".to_string()),
+                value: "Emerald".to_string(),
+            },
+            couchdb::ViewRow::<String, String> {
+                id: Some("nutmeg".to_string()),
+                key: Some("Nutmeg".to_string()),
+                value: "Nutmeg".to_string(),
+            },
+        ]);
+
+    // Verify: Getting a nonempty view with 'reduce' disabled succeeds.
+
+    let result = client.get_view::<String, u32>("cats", "my_design", "age")
+        .reduce(false)
+        .run().unwrap();
+    assert_eq!(2, result.total_rows);
+    assert_eq!(0, result.offset);
+    assert_eq!(
+        result.rows,
+        vec![
+            couchdb::ViewRow::<String, u32> {
+                id: Some("emerald".to_string()),
+                key: Some("Emerald".to_string()),
+                value: 6,
+            },
+            couchdb::ViewRow::<String, u32> {
+                id: Some("nutmeg".to_string()),
+                key: Some("Nutmeg".to_string()),
+                value: 7,
+            },
+        ]);
+
+    // Verify: Getting a reduced view succeeds.
+
+    let result = client.get_view::<String, u32>("cats", "my_design", "age")
+        .run().unwrap();
+    assert_eq!(0, result.total_rows);
+    assert_eq!(0, result.offset);
+    assert_eq!(
+        result.rows,
+        vec![
+            couchdb::ViewRow::<String, u32> {
+                id: None,
+                key: None,
+                value: 13,
+            },
+        ]);
+
+    // Verify: Getting a view with an explicit start-key succeeds.
+    let result = client.get_view::<String, u32>("cats", "my_design", "age")
+        .reduce(false)
+        .startkey("f".to_string())
+        .run().unwrap();
+    assert_eq!(2, result.total_rows);
+    assert_eq!(1, result.offset);
+    assert_eq!(
+        result.rows,
+        vec![
+            couchdb::ViewRow::<String, u32> {
+                id: Some("nutmeg".to_string()),
+                key: Some("Nutmeg".to_string()),
+                value: 7,
+            },
+        ]);
+
+    // Verify: Getting a view with an explicit end-key succeeds.
+    let result = client.get_view::<String, u32>("cats", "my_design", "age")
+        .reduce(false)
+        .endkey("f".to_string())
+        .run().unwrap();
+    assert_eq!(2, result.total_rows);
+    assert_eq!(0, result.offset);
+    assert_eq!(
+        result.rows,
+        vec![
+            couchdb::ViewRow::<String, u32> {
+                id: Some("emerald".to_string()),
+                key: Some("Emerald".to_string()),
+                value: 6,
+            },
+        ]);
 }

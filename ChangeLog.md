@@ -1,5 +1,9 @@
 # CouchDB-rs Change Log
 
+## v0.1.1 (in development)
+
+* Refactor integration tests.
+
 ## v0.1.0
 
 This release fixes many small problems in the API.
