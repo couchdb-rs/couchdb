@@ -1,26 +1,27 @@
 use hyper;
 
-use client;
+use client::{self, ClientState};
 use error::{self, Error};
+
+#[doc(hidden)]
+pub fn new_put_database<'a>(
+    client_state: &'a ClientState,
+    db_name: &'a str)
+    -> PutDatabase<'a>
+{
+    PutDatabase {
+        client_state: client_state,
+        db_name: db_name,
+    }
+}
 
 /// Command to create a database.
 pub struct PutDatabase<'a> {
-    client_state: &'a client::ClientState,
+    client_state: &'a ClientState,
     db_name: &'a str,
 }
 
 impl<'a> PutDatabase<'a> {
-
-    pub fn new(
-        client_state: &'a client::ClientState,
-        db_name: &'a str)
-        -> PutDatabase<'a>
-    {
-        PutDatabase {
-            client_state: client_state,
-            db_name: db_name,
-        }
-    }
 
     /// Send the command request and wait for the response.
     ///

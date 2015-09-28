@@ -3,40 +3,48 @@ use serde;
 use serde_json;
 use std;
 
-use client;
-use document::{self, Document, Revision};
-use design::Design;
+use client::{self, ClientState};
+use document::{self, Document, DocumentType, Revision};
 use error::{self, Error};
 
-/// Command to get a document.
-pub struct GetDocument<'a, T: serde::Deserialize> {
-    client_state: &'a client::ClientState,
-    uri: hyper::Url,
-    if_none_match: Option<&'a Revision>,
-    _phantom: std::marker::PhantomData<T>,
+#[doc(hidden)]
+pub fn new_get_document<'a, D, T>(
+    client_state: &'a ClientState,
+    db_name: &'a str,
+    doc_id: &'a str)
+    -> GetDocument<'a, D, T>
+    where D: DocumentType,
+          T: serde::Deserialize
+{
+    GetDocument::<'a, D, T> {
+        client_state: client_state,
+        doc_type: std::marker::PhantomData,
+        db_name: db_name,
+        doc_id: doc_id,
+        if_none_match: None,
+        _content_type: std::marker::PhantomData,
+    }
 }
 
-impl<'a, T: serde::Deserialize> GetDocument<'a, T> {
+/// Command to get a document.
+pub struct GetDocument<'a, D, T>
+    where D: DocumentType,
+          T: serde::Deserialize
+{
+    client_state: &'a ClientState,
+    doc_type: std::marker::PhantomData<D>,
+    db_name: &'a str,
+    doc_id: &'a str,
+    if_none_match: Option<&'a Revision>,
+    _content_type: std::marker::PhantomData<T>,
+}
 
-    pub fn new_db_document(
-        client_state: &'a client::ClientState,
-        db_name: &str,
-        doc_id: &str)
-        -> GetDocument<'a, T>
-    {
-        let mut u = client_state.uri.clone();
-        u.path_mut().unwrap()[0] = db_name.to_string();
-        u.path_mut().unwrap().push(doc_id.to_string());
-        GetDocument {
-            client_state: client_state,
-            uri: u,
-            if_none_match: None,
-            _phantom: std::marker::PhantomData,
-        }
-    }
-
+impl<'a, D, T> GetDocument<'a, D, T>
+    where D: DocumentType,
+          T: serde::Deserialize
+{
     /// Set the If-None-Match header.
-    pub fn if_none_match(mut self, rev: &'a Revision) -> GetDocument<'a, T> {
+    pub fn if_none_match(mut self, rev: &'a Revision) -> GetDocument<'a, D, T> {
         self.if_none_match = Some(rev);
         self
     }
@@ -59,8 +67,15 @@ impl<'a, T: serde::Deserialize> GetDocument<'a, T> {
     pub fn run(self) -> Result<Option<Document<T>>, Error> {
 
         let mut resp = {
+
             use hyper::mime::{Mime, TopLevel, SubLevel};
-            let mut req = self.client_state.http_client.get(self.uri)
+
+            let uri = document::new_uri::<D>(
+                &self.client_state.uri,
+                self.db_name,
+                self.doc_id);
+
+            let mut req = self.client_state.http_client.get(uri)
                 .header(hyper::header::Accept(vec![
                                               hyper::header::qitem(
                                                   Mime(TopLevel::Application, SubLevel::Json, vec![]))]))
@@ -105,7 +120,21 @@ impl<'a, T: serde::Deserialize> GetDocument<'a, T> {
                         let id = match dot.remove("_id") {
                             None => { return None; },
                             Some(x) => match x {
-                                serde_json::Value::String(x) => x,
+                                serde_json::Value::String(x) => {
+                                    // Must strip the "_design" or "_local"
+                                    // prefix from the returned path.
+                                    match D::uri_path_component() {
+                                        None => x,
+                                        Some(p) => {
+                                            let mut p = p.to_string();
+                                            p.push('/');
+                                            if !x.starts_with(&p) {
+                                                return None;
+                                            }
+                                            x[p.len()..].to_string()
+                                        },
+                                    }
+                                }
                                 _ => { return None; },
                             },
                         };
@@ -142,26 +171,6 @@ impl<'a, T: serde::Deserialize> GetDocument<'a, T> {
             hyper::status::StatusCode::NotFound =>
                 Err(error::new_because_not_found(&mut resp)),
             _ => Err(Error::UnexpectedHttpStatus { got: resp.status } ),
-        }
-    }
-}
-
-impl<'a> GetDocument<'a, Design> {
-    pub fn new_design_document(
-        client_state: &'a client::ClientState,
-        db_name: &str,
-        ddoc_id: &str)
-        -> GetDocument<'a, Design>
-    {
-        let mut u = client_state.uri.clone();
-        u.path_mut().unwrap()[0] = db_name.to_string();
-        u.path_mut().unwrap().push("_design".to_string());
-        u.path_mut().unwrap().push(ddoc_id.to_string());
-        GetDocument {
-            client_state: client_state,
-            uri: u,
-            if_none_match: None,
-            _phantom: std::marker::PhantomData,
         }
     }
 }

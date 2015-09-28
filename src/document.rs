@@ -1,5 +1,22 @@
+use hyper;
 use serde;
 use std;
+
+pub trait DocumentType {
+    fn uri_path_component() -> Option<&'static str>;
+}
+
+pub struct NormalDocumentType;
+
+impl DocumentType for NormalDocumentType {
+    fn uri_path_component() -> Option<&'static str> { None }
+}
+
+pub struct DesignDocumentType;
+
+impl DocumentType for DesignDocumentType {
+    fn uri_path_component() -> Option<&'static str> { Some("_design") }
+}
 
 /// Document revision.
 #[derive(Debug)]
@@ -58,6 +75,27 @@ pub struct Document<T: serde::Deserialize> {
     pub id: String,
     pub revision: Revision,
     pub content: T,
+}
+
+/// Construct a document URI.
+pub fn new_uri<D>(
+    base_uri: &hyper::Url,
+    db_name: &str,
+    doc_id: &str)
+    -> hyper::Url
+    where D: DocumentType
+{
+    let mut uri = base_uri.clone();
+    {
+        let p = uri.path_mut().unwrap();
+        p.clear();
+        p.push(db_name.to_string());
+        for c in D::uri_path_component() {
+            p.push(c.to_string());
+        }
+        p.push(doc_id.to_string());
+    }
+    uri
 }
 
 #[cfg(test)]

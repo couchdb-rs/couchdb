@@ -416,7 +416,7 @@ fn get_design_document() {
     assert_eq!(ddoc.revision, rev1);
 
     // Verify: Getting a non-existing design document fails.
-    match client.get_design_document("cats", "my_design")
+    match client.get_design_document("cats", "not_an_existing_document")
             .run()
             .unwrap_err()
     {

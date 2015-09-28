@@ -1,52 +1,40 @@
 use hyper;
+use std;
 
-use client;
-use document;
+use client::{self, ClientState};
+use document::{self, DocumentType, Revision};
 use error::{self, Error};
 
-/// Command to delete a document.
-pub struct DeleteDocument<'a> {
-    client_state: &'a client::ClientState,
-    uri: hyper::Url,
-    rev: &'a document::Revision,
+#[doc(hidden)]
+pub fn new_delete_document<'a, D>(
+    client_state: &'a ClientState,
+    db_name: &'a str,
+    doc_id: &'a str,
+    rev: &'a Revision)
+    -> DeleteDocument<'a, D>
+    where D: DocumentType
+{
+    DeleteDocument::<'a, D> {
+        client_state: client_state,
+        doc_type: std::marker::PhantomData,
+        db_name: db_name,
+        doc_id: doc_id,
+        rev: rev,
+    }
 }
 
-impl<'a> DeleteDocument<'a> {
+/// Command to delete a document.
+pub struct DeleteDocument<'a, D>
+    where D: DocumentType
+{
+    client_state: &'a client::ClientState,
+    doc_type: std::marker::PhantomData<D>,
+    db_name: &'a str,
+    doc_id: &'a str,
+    rev: &'a Revision,
+}
 
-    pub fn new_db_document(
-        client_state: &'a client::ClientState,
-        db_name: &str,
-        doc_id: &str,
-        rev: &'a document::Revision)
-        -> DeleteDocument<'a>
-    {
-        let mut u = client_state.uri.clone();
-        u.path_mut().unwrap()[0] = db_name.to_string();
-        u.path_mut().unwrap().push(doc_id.to_string());
-        DeleteDocument {
-            client_state: client_state,
-            uri: u,
-            rev: rev,
-        }
-    }
-
-    pub fn new_design_document(
-        client_state: &'a client::ClientState,
-        db_name: &str,
-        ddoc_id: &str,
-        rev: &'a document::Revision)
-        -> DeleteDocument<'a>
-    {
-        let mut u = client_state.uri.clone();
-        u.path_mut().unwrap()[0] = db_name.to_string();
-        u.path_mut().unwrap().push("_design".to_string());
-        u.path_mut().unwrap().push(ddoc_id.to_string());
-        DeleteDocument {
-            client_state: client_state,
-            uri: u,
-            rev: rev,
-        }
-    }
+impl<'a, D> DeleteDocument<'a, D> where D: DocumentType {
 
     /// Send the command request and wait for the response.
     ///
@@ -63,7 +51,11 @@ impl<'a> DeleteDocument<'a> {
 
         let mut resp = {
             use hyper::mime::{Mime, TopLevel, SubLevel};
-            let mut req = self.client_state.http_client.delete(self.uri)
+            let uri = document::new_uri::<D>(
+                &self.client_state.uri,
+                self.db_name,
+                self.doc_id);
+            let mut req = self.client_state.http_client.delete(uri)
                     .header(hyper::header::Accept(vec![
                         hyper::header::qitem(
                             Mime(TopLevel::Application, SubLevel::Json, vec![]))]));

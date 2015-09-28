@@ -2,28 +2,29 @@ use hyper;
 use serde_json;
 use std;
 
-use client;
+use client::{self, ClientState};
 use database::Database;
 use error::{self, Error};
 
+#[doc(hidden)]
+pub fn new_get_database<'a>(
+    client_state: &'a ClientState,
+    db_name: &'a str)
+    -> GetDatabase<'a>
+{
+    GetDatabase {
+        client_state: client_state,
+        db_name: db_name,
+    }
+}
+
 /// Command to get a database.
 pub struct GetDatabase<'a> {
-    client_state: &'a client::ClientState,
+    client_state: &'a ClientState,
     db_name: &'a str,
 }
 
 impl<'a> GetDatabase<'a> {
-
-    pub fn new(
-        client_state: &'a client::ClientState,
-        db_name: &'a str)
-        -> GetDatabase<'a>
-    {
-        GetDatabase {
-            client_state: client_state,
-            db_name: db_name,
-        }
-    }
 
     /// Send the command request and wait for the response.
     ///

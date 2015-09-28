@@ -3,41 +3,49 @@ use serde;
 use serde_json;
 use std;
 
-use client;
-use design::Design;
-use document::{self, Revision};
+use client::{self, ClientState};
+use document::{self, DocumentType, Revision};
 use error::{self, Error};
 
+#[doc(hidden)]
+pub fn new_put_document<'a, D, T>(
+    client_state: &'a ClientState,
+    db_name: &'a str,
+    doc_id: &'a str,
+    doc_content: &'a T)
+    -> PutDocument<'a, D, T>
+    where D: DocumentType,
+          T: serde::Serialize
+{
+    PutDocument::<'a, D, T> {
+        client_state: client_state,
+        doc_type: std::marker::PhantomData,
+        db_name: db_name,
+        doc_id: doc_id,
+        doc_content: doc_content,
+        if_match: None,
+    }
+}
+
 /// Command to create a document.
-pub struct PutDocument<'a, T: 'a + serde::Serialize> {
-    client_state: &'a client::ClientState,
-    uri: hyper::Url,
+pub struct PutDocument<'a, D, T>
+    where D: DocumentType,
+          T: 'a + serde::Serialize
+{
+    client_state: &'a ClientState,
+    doc_type: std::marker::PhantomData<D>,
+    db_name: &'a str,
+    doc_id: &'a str,
     doc_content: &'a T,
     if_match: Option<&'a Revision>,
 }
 
-impl<'a, T: 'a + serde::Serialize> PutDocument<'a, T> {
-
-    pub fn new_db_document(
-        client_state: &'a client::ClientState,
-        db_name: &str,
-        doc_id: &str,
-        doc_content: &'a T)
-        -> PutDocument<'a, T>
-    {
-        let mut u = client_state.uri.clone();
-        u.path_mut().unwrap()[0] = db_name.to_string();
-        u.path_mut().unwrap().push(doc_id.to_string());
-        PutDocument {
-            client_state: client_state,
-            uri: u,
-            doc_content: doc_content,
-            if_match: None,
-        }
-    }
-
+impl<'a, D, T> PutDocument<'a, D, T>
+    where D: DocumentType,
+          T: 'a + serde::Serialize
+{
     /// Set the If-Match header.
-    pub fn if_match(mut self, rev: &'a Revision) -> PutDocument<'a, T> {
+    pub fn if_match(mut self, rev: &'a Revision) -> PutDocument<'a, D, T> {
         self.if_match = Some(rev);
         self
     }
@@ -68,7 +76,11 @@ impl<'a, T: 'a + serde::Serialize> PutDocument<'a, T> {
 
         let mut resp = {
             use hyper::mime::{Mime, TopLevel, SubLevel};
-            let mut req = self.client_state.http_client.put(self.uri)
+            let uri = document::new_uri::<D>(
+                &self.client_state.uri,
+                self.db_name,
+                self.doc_id);
+            let mut req = self.client_state.http_client.put(uri)
                 .header(hyper::header::Accept(
                         vec![hyper::header::qitem(
                             Mime(TopLevel::Application, SubLevel::Json, vec![]))]))
@@ -126,27 +138,6 @@ impl<'a, T: 'a + serde::Serialize> PutDocument<'a, T> {
             hyper::status::StatusCode::Conflict =>
                 Err(error::new_because_document_conflict(&mut resp)),
             _ => Err(Error::UnexpectedHttpStatus{ got: resp.status } ),
-        }
-    }
-}
-
-impl<'a> PutDocument<'a, Design> {
-    pub fn new_design_document(
-        client_state: &'a client::ClientState,
-        db_name: &str,
-        ddoc_id: &str,
-        ddoc_content: &'a Design)
-        -> PutDocument<'a, Design>
-    {
-        let mut u = client_state.uri.clone();
-        u.path_mut().unwrap()[0] = db_name.to_string();
-        u.path_mut().unwrap().push("_design".to_string());
-        u.path_mut().unwrap().push(ddoc_id.to_string());
-        PutDocument {
-            client_state: client_state,
-            uri: u,
-            doc_content: ddoc_content,
-            if_match: None,
         }
     }
 }

@@ -3,17 +3,42 @@ use serde;
 use serde_json;
 use std;
 
-use client;
+use client::{self, ClientState};
 use design::{ViewResult, ViewRow};
 use error::{self, Error};
+
+#[doc(hidden)]
+pub fn new_get_view<'a, K, V>(
+    client_state: &'a ClientState,
+    db_name: &'a str,
+    ddoc_id: &'a str,
+    view_name: &'a str)
+    -> GetView<'a, K, V>
+    where K: serde::Deserialize,
+          V: serde::Deserialize
+{
+    GetView {
+        client_state: client_state,
+        db_name: db_name,
+        ddoc_id: ddoc_id,
+        view_name: view_name,
+        reduce: None,
+        endkey: None,
+        startkey: None,
+        _phantom_key: std::marker::PhantomData,
+        _phantom_value: std::marker::PhantomData,
+    }
+}
 
 /// Command to run a view.
 pub struct GetView<'a, K, V> where
     K: serde::Deserialize,
     V: serde::Deserialize
 {
-    client_state: &'a client::ClientState,
-    uri: hyper::Url,
+    client_state: &'a ClientState,
+    db_name: &'a str,
+    ddoc_id: &'a str,
+    view_name: &'a str,
 
     reduce: Option<bool>,
     endkey: Option<K>,
@@ -27,30 +52,6 @@ impl<'a, K, V> GetView<'a, K, V> where
     K: serde::Deserialize + serde::Serialize, // serialize needed for endkey and startkey
     V: serde::Deserialize
 {
-    pub fn new(
-        client_state: &'a client::ClientState,
-        db_name: &str,
-        ddoc_id: &str,
-        view_name: &str)
-        -> GetView<'a, K, V>
-    {
-        let mut u = client_state.uri.clone();
-        u.path_mut().unwrap()[0] = db_name.to_string();
-        u.path_mut().unwrap().push("_design".to_string());
-        u.path_mut().unwrap().push(ddoc_id.to_string());
-        u.path_mut().unwrap().push("_view".to_string());
-        u.path_mut().unwrap().push(view_name.to_string());
-        GetView {
-            client_state: client_state,
-            uri: u,
-            reduce: None,
-            endkey: None,
-            startkey: None,
-            _phantom_key: std::marker::PhantomData,
-            _phantom_value: std::marker::PhantomData,
-        }
-    }
-
     pub fn reduce(mut self, v: bool) -> Self {
         self.reduce = Some(v);
         self
@@ -81,7 +82,17 @@ impl<'a, K, V> GetView<'a, K, V> where
     ///
     pub fn run(self) -> Result<ViewResult<K, V>, Error>
     {
-        let mut uri = self.uri;
+        let mut uri = self.client_state.uri.clone();
+        {
+            let mut p = uri.path_mut().unwrap();
+            p.clear();
+            p.push(self.db_name.to_string());
+            p.push("_design".to_string());
+            p.push(self.ddoc_id.to_string());
+            p.push("_view".to_string());
+            p.push(self.view_name.to_string());
+        }
+
         {
             let mut query_pairs = Vec::<(&'static str, String)>::new();
             if self.reduce.is_some() {

@@ -4,7 +4,10 @@ use serde_json;
 
 use command;
 use design::Design;
-use document::Revision;
+use document::{
+    DesignDocumentType,
+    NormalDocumentType,
+    Revision};
 use error::{self, Error};
 
 /// Trait for converting some types into a URI.
@@ -55,7 +58,7 @@ impl<'a> Client {
 
     /// Build a command to GET all database names.
     pub fn get_all_databases(&'a self) -> command::GetAllDatabases<'a> {
-        command::GetAllDatabases::new(&self.state)
+        command::new_get_all_databases(&self.state)
     }
 
     /// Build a command to HEAD a database.
@@ -64,7 +67,7 @@ impl<'a> Client {
         db_name: &'a str)
         -> command::HeadDatabase<'a>
     {
-        command::HeadDatabase::new(&self.state, db_name)
+        command::new_head_database(&self.state, db_name)
     }
 
     /// Build a command to GET a database.
@@ -73,7 +76,7 @@ impl<'a> Client {
         db_name: &'a str)
         -> command::GetDatabase<'a>
     {
-        command::GetDatabase::new(&self.state, db_name)
+        command::new_get_database(&self.state, db_name)
     }
 
     /// Build a command to PUT a database.
@@ -82,7 +85,7 @@ impl<'a> Client {
         db_name: &'a str)
         -> command::PutDatabase<'a>
     {
-        command::PutDatabase::new(&self.state, db_name)
+        command::new_put_database(&self.state, db_name)
     }
 
     /// Build a command to DELETE a database.
@@ -91,98 +94,134 @@ impl<'a> Client {
         db_name: &'a str)
         -> command::DeleteDatabase<'a>
     {
-        command::DeleteDatabase::new(&self.state, db_name)
+        command::new_delete_database(&self.state, db_name)
     }
 
     /// Build a command to HEAD a document.
-    pub fn head_document(&'a self,
-                         db_name: &str,
-                         doc_id: &str)
-                         -> command::HeadDocument<'a> {
-        command::HeadDocument::new_db_document(&self.state, db_name, doc_id)
+    pub fn head_document(
+        &'a self,
+        db_name: &'a str,
+        doc_id: &'a str)
+        -> command::HeadDocument<'a, NormalDocumentType>
+    {
+        command::new_head_document::<NormalDocumentType>(
+            &self.state,
+            db_name,
+            doc_id)
     }
 
     /// Build a command to GET a document.
-    pub fn get_document<T: serde::Deserialize>(
-                        &'a self,
-                        db_name: &str,
-                        doc_id: &str)
-                        -> command::GetDocument<'a, T> {
-        command::GetDocument::new_db_document(&self.state, db_name, doc_id)
+    pub fn get_document<
+        T: serde::Deserialize>(
+            &'a self,
+            db_name: &'a str,
+            doc_id: &'a str)
+        -> command::GetDocument<'a, NormalDocumentType, T>
+    {
+        command::new_get_document::<NormalDocumentType, T>(
+            &self.state,
+            db_name,
+            doc_id)
     }
 
     /// Build a command to PUT a document.
     pub fn put_document<
         T: serde::Serialize>(
-        &'a self,
-        db_name: &str,
-        doc_id: &str,
-        doc_content: &'a T)
-        -> command::PutDocument<'a, T>
+            &'a self,
+            db_name: &'a str,
+            doc_id: &'a str,
+            doc_content: &'a T)
+        -> command::PutDocument<'a, NormalDocumentType, T>
     {
-        command::PutDocument::new_db_document(&self.state, db_name, doc_id, doc_content)
+        command::new_put_document::<NormalDocumentType, T>(
+            &self.state,
+            db_name,
+            doc_id,
+            doc_content)
     }
 
     /// Build a command to DELETE a document.
     pub fn delete_document(
         &'a self,
-        db_name: &str,
-        doc_id: &str,
+        db_name: &'a str,
+        doc_id: &'a str,
         rev: &'a Revision)
-        -> command::DeleteDocument<'a>
+        -> command::DeleteDocument<'a, NormalDocumentType>
     {
-        command::DeleteDocument::new_db_document(&self.state, db_name, doc_id, rev)
+        command::new_delete_document::<NormalDocumentType>(
+            &self.state,
+            db_name,
+            doc_id,
+            rev)
     }
 
     /// Build a command to HEAD a design document.
-    pub fn head_design_document(&'a self,
-                                db_name: &str,
-                                ddoc_id: &str)
-                                -> command::HeadDocument<'a> {
-        command::HeadDocument::new_design_document(&self.state, db_name, ddoc_id)
+    pub fn head_design_document(
+        &'a self,
+        db_name: &'a str,
+        ddoc_id: &'a str)
+        -> command::HeadDocument<'a, DesignDocumentType>
+    {
+        command::new_head_document::<DesignDocumentType>(
+            &self.state,
+            db_name,
+            ddoc_id)
     }
 
     /// Build a command to GET a design document.
-    pub fn get_design_document(&'a self,
-                               db_name: &str,
-                               ddoc_id: &str)
-                               -> command::GetDocument<'a, Design> {
-        command::GetDocument::new_design_document(&self.state, db_name, ddoc_id)
+    pub fn get_design_document(
+        &'a self,
+        db_name: &'a str,
+        ddoc_id: &'a str)
+        -> command::GetDocument<'a, DesignDocumentType, Design>
+    {
+        command::new_get_document::<DesignDocumentType, Design>(
+            &self.state,
+            db_name,
+            ddoc_id)
     }
 
     /// Build a command to PUT a design document.
     pub fn put_design_document(
         &'a self,
-        db_name: &str,
-        ddoc_id: &str,
+        db_name: &'a str,
+        ddoc_id: &'a str,
         ddoc_content: &'a Design)
-        -> command::PutDocument<'a, Design>
+        -> command::PutDocument<'a, DesignDocumentType, Design>
     {
-        command::PutDocument::new_design_document(&self.state, db_name, ddoc_id, ddoc_content)
+        command::new_put_document::<DesignDocumentType, Design>(
+            &self.state,
+            db_name,
+            ddoc_id,
+            ddoc_content)
     }
 
     /// Build a command to DELETE a design document.
     pub fn delete_design_document(
         &'a self,
-        db_name: &str,
-        ddoc_id: &str,
+        db_name: &'a str,
+        ddoc_id: &'a str,
         rev: &'a Revision)
-        -> command::DeleteDocument<'a>
+        -> command::DeleteDocument<'a, DesignDocumentType>
     {
-        command::DeleteDocument::new_design_document(&self.state, db_name, ddoc_id, rev)
+        command::new_delete_document::<DesignDocumentType>(
+            &self.state,
+            db_name,
+            ddoc_id,
+            rev)
     }
 
     /// Build a command to GET a view.
     pub fn get_view<K, V>(
         &'a self,
-        db_name: &str,
-        ddoc_id: &str,
-        view_name: &str)
-        -> command::GetView<'a, K, V> where
-        K: serde::Deserialize + serde::Serialize,
-        V: serde::Deserialize
+        db_name: &'a str,
+        ddoc_id: &'a str,
+        view_name: &'a str)
+        -> command::GetView<'a, K, V>
+        where K: serde::Deserialize + serde::Serialize,
+              V: serde::Deserialize
     {
-        command::GetView::new(&self.state, db_name, ddoc_id, view_name)
+        command::new_get_view(&self.state, db_name, ddoc_id, view_name)
     }
 }
 

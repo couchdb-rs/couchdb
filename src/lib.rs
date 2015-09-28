@@ -144,16 +144,14 @@ mod document;
 mod error;
 mod server;
 
-pub use client::Client;
-pub use client::IntoUrl;
+pub use client::{Client, IntoUrl};
 pub use database::Database;
-pub use design::Design;
-pub use design::ViewFunction;
-pub use design::ViewFunctionMap;
-pub use design::ViewResult;
-pub use design::ViewRow;
-pub use document::Document;
-pub use document::Revision;
-pub use error::Error;
-pub use error::ErrorResponse;
+pub use design::{
+    Design,
+    ViewFunction,
+    ViewFunctionMap,
+    ViewResult,
+    ViewRow};
+pub use document::{Document, Revision};
+pub use error::{Error, ErrorResponse};
 pub use server::Server;

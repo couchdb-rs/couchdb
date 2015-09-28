@@ -1,53 +1,50 @@
-use client;
 use hyper;
+use std;
 
-use document::Revision;
+use client::ClientState;
+use document::{
+    self,
+    DocumentType,
+    Revision};
 use error::{self, Error};
 
+#[doc(hidden)]
+pub fn new_head_document<'a, D>(
+    client_state: &'a ClientState,
+    db_name: &'a str,
+    doc_id: &'a str)
+    -> HeadDocument<'a, D>
+    where D: DocumentType
+{
+    HeadDocument {
+        client_state: client_state,
+        doc_type: std::marker::PhantomData,
+        db_name: db_name,
+        doc_id: doc_id,
+        if_none_match: None,
+    }
+}
+
 /// Command to get document meta-information.
-pub struct HeadDocument<'a> {
-    client_state: &'a client::ClientState,
-    uri: hyper::Url,
+pub struct HeadDocument<'a, D>
+    where D: DocumentType
+{
+    client_state: &'a ClientState,
+    doc_type: std::marker::PhantomData<D>,
+    db_name: &'a str,
+    doc_id: &'a str,
     if_none_match: Option<&'a Revision>,
 }
 
-impl<'a> HeadDocument<'a> {
-
-    pub fn new_db_document(
-        client_state: &'a client::ClientState,
-        db_name: &str,
-        doc_id: &str)
-        -> HeadDocument<'a>
-    {
-        let mut u = client_state.uri.clone();
-        u.path_mut().unwrap()[0] = db_name.to_string();
-        u.path_mut().unwrap().push(doc_id.to_string());
-        HeadDocument {
-            client_state: client_state,
-            uri: u,
-            if_none_match: None,
-        }
-    }
-
-    pub fn new_design_document(
-        client_state: &'a client::ClientState,
-        db_name: &str,
-        ddoc_id: &str)
-        -> HeadDocument<'a>
-    {
-        let mut u = client_state.uri.clone();
-        u.path_mut().unwrap()[0] = db_name.to_string();
-        u.path_mut().unwrap().push("_design".to_string());
-        u.path_mut().unwrap().push(ddoc_id.to_string());
-        HeadDocument {
-            client_state: client_state,
-            uri: u,
-            if_none_match: None,
-        }
-    }
+impl<'a, D> HeadDocument<'a, D> where D: DocumentType {
 
     /// Set the If-None-Match header.
-    pub fn if_none_match(mut self, rev: &'a Revision) -> HeadDocument<'a> {
+    pub fn if_none_match(
+        mut self,
+        rev: &'a Revision)
+        -> HeadDocument<'a, D>
+        where D: DocumentType
+    {
         self.if_none_match = Some(rev);
         self
     }
@@ -69,7 +66,13 @@ impl<'a> HeadDocument<'a> {
     pub fn run(self) -> Result<Option<()>, Error> {
 
         let mut resp = {
-            let mut req = self.client_state.http_client.head(self.uri);
+
+            let uri = document::new_uri::<D>(
+                &self.client_state.uri,
+                self.db_name,
+                self.doc_id);
+
+            let mut req = self.client_state.http_client.head(uri);
             if self.if_none_match.is_some() {
                 req = req.header(
                     hyper::header::IfNoneMatch::Items(

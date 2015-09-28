@@ -1,20 +1,21 @@
 use hyper;
 
-use client;
+use client::{self, ClientState};
 use error::{self, Error};
+
+#[doc(hidden)]
+pub fn new_get_all_databases(client_state: &ClientState) -> GetAllDatabases {
+    GetAllDatabases {
+        client_state: client_state,
+    }
+}
 
 /// Command to get all database names.
 pub struct GetAllDatabases<'a> {
-    client_state: &'a client::ClientState,
+    client_state: &'a ClientState,
 }
 
 impl<'a> GetAllDatabases<'a> {
-
-    pub fn new(client_state: &client::ClientState) -> GetAllDatabases {
-        GetAllDatabases {
-            client_state: client_state,
-        }
-    }
 
     /// Send the command request and wait for the response.
     ///
