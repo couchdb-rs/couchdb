@@ -79,11 +79,7 @@ impl Server {
 
         let mut process = AutoKillProcess(
             try!(
-                std::process::Command::new("couchdb")
-                .arg("-a")
-                .arg("couchdb.conf")
-                .current_dir(tmp_root.path())
-                .stdout(std::process::Stdio::piped())
+                new_test_server_command(&tmp_root)
                 .spawn()
                 .or_else(|e| {
                     Err(Error::Io {
@@ -152,4 +148,37 @@ impl Server {
     pub fn uri(&self) -> &str {
         &self.uri
     }
+}
+
+#[cfg(any(windows))]
+fn new_test_server_command(tmp_root: &tempdir::TempDir)
+    -> std::process::Command
+{
+    // Getting a one-shot CouchDB server running on Windows is tricky:
+    // http://stackoverflow.com/questions/11812365/how-to-use-a-custom-couch-ini-on-windows
+    //
+    // TODO: Support CouchDB being installed in a non-default directory.
+
+    let mut c = std::process::Command::new("erl");
+    c.arg("-couch_ini");
+    c.arg("c:/program files (x86)/apache software foundation/couchdb/etc/couchdb/default.ini");
+    c.arg("c:/program files (x86)/apache software foundation/couchdb/etc/couchdb/local.ini");
+    c.arg("couchdb.conf");
+    c.arg("-s");
+    c.arg("couch");
+    c.current_dir(tmp_root.path());
+    c.stdout(std::process::Stdio::piped());
+    c
+}
+
+#[cfg(any(not(windows)))]
+fn new_test_server_command(tmp_root: &tempdir::TempDir)
+    -> std::process::Command
+{
+    let mut c = std::process::Command::new("couchdb");
+    c.arg("-a");
+    c.arg("couchdb.conf");
+    c.current_dir(tmp_root.path());
+    c.stdout(std::process::Stdio::piped());
+    c
 }
