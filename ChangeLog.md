@@ -1,27 +1,31 @@
 # CouchDB-rs Change Log
 
-## v0.2.0 (in development)
+## v0.2.0
 
-Backwards-incompatible API changes:
+This release fixes a few small problems in the API, as well as
+refactoring a lot of code to make it easier to add support for covering
+more CouchDB commands.
 
-* Command-construction methods of the `Client` type now bind the
-  lifetime of the returned command to the lifetimes of all `&str`
-  arguments.
+API changes:
 
-Fixes:
-
-* Strip `"_design/"` from document id for `GetDesignDocument` command.
+* Command-construction methods (e.g., `put_document`, `get_database`,
+	etc.) now bind the lifetime of the returned command to the lifetimes
+  of all `&str` arguments.
 
 Other changes:
 
+* Fix `GetDesignDocument` to strip `"_design/"` from document id.
 * Refactor integration tests.
+	* Separate integration test into separate test cases, one for each
+	  CouchDB command.
+  * Add support for running on Windows. (See issue #8.)
 * New `Command` trait to simplify command implementations.
 
 ## v0.1.0
 
 This release fixes many small problems in the API.
 
-Backwards-incompatible API changes:
+API changes:
 
 * Improve `Revision` type-safety:
 	* Remove `as_str` method and instead implement the `AsRef<str>` trait.
@@ -31,8 +35,7 @@ Backwards-incompatible API changes:
 		now may only construct revisions via the API, e.g., getting a
     document.
 * New `ViewFunctionMap` collection type.
-* The `views` member of the `DesignDocument` struct is now publicly
-  accessible.
+* Make public the `views` member of the `DesignDocument` struct.
 * New `IntoUrl` trait to alias the trait of the same name from the hyper
   crate.
 * Rename `ServerErrorResponse` to `ErrorResponse` and use the type
