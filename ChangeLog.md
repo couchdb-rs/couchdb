@@ -1,5 +1,9 @@
 # CouchDB-rs Change Log
 
+## v0.2.1 (in development)
+
+(nothing yet!)
+
 ## v0.2.0
 
 This release fixes a few small problems in the API, as well as
