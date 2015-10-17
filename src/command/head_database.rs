@@ -1,7 +1,9 @@
 use hyper;
 
 use client::ClientState;
-use error::{self, Error};
+use database;
+use error::Error;
+use transport::{self, Command, Request};
 
 #[doc(hidden)]
 pub fn new_head_database<'a>(
@@ -32,17 +34,22 @@ impl<'a> HeadDatabase<'a> {
     /// * `Error::NotFound`: The database does not exist.
     ///
     pub fn run(self) -> Result<(), Error> {
-        let resp = {
-            let mut u = self.client_state.uri.clone();
-            u.path_mut().unwrap()[0] = self.db_name.to_string();
-            try!(
-                self.client_state.http_client.head(u)
-                .send()
-                .or_else(|e| {
-                    Err(Error::Transport { cause: error::TransportCause::Hyper(e) } )
-                })
-            )
-        };
+        transport::run_command(self)
+    }
+}
+
+impl<'a> Command for HeadDatabase<'a> {
+
+    type Output = ();
+
+    fn make_request(self) -> Result<Request, Error> {
+        let uri = database::new_uri(&self.client_state.uri, self.db_name);
+        Request::new(hyper::Head, uri)
+    }
+
+    fn take_response(resp: hyper::client::Response)
+        -> Result<Self::Output, Error>
+    {
         match resp.status {
             hyper::status::StatusCode::Ok => Ok(()),
             hyper::status::StatusCode::NotFound =>
@@ -51,5 +58,3 @@ impl<'a> HeadDatabase<'a> {
         }
     }
 }
-
-

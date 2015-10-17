@@ -3,8 +3,9 @@ use serde_json;
 use std;
 
 use client::{self, ClientState};
-use database::Database;
+use database::{self, Database};
 use error::{self, Error};
+use transport::{self, Command, Request};
 
 #[doc(hidden)]
 pub fn new_get_database<'a>(
@@ -35,23 +36,24 @@ impl<'a> GetDatabase<'a> {
     /// * `Error::NotFound`: The database does not exist.
     ///
     pub fn run(self) -> Result<Database, Error> {
+        transport::run_command(self)
+    }
+}
 
-        let mut resp = {
-            use hyper::mime::{Mime, TopLevel, SubLevel};
-            let mut u = self.client_state.uri.clone();
-            u.path_mut().unwrap()[0] = self.db_name.to_string();
-            try!(
-                self.client_state.http_client.get(u)
-                .header(hyper::header::Accept(vec![
-                    hyper::header::qitem(
-                        Mime(TopLevel::Application, SubLevel::Json, vec![]))]))
-                .send()
-                .or_else(|e| {
-                    Err(Error::Transport { cause: error::TransportCause::Hyper(e) } )
-                })
-            )
-        };
+impl<'a> Command for GetDatabase<'a> {
 
+    type Output = Database;
+
+    fn make_request(self) -> Result<Request, Error> {
+        let uri = database::new_uri(&self.client_state.uri, self.db_name);
+        let req = try!(Request::new(hyper::Get, uri))
+            .accept_application_json();
+        Ok(req)
+    }
+
+    fn take_response(mut resp: hyper::client::Response)
+        -> Result<Self::Output, Error>
+    {
         match resp.status {
             hyper::status::StatusCode::Ok => {
                 let s = try!(client::read_json_response(&mut resp));

@@ -4,6 +4,7 @@ use std;
 use client::{self, ClientState};
 use document::{self, DocumentType, Revision};
 use error::{self, Error};
+use transport::{self, Command, Request};
 
 #[doc(hidden)]
 pub fn new_delete_document<'a, D>(
@@ -48,34 +49,28 @@ impl<'a, D> DeleteDocument<'a, D> where D: DocumentType {
     /// * `Error::Unauthorized`: The client is unauthorized.
     ///
     pub fn run(self) -> Result<(), Error> {
+        transport::run_command(self)
+    }
+}
 
-        let mut resp = {
-            use hyper::mime::{Mime, TopLevel, SubLevel};
-            let uri = document::new_uri::<D>(
-                &self.client_state.uri,
-                self.db_name,
-                self.doc_id);
-            let mut req = self.client_state.http_client.delete(uri)
-                    .header(hyper::header::Accept(vec![
-                        hyper::header::qitem(
-                            Mime(TopLevel::Application, SubLevel::Json, vec![]))]));
-            req = req.header(
-                hyper::header::IfMatch::Items(
-                    vec![
-                        hyper::header::EntityTag::new(
-                            false,
-                            self.rev.to_string())
-                    ]
-                )
-            );
-            try!(
-                req.send()
-                .or_else(|e| {
-                    Err(Error::Transport { cause: error::TransportCause::Hyper(e) })
-                })
-            )
-        };
+impl<'a, D> Command for DeleteDocument<'a, D> where D: DocumentType {
 
+    type Output = ();
+
+    fn make_request(self) -> Result<Request, Error> {
+        let uri = document::new_uri::<D>(
+            &self.client_state.uri,
+            self.db_name,
+            self.doc_id);
+        let req = try!(Request::new(hyper::Delete, uri))
+            .accept_application_json()
+            .if_match_revision(Some(self.rev));
+        Ok(req)
+    }
+
+    fn take_response(mut resp: hyper::client::Response)
+        -> Result<Self::Output, Error>
+    {
         match resp.status {
             hyper::status::StatusCode::Ok =>
                 Ok(try!(client::require_content_type_application_json(&resp.headers))),
@@ -91,4 +86,3 @@ impl<'a, D> DeleteDocument<'a, D> where D: DocumentType {
         }
     }
 }
-

@@ -1,7 +1,9 @@
 use hyper;
 
 use client::{self, ClientState};
+use database;
 use error::{self, Error};
+use transport::{self, Command, Request};
 
 #[doc(hidden)]
 pub fn new_delete_database<'a>(
@@ -33,25 +35,24 @@ impl<'a> DeleteDatabase<'a> {
     /// * `Error::Unauthorized`: The client is unauthorized.
     ///
     pub fn run(self) -> Result<(), Error> {
+        transport::run_command(self)
+    }
+}
 
-        let mut resp = {
-            use hyper::mime::{Mime, TopLevel, SubLevel};
-            let mut u = self.client_state.uri.clone();
-            u.path_mut().unwrap()[0] = self.db_name.to_string();
-            try!(
-                self.client_state.http_client.delete(u)
-                .header(hyper::header::Accept(vec![
-                    hyper::header::qitem(
-                        Mime(TopLevel::Application, SubLevel::Json, vec![]))]))
-                .send()
-                .or_else(|e| {
-                    Err(Error::Transport {
-                        cause: error::TransportCause::Hyper(e),
-                    })
-                })
-            )
-        };
+impl<'a> Command for DeleteDatabase<'a> {
 
+    type Output = ();
+
+    fn make_request(self) -> Result<Request, Error> {
+        let uri = database::new_uri(&self.client_state.uri, self.db_name);
+        let req = try!(Request::new(hyper::Delete, uri))
+            .accept_application_json();
+        Ok(req)
+    }
+
+    fn take_response(mut resp: hyper::client::Response)
+        -> Result<Self::Output, Error>
+    {
         match resp.status {
             hyper::status::StatusCode::Ok =>
                 Ok(try!(client::require_content_type_application_json(&resp.headers))),

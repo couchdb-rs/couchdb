@@ -6,6 +6,7 @@ use std;
 use client::{self, ClientState};
 use design::{ViewResult, ViewRow};
 use error::{self, Error};
+use transport::{self, Command, Request};
 
 #[doc(hidden)]
 pub fn new_get_view<'a, K, V>(
@@ -32,7 +33,7 @@ pub fn new_get_view<'a, K, V>(
 
 /// Command to run a view.
 pub struct GetView<'a, K, V> where
-    K: serde::Deserialize,
+    K: serde::Deserialize, // serialize needed for endkey and startkey
     V: serde::Deserialize
 {
     client_state: &'a ClientState,
@@ -49,7 +50,7 @@ pub struct GetView<'a, K, V> where
 }
 
 impl<'a, K, V> GetView<'a, K, V> where
-    K: serde::Deserialize + serde::Serialize, // serialize needed for endkey and startkey
+    K: serde::Deserialize + serde::Serialize,
     V: serde::Deserialize
 {
     pub fn reduce(mut self, v: bool) -> Self {
@@ -82,61 +83,72 @@ impl<'a, K, V> GetView<'a, K, V> where
     ///
     pub fn run(self) -> Result<ViewResult<K, V>, Error>
     {
-        let mut uri = self.client_state.uri.clone();
-        {
-            let mut p = uri.path_mut().unwrap();
-            p.clear();
-            p.push(self.db_name.to_string());
-            p.push("_design".to_string());
-            p.push(self.ddoc_id.to_string());
-            p.push("_view".to_string());
-            p.push(self.view_name.to_string());
-        }
+        transport::run_command(self)
+    }
+}
 
-        {
-            let mut query_pairs = Vec::<(&'static str, String)>::new();
-            if self.reduce.is_some() {
-                match self.reduce.unwrap() {
-                    true => query_pairs.push(("reduce", "true".to_string())),
-                    false => query_pairs.push(("reduce", "false".to_string())),
-                };
-            }
-            if self.startkey.is_some() {
-                let x = try!(
-                    serde_json::to_string(&self.startkey.unwrap())
-                    .or_else(|e| { Err(Error::Encode{ cause: e }) }));
-                query_pairs.push(("startkey", x));
-            }
-            if self.endkey.is_some() {
-                let x = try!(
-                    serde_json::to_string(&self.endkey.unwrap())
-                    .or_else(|e| { Err(Error::Encode { cause: e } ) }));
-                query_pairs.push(("endkey", x));
-            }
-            uri.set_query_from_pairs(
-                query_pairs.iter()
-                .map(|&(k, ref v)| {
-                    let x: (&str, &str) = (k, v);
-                    x
-                })
-            );
-        }
+impl<'a, K, V> Command for GetView<'a, K, V> where
+    K: serde::Deserialize + serde::Serialize,
+    V: serde::Deserialize
+{
+    type Output = ViewResult<K, V>;
 
-        let mut resp = {
-            use hyper::mime::{Mime, TopLevel, SubLevel};
-            let req = self.client_state.http_client.get(uri)
-                .header(hyper::header::Accept(vec![
-                                              hyper::header::qitem(
-                                                  Mime(TopLevel::Application, SubLevel::Json, vec![]))]))
-                ;
-            try!(
-                req.send()
-                .or_else(|e| {
-                    Err(Error::Transport { cause: error::TransportCause::Hyper(e) } )
-                })
-            )
+    fn make_request(self) -> Result<Request, Error> {
+
+        let uri = {
+
+            let mut uri = self.client_state.uri.clone();
+
+            {
+                let mut p = uri.path_mut().unwrap();
+                p.clear();
+                p.push(self.db_name.to_string());
+                p.push("_design".to_string());
+                p.push(self.ddoc_id.to_string());
+                p.push("_view".to_string());
+                p.push(self.view_name.to_string());
+            }
+
+            {
+                let mut query_pairs = Vec::<(&'static str, String)>::new();
+                if self.reduce.is_some() {
+                    match self.reduce.unwrap() {
+                        true => query_pairs.push(("reduce", "true".to_string())),
+                        false => query_pairs.push(("reduce", "false".to_string())),
+                    };
+                }
+                if self.startkey.is_some() {
+                    let x = try!(
+                        serde_json::to_string(&self.startkey.unwrap())
+                        .or_else(|e| { Err(Error::Encode{ cause: e }) }));
+                    query_pairs.push(("startkey", x));
+                }
+                if self.endkey.is_some() {
+                    let x = try!(
+                        serde_json::to_string(&self.endkey.unwrap())
+                        .or_else(|e| { Err(Error::Encode { cause: e } ) }));
+                    query_pairs.push(("endkey", x));
+                }
+                uri.set_query_from_pairs(
+                    query_pairs.iter()
+                    .map(|&(k, ref v)| {
+                        let x: (&str, &str) = (k, v);
+                        x
+                    })
+                );
+            }
+
+            uri
         };
 
+        let req = try!(Request::new(hyper::Get, uri))
+            .accept_application_json();
+        Ok(req)
+    }
+
+    fn take_response(mut resp: hyper::client::Response)
+        -> Result<Self::Output, Error>
+    {
         match resp.status {
             hyper::status::StatusCode::Ok => {
                 let s = try!(client::read_json_response(&mut resp));

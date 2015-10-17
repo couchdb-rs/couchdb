@@ -6,6 +6,7 @@ use std;
 use client::{self, ClientState};
 use document::{self, DocumentType, Revision};
 use error::{self, Error};
+use transport::{self, Command, Request};
 
 #[doc(hidden)]
 pub fn new_put_document<'a, D, T>(
@@ -66,46 +67,38 @@ impl<'a, D, T> PutDocument<'a, D, T>
     /// * `Error::Unauthorized`: The client is unauthorized.
     ///
     pub fn run(self) -> Result<Revision, Error> {
+        transport::run_command(self)
+    }
+}
 
-        let req_body = try!(
-            serde_json::to_string(&self.doc_content)
-            .or_else(|e| {
-                Err(Error::Encode { cause: e } )
-            })
-        );
+impl<'a, D, T> Command for PutDocument<'a, D, T> where
+    D: DocumentType,
+    T: 'a + serde::Serialize
+{
+    type Output = Revision;
 
-        let mut resp = {
-            use hyper::mime::{Mime, TopLevel, SubLevel};
-            let uri = document::new_uri::<D>(
-                &self.client_state.uri,
-                self.db_name,
-                self.doc_id);
-            let mut req = self.client_state.http_client.put(uri)
-                .header(hyper::header::Accept(
-                        vec![hyper::header::qitem(
-                            Mime(TopLevel::Application, SubLevel::Json, vec![]))]))
-                .header(hyper::header::ContentType(
-                        hyper::mime::Mime(TopLevel::Application, SubLevel::Json, vec![])));
-            if self.if_match.is_some() {
-                req = req.header(
-                    hyper::header::IfMatch::Items(
-                        vec![
-                            hyper::header::EntityTag::new(
-                            false,
-                            self.if_match.unwrap().to_string())
-                        ]
-                    )
-                );
-            }
-            try!(
-                req.body(&req_body)
-                .send()
-                .or_else(|e| {
-                    Err(Error::Transport { cause: error::TransportCause::Hyper(e) })
+    fn make_request(self) -> Result<Request, Error> {
+        let uri = document::new_uri::<D>(
+            &self.client_state.uri,
+            self.db_name,
+            self.doc_id);
+        let body = try!(
+            serde_json::to_vec(self.doc_content)
+                .map_err(|e| {
+                    Error::Encode { cause: e }
                 })
-            )
-        };
+        );
+        let req = try!(Request::new(hyper::method::Method::Put, uri))
+            .accept_application_json()
+            .content_type_application_json()
+            .if_match_revision(self.if_match)
+            .body(body);
+        Ok(req)
+    }
 
+    fn take_response(mut resp: hyper::client::Response)
+        -> Result<Self::Output, Error>
+    {
         match resp.status {
             hyper::status::StatusCode::Created => {
                 let s = try!(client::read_json_response(&mut resp));

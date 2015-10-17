@@ -2,11 +2,9 @@ use hyper;
 use std;
 
 use client::ClientState;
-use document::{
-    self,
-    DocumentType,
-    Revision};
+use document::{self, DocumentType, Revision};
 use error::{self, Error};
+use transport::{self, Command, Request};
 
 #[doc(hidden)]
 pub fn new_head_document<'a, D>(
@@ -64,34 +62,27 @@ impl<'a, D> HeadDocument<'a, D> where D: DocumentType {
     /// * `Error::Unauthorized`: The client is unauthorized.
     ///
     pub fn run(self) -> Result<Option<()>, Error> {
+        transport::run_command(self)
+    }
+}
 
-        let mut resp = {
+impl<'a, D> Command for HeadDocument<'a, D> where D: DocumentType {
 
-            let uri = document::new_uri::<D>(
-                &self.client_state.uri,
-                self.db_name,
-                self.doc_id);
+    type Output = Option<()>;
 
-            let mut req = self.client_state.http_client.head(uri);
-            if self.if_none_match.is_some() {
-                req = req.header(
-                    hyper::header::IfNoneMatch::Items(
-                        vec![
-                            hyper::header::EntityTag::new(
-                                false,
-                                self.if_none_match.unwrap().to_string())
-                        ]
-                    )
-                );
-            }
-            try!(
-                req.send()
-                .or_else(|e| {
-                    Err(Error::Transport { cause: error::TransportCause::Hyper(e) } )
-                })
-            )
-        };
+    fn make_request(self) -> Result<Request, Error> {
+        let uri = document::new_uri::<D>(
+            &self.client_state.uri,
+            self.db_name,
+            self.doc_id);
+        let req = try!(Request::new(hyper::Head, uri))
+            .if_none_match_revision(self.if_none_match);
+        Ok(req)
+    }
 
+    fn take_response(mut resp: hyper::client::Response)
+        -> Result<Self::Output, Error>
+    {
         match resp.status {
             hyper::status::StatusCode::Ok => Ok(Some(())),
             hyper::status::StatusCode::NotModified => Ok(None),
@@ -102,5 +93,4 @@ impl<'a, D> HeadDocument<'a, D> where D: DocumentType {
             _ => Err(Error::UnexpectedHttpStatus { got: resp.status } ),
         }
     }
-
 }

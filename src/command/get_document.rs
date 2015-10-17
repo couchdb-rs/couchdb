@@ -6,6 +6,7 @@ use std;
 use client::{self, ClientState};
 use document::{self, Document, DocumentType, Revision};
 use error::{self, Error};
+use transport::{self, Command, Request};
 
 #[doc(hidden)]
 pub fn new_get_document<'a, D, T>(
@@ -65,40 +66,30 @@ impl<'a, D, T> GetDocument<'a, D, T>
     /// * `Error::Unauthorized`: The client is unauthorized.
     ///
     pub fn run(self) -> Result<Option<Document<T>>, Error> {
+        transport::run_command(self)
+    }
+}
 
-        let mut resp = {
+impl<'a, D, T> Command for GetDocument<'a, D, T>
+    where D: DocumentType,
+          T: serde::Deserialize
+{
+    type Output = Option<Document<T>>;
 
-            use hyper::mime::{Mime, TopLevel, SubLevel};
+    fn make_request(self) -> Result<Request, Error> {
+        let uri = document::new_uri::<D>(
+            &self.client_state.uri,
+            self.db_name,
+            self.doc_id);
+        let req = try!(Request::new(hyper::Get, uri))
+            .accept_application_json()
+            .if_none_match_revision(self.if_none_match);
+        Ok(req)
+    }
 
-            let uri = document::new_uri::<D>(
-                &self.client_state.uri,
-                self.db_name,
-                self.doc_id);
-
-            let mut req = self.client_state.http_client.get(uri)
-                .header(hyper::header::Accept(vec![
-                                              hyper::header::qitem(
-                                                  Mime(TopLevel::Application, SubLevel::Json, vec![]))]))
-                ;
-            if self.if_none_match.is_some() {
-                req = req.header(
-                    hyper::header::IfNoneMatch::Items(
-                        vec![
-                            hyper::header::EntityTag::new(
-                                false,
-                                self.if_none_match.unwrap().to_string())
-                        ]
-                    )
-                );
-            }
-            try!(
-                req.send()
-                .or_else(|e| {
-                    Err(Error::Transport { cause: error::TransportCause::Hyper(e) } )
-                })
-            )
-        };
-
+    fn take_response(mut resp: hyper::client::Response)
+        -> Result<Self::Output, Error>
+    {
         match resp.status {
             hyper::status::StatusCode::Ok => {
                 let s = try!(client::read_json_response(&mut resp));

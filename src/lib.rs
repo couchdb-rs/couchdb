@@ -143,6 +143,7 @@ mod design;
 mod document;
 mod error;
 mod server;
+mod transport;
 
 pub use client::{Client, IntoUrl};
 pub use database::Database;
@@ -155,3 +156,4 @@ pub use design::{
 pub use document::{Document, Revision};
 pub use error::{Error, ErrorResponse};
 pub use server::Server;
+pub use transport::Command;

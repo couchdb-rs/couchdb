@@ -15,6 +15,7 @@ Fixes:
 Other changes:
 
 * Refactor integration tests.
+* New `Command` trait to simplify command implementations.
 
 ## v0.1.0
 
