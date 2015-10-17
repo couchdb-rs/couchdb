@@ -1,0 +1,1 @@
+initSidebarItems({"struct":[["Design","Design document content."],["ViewFunction","View function."],["ViewResult","View result."],["ViewRow","View row."]],"type":[["ViewFunctionMap","Associative collection for view functions."]]});

@@ -1,0 +1,1 @@
+initSidebarItems({"struct":[["Database","Database meta-information."]]});

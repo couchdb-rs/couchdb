@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="generator" content="rustdoc">
+    <meta name="description" content="API documentation for the Rust `command` mod in crate `couchdb`.">
+    <meta name="keywords" content="rust, rustlang, rust-lang, command">
+
+    <title>couchdb::command - Rust</title>
+
+    <link rel="stylesheet" type="text/css" href="../../main.css">
+
+    
+    
+</head>
+<body class="rustdoc">
+    <!--[if lte IE 8]>
+    <div class="warning">
+        This old browser is unsupported and will most likely display funky
+        things.
+    </div>
+    <![endif]-->
+
+    
+
+    <section class="sidebar">
+        
+        <p class='location'><a href='../index.html'>couchdb</a></p><script>window.sidebarCurrent = {name: 'command', ty: 'mod', relpath: '../'};</script><script defer src="../sidebar-items.js"></script>
+    </section>
+
+    <nav class="sub">
+        <form class="search-form js-only">
+            <div class="search-container">
+                <input class="search-input" name="search"
+                       autocomplete="off"
+                       placeholder="Click or press ‘S’ to search, ‘?’ for more options…"
+                       type="search">
+            </div>
+        </form>
+    </nav>
+
+    <section id='main' class="content mod">
+<h1 class='fqn'><span class='in-band'>Module <a href='../index.html'>couchdb</a>::<wbr><a class='mod' href=''>command</a></span><span class='out-of-band'><span id='render-detail'>
+            <a id="toggle-all-docs" href="javascript:void(0)" title="collapse all docs">
+                [<span class='inner'>&#x2212;</span>]
+            </a>
+        </span><a id='src-10' class='srclink' href='../../src/couchdb/command/mod.rs.html#1-23' title='goto source code'>[src]</a></span></h1>
+<div class='docblock'><p>Sub-module for individual command types.</p>
+</div><h2 id='structs' class='section-header'><a href="#structs">Structs</a></h2>
+<table>
+                    <tr class=' module-item'>
+                        <td><a class='struct' href='struct.DeleteDatabase.html'
+                               title='couchdb::command::DeleteDatabase'>DeleteDatabase</a></td>
+                        <td class='docblock short'>
+                             <p>Command to delete a database.</p>
+
+                        </td>
+                    </tr>
+                
+                    <tr class=' module-item'>
+                        <td><a class='struct' href='struct.DeleteDocument.html'
+                               title='couchdb::command::DeleteDocument'>DeleteDocument</a></td>
+                        <td class='docblock short'>
+                             <p>Command to delete a document.</p>
+
+                        </td>
+                    </tr>
+                
+                    <tr class=' module-item'>
+                        <td><a class='struct' href='struct.GetAllDatabases.html'
+                               title='couchdb::command::GetAllDatabases'>GetAllDatabases</a></td>
+                        <td class='docblock short'>
+                             <p>Command to get all database names.</p>
+
+                        </td>
+                    </tr>
+                
+                    <tr class=' module-item'>
+                        <td><a class='struct' href='struct.GetDatabase.html'
+                               title='couchdb::command::GetDatabase'>GetDatabase</a></td>
+                        <td class='docblock short'>
+                             <p>Command to get a database.</p>
+
+                        </td>
+                    </tr>
+                
+                    <tr class=' module-item'>
+                        <td><a class='struct' href='struct.GetDocument.html'
+                               title='couchdb::command::GetDocument'>GetDocument</a></td>
+                        <td class='docblock short'>
+                             <p>Command to get a document.</p>
+
+                        </td>
+                    </tr>
+                
+                    <tr class=' module-item'>
+                        <td><a class='struct' href='struct.GetView.html'
+                               title='couchdb::command::GetView'>GetView</a></td>
+                        <td class='docblock short'>
+                             <p>Command to run a view.</p>
+
+                        </td>
+                    </tr>
+                
+                    <tr class=' module-item'>
+                        <td><a class='struct' href='struct.HeadDatabase.html'
+                               title='couchdb::command::HeadDatabase'>HeadDatabase</a></td>
+                        <td class='docblock short'>
+                             <p>Command to get database meta-information.</p>
+
+                        </td>
+                    </tr>
+                
+                    <tr class=' module-item'>
+                        <td><a class='struct' href='struct.HeadDocument.html'
+                               title='couchdb::command::HeadDocument'>HeadDocument</a></td>
+                        <td class='docblock short'>
+                             <p>Command to get document meta-information.</p>
+
+                        </td>
+                    </tr>
+                
+                    <tr class=' module-item'>
+                        <td><a class='struct' href='struct.PutDatabase.html'
+                               title='couchdb::command::PutDatabase'>PutDatabase</a></td>
+                        <td class='docblock short'>
+                             <p>Command to create a database.</p>
+
+                        </td>
+                    </tr>
+                
+                    <tr class=' module-item'>
+                        <td><a class='struct' href='struct.PutDocument.html'
+                               title='couchdb::command::PutDocument'>PutDocument</a></td>
+                        <td class='docblock short'>
+                             <p>Command to create a document.</p>
+
+                        </td>
+                    </tr>
+                </table></section>
+    <section id='search' class="content hidden"></section>
+
+    <section class="footer"></section>
+
+    <div id="help" class="hidden">
+        <div>
+            <div class="shortcuts">
+                <h1>Keyboard Shortcuts</h1>
+
+                <dl>
+                    <dt>?</dt>
+                    <dd>Show this help dialog</dd>
+                    <dt>S</dt>
+                    <dd>Focus the search field</dd>
+                    <dt>&larrb;</dt>
+                    <dd>Move up in search results</dd>
+                    <dt>&rarrb;</dt>
+                    <dd>Move down in search results</dd>
+                    <dt>&#9166;</dt>
+                    <dd>Go to active search result</dd>
+                </dl>
+            </div>
+
+            <div class="infos">
+                <h1>Search Tricks</h1>
+
+                <p>
+                    Prefix searches with a type followed by a colon (e.g.
+                    <code>fn:</code>) to restrict the search to a given type.
+                </p>
+
+                <p>
+                    Accepted types are: <code>fn</code>, <code>mod</code>,
+                    <code>struct</code>, <code>enum</code>,
+                    <code>trait</code>, <code>typedef</code> (or
+                    <code>tdef</code>).
+                </p>
+
+                <p>
+                    Search functions by type signature (e.g.
+                    <code>vec -> usize</code>)
+                </p>
+            </div>
+        </div>
+    </div>
+
+    
+
+    <script>
+        window.rootPath = "../../";
+        window.currentCrate = "couchdb";
+        window.playgroundUrl = "";
+    </script>
+    <script src="../../jquery.js"></script>
+    <script src="../../main.js"></script>
+    
+    <script async src="../../search-index.js"></script>
+</body>
+</html>
