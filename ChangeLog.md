@@ -2,13 +2,7 @@
 
 ## v0.2.1 (in development)
 
-API changes:
-
-* Unexport the `Command` trait.
-
-Other changes:
-
-(Nothing yet!)
+(nothing yet!)
 
 ## v0.2.0
 
