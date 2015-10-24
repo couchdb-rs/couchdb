@@ -122,6 +122,9 @@ impl Server {
                 use std::io::BufRead;
                 line.clear();
                 process_out.read_line(&mut line).unwrap();
+                if line.is_empty() {
+                    break;
+                }
             }
         });
 
