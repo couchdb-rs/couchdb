@@ -2,7 +2,13 @@
 
 ## v0.2.1 (in development)
 
-(nothing yet!)
+API changes:
+
+(None)
+
+Other changes:
+
+* Fix CPU spin in `Server` on Windows (partially resolve issue #8).
 
 ## v0.2.0
 
