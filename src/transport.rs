@@ -88,11 +88,10 @@ fn new_revision_etags(rev: &Revision) -> Vec<hyper::header::EntityTag> {
     ]
 }
 
-/// CouchDB command trait
-///
-/// The Command trait abstracts the machinery for executing CouchDB commands.
-/// Types implementing the Command trait define only how they construct requests
-/// and process responses.
+// The Command trait abstracts the machinery for executing CouchDB commands.
+// Types implementing the Command trait define only how they construct requests
+// and process responses. This separates the command logic from the
+// responsibility of sending a request and receiving its response.
 pub trait Command: Sized {
     type Output;
     fn make_request(self) -> Result<Request, Error>;

@@ -156,4 +156,3 @@ pub use design::{
 pub use document::{Document, Revision};
 pub use error::{Error, ErrorResponse};
 pub use server::Server;
-pub use transport::Command;
