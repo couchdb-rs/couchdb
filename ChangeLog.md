@@ -1,16 +1,20 @@
 # CouchDB-rs Change Log
 
-## v0.2.1 (in development)
+## v0.3.0 (in development)
+
+Release date: n/a
 
 API changes:
 
-(None)
+* Change crate dependency versions from * to explicit range values.
 
 Other changes:
 
 * Fix CPU spin in `Server` on Windows (partially resolve issue #8).
 
 ## v0.2.0
+
+Release date: 2015-10-17
 
 This release fixes a few small problems in the API, as well as
 refactoring a lot of code to make it easier to add support for covering
@@ -33,6 +37,8 @@ Other changes:
 
 ## v0.1.0
 
+Release date: 2015-09-21
+
 This release fixes many small problems in the API.
 
 API changes:
@@ -54,10 +60,14 @@ API changes:
 
 ## v0.0.1
 
+Release date: 2015-09-07
+
 * Improve documentation.
 * Add this Change Log.
 
 ## v0.0.0
+
+Release date: 2015-09-05
 
 * Initial release
 * New commands for database manipulation (GET, PUT, HEAD, and DELETE),
