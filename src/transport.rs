@@ -94,16 +94,17 @@ fn new_revision_etags(rev: &Revision) -> Vec<hyper::header::EntityTag> {
 // responsibility of sending a request and receiving its response.
 pub trait Command: Sized {
     type Output;
-    fn make_request(self) -> Result<Request, Error>;
-    fn take_response(resp: hyper::client::Response)
+    type State;
+    fn make_request(self) -> Result<(Request, Self::State), Error>;
+    fn take_response(resp: hyper::client::Response, state: Self::State)
         -> Result<Self::Output, Error>;
 }
 
 pub fn run_command<C>(cmd: C) -> Result<C::Output, Error> where C: Command
 {
-    let resp = {
+    let (resp, state) = {
         use std::io::Write;
-        let req = try!(cmd.make_request());
+        let (req, state) = try!(cmd.make_request());
         let mut stream = try!(
             req.request.start().map_err(|e| {
                 Error::Transport { cause: TransportCause::Hyper(e) }
@@ -117,14 +118,15 @@ pub fn run_command<C>(cmd: C) -> Result<C::Output, Error> where C: Command
                     }
                 })
         );
-        try!(
+        let resp = try!(
             stream.send()
                 .map_err(|e| {
                     Error::Transport {
                         cause: TransportCause::Hyper(e),
                     }
                 })
-        )
+        );
+        (resp, state)
     };
-    C::take_response(resp)
+    C::take_response(resp, state)
 }

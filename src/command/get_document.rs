@@ -4,48 +4,37 @@ use serde_json;
 use std;
 
 use client::{self, ClientState};
-use document::{self, Document, DocumentType, Revision};
+use docpath::{DocumentId, DocumentPath};
+use document::{self, Document, Revision};
 use error::{self, Error};
 use transport::{self, Command, Request};
 
 #[doc(hidden)]
-pub fn new_get_document<'a, D, T>(
-    client_state: &'a ClientState,
-    db_name: &'a str,
-    doc_id: &'a str)
-    -> GetDocument<'a, D, T>
-    where D: DocumentType,
-          T: serde::Deserialize
+pub fn new_get_document<'a, T>(client_state: &'a ClientState, path: DocumentPath)
+    -> GetDocument<'a, T>
+    where T: serde::Deserialize
 {
-    GetDocument::<'a, D, T> {
+    GetDocument {
         client_state: client_state,
-        doc_type: std::marker::PhantomData,
-        db_name: db_name,
-        doc_id: doc_id,
+        path: path,
         if_none_match: None,
         _content_type: std::marker::PhantomData,
     }
 }
 
 /// Command to get a document.
-pub struct GetDocument<'a, D, T>
-    where D: DocumentType,
-          T: serde::Deserialize
+pub struct GetDocument<'a, T> where T: serde::Deserialize
 {
     client_state: &'a ClientState,
-    doc_type: std::marker::PhantomData<D>,
-    db_name: &'a str,
-    doc_id: &'a str,
+    path: DocumentPath,
     if_none_match: Option<&'a Revision>,
     _content_type: std::marker::PhantomData<T>,
 }
 
-impl<'a, D, T> GetDocument<'a, D, T>
-    where D: DocumentType,
-          T: serde::Deserialize
+impl<'a, T> GetDocument<'a, T> where T: serde::Deserialize
 {
     /// Set the If-None-Match header.
-    pub fn if_none_match(mut self, rev: &'a Revision) -> GetDocument<'a, D, T> {
+    pub fn if_none_match(mut self, rev: &'a Revision) -> Self {
         self.if_none_match = Some(rev);
         self
     }
@@ -70,24 +59,21 @@ impl<'a, D, T> GetDocument<'a, D, T>
     }
 }
 
-impl<'a, D, T> Command for GetDocument<'a, D, T>
-    where D: DocumentType,
-          T: serde::Deserialize
+impl<'a, T> Command for GetDocument<'a, T>
+    where T: serde::Deserialize
 {
     type Output = Option<Document<T>>;
+    type State = ();
 
-    fn make_request(self) -> Result<Request, Error> {
-        let uri = document::new_uri::<D>(
-            &self.client_state.uri,
-            self.db_name,
-            self.doc_id);
+    fn make_request(self) -> Result<(Request, Self::State), Error> {
+        let uri = self.path.into_uri(self.client_state.uri.clone());
         let req = try!(Request::new(hyper::Get, uri))
             .accept_application_json()
             .if_none_match_revision(self.if_none_match);
-        Ok(req)
+        Ok((req, ()))
     }
 
-    fn take_response(mut resp: hyper::client::Response)
+    fn take_response(mut resp: hyper::client::Response, _state: Self::State)
         -> Result<Self::Output, Error>
     {
         match resp.status {
@@ -111,21 +97,8 @@ impl<'a, D, T> Command for GetDocument<'a, D, T>
                         let id = match dot.remove("_id") {
                             None => { return None; },
                             Some(x) => match x {
-                                serde_json::Value::String(x) => {
-                                    // Must strip the "_design" or "_local"
-                                    // prefix from the returned path.
-                                    match D::uri_path_component() {
-                                        None => x,
-                                        Some(p) => {
-                                            let mut p = p.to_string();
-                                            p.push('/');
-                                            if !x.starts_with(&p) {
-                                                return None;
-                                            }
-                                            x[p.len()..].to_string()
-                                        },
-                                    }
-                                }
+                                serde_json::Value::String(x) =>
+                                    DocumentId::from(x),
                                 _ => { return None; },
                             },
                         };

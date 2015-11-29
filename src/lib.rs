@@ -1,3 +1,4 @@
+/*
 //! The couchdb crate is a thin wrapper around the CouchDB API, providing direct
 //! access to individual CouchDB commands—e.g., PUT database, GET document, etc.
 //!
@@ -128,6 +129,7 @@
 //!     .unwrap();
 //! assert!(doc.is_none());
 //! ```
+*/
 
 extern crate hyper;
 extern crate regex;
@@ -139,20 +141,26 @@ extern crate url;
 pub mod command;
 mod client;
 mod database;
+mod dbpath;
 mod design;
+mod docpath;
 mod document;
 mod error;
 mod server;
 mod transport;
+mod viewpath;
 
 pub use client::{Client, IntoUrl};
 pub use database::Database;
+pub use dbpath::DatabasePath;
 pub use design::{
     Design,
     ViewFunction,
     ViewFunctionMap,
     ViewResult,
     ViewRow};
+pub use docpath::{DocumentId, DocumentPath};
 pub use document::{Document, Revision};
 pub use error::{Error, ErrorResponse};
 pub use server::Server;
+pub use viewpath::ViewPath;

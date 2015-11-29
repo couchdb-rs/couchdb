@@ -4,49 +4,40 @@ use serde_json;
 use std;
 
 use client::{self, ClientState};
-use document::{self, DocumentType, Revision};
+use docpath::DocumentPath;
+use document::{self, Revision};
 use error::{self, Error};
 use transport::{self, Command, Request};
 
 #[doc(hidden)]
-pub fn new_put_document<'a, D, T>(
+pub fn new_put_document<'a, T>(
     client_state: &'a ClientState,
-    db_name: &'a str,
-    doc_id: &'a str,
+    path: DocumentPath,
     doc_content: &'a T)
-    -> PutDocument<'a, D, T>
-    where D: DocumentType,
-          T: serde::Serialize
+    -> PutDocument<'a, T>
+    where T: serde::Serialize
 {
-    PutDocument::<'a, D, T> {
+    PutDocument {
         client_state: client_state,
-        doc_type: std::marker::PhantomData,
-        db_name: db_name,
-        doc_id: doc_id,
+        path: path,
         doc_content: doc_content,
         if_match: None,
     }
 }
 
 /// Command to create a document.
-pub struct PutDocument<'a, D, T>
-    where D: DocumentType,
-          T: 'a + serde::Serialize
+pub struct PutDocument<'a, T> where T: 'a + serde::Serialize
 {
     client_state: &'a ClientState,
-    doc_type: std::marker::PhantomData<D>,
-    db_name: &'a str,
-    doc_id: &'a str,
+    path: DocumentPath,
     doc_content: &'a T,
     if_match: Option<&'a Revision>,
 }
 
-impl<'a, D, T> PutDocument<'a, D, T>
-    where D: DocumentType,
-          T: 'a + serde::Serialize
+impl<'a, T> PutDocument<'a, T> where T: 'a + serde::Serialize
 {
     /// Set the If-Match header.
-    pub fn if_match(mut self, rev: &'a Revision) -> PutDocument<'a, D, T> {
+    pub fn if_match(mut self, rev: &'a Revision) -> Self {
         self.if_match = Some(rev);
         self
     }
@@ -71,17 +62,13 @@ impl<'a, D, T> PutDocument<'a, D, T>
     }
 }
 
-impl<'a, D, T> Command for PutDocument<'a, D, T> where
-    D: DocumentType,
-    T: 'a + serde::Serialize
+impl<'a, T> Command for PutDocument<'a, T> where T: 'a + serde::Serialize
 {
     type Output = Revision;
+    type State = ();
 
-    fn make_request(self) -> Result<Request, Error> {
-        let uri = document::new_uri::<D>(
-            &self.client_state.uri,
-            self.db_name,
-            self.doc_id);
+    fn make_request(self) -> Result<(Request, Self::State), Error> {
+        let uri = self.path.into_uri(self.client_state.uri.clone());
         let body = try!(
             serde_json::to_vec(self.doc_content)
                 .map_err(|e| {
@@ -93,10 +80,10 @@ impl<'a, D, T> Command for PutDocument<'a, D, T> where
             .content_type_application_json()
             .if_match_revision(self.if_match)
             .body(body);
-        Ok(req)
+        Ok((req, ()))
     }
 
-    fn take_response(mut resp: hyper::client::Response)
+    fn take_response(mut resp: hyper::client::Response, _state: Self::State)
         -> Result<Self::Output, Error>
     {
         match resp.status {

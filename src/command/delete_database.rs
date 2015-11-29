@@ -1,26 +1,24 @@
 use hyper;
 
 use client::{self, ClientState};
-use database;
+use dbpath::DatabasePath;
 use error::{self, Error};
 use transport::{self, Command, Request};
 
 #[doc(hidden)]
-pub fn new_delete_database<'a>(
-    client_state: &'a ClientState,
-    db_name: &'a str)
+pub fn new_delete_database<'a>(client_state: &'a ClientState, path: DatabasePath)
     -> DeleteDatabase<'a>
 {
     DeleteDatabase {
         client_state: client_state,
-        db_name: db_name,
+        path: path,
     }
 }
 
 /// Command to delete a database.
 pub struct DeleteDatabase<'a> {
     client_state: &'a ClientState,
-    db_name: &'a str,
+    path: DatabasePath,
 }
 
 impl<'a> DeleteDatabase<'a> {
@@ -42,15 +40,16 @@ impl<'a> DeleteDatabase<'a> {
 impl<'a> Command for DeleteDatabase<'a> {
 
     type Output = ();
+    type State = ();
 
-    fn make_request(self) -> Result<Request, Error> {
-        let uri = database::new_uri(&self.client_state.uri, self.db_name);
+    fn make_request(self) -> Result<(Request, Self::State), Error> {
+        let uri = self.path.into_uri(self.client_state.uri.clone());
         let req = try!(Request::new(hyper::Delete, uri))
             .accept_application_json();
-        Ok(req)
+        Ok((req, ()))
     }
 
-    fn take_response(mut resp: hyper::client::Response)
+    fn take_response(mut resp: hyper::client::Response, _state: Self::State)
         -> Result<Self::Output, Error>
     {
         match resp.status {

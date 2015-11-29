@@ -1,41 +1,34 @@
 use hyper;
-use std;
 
 use client::{self, ClientState};
-use document::{self, DocumentType, Revision};
+use docpath::DocumentPath;
+use document::Revision;
 use error::{self, Error};
 use transport::{self, Command, Request};
 
 #[doc(hidden)]
-pub fn new_delete_document<'a, D>(
+pub fn new_delete_document<'a>(
     client_state: &'a ClientState,
-    db_name: &'a str,
-    doc_id: &'a str,
+    path: DocumentPath,
     rev: &'a Revision)
-    -> DeleteDocument<'a, D>
-    where D: DocumentType
+    -> DeleteDocument<'a>
 {
-    DeleteDocument::<'a, D> {
+    DeleteDocument {
         client_state: client_state,
-        doc_type: std::marker::PhantomData,
-        db_name: db_name,
-        doc_id: doc_id,
+        path: path,
         rev: rev,
     }
 }
 
 /// Command to delete a document.
-pub struct DeleteDocument<'a, D>
-    where D: DocumentType
+pub struct DeleteDocument<'a>
 {
     client_state: &'a client::ClientState,
-    doc_type: std::marker::PhantomData<D>,
-    db_name: &'a str,
-    doc_id: &'a str,
+    path: DocumentPath,
     rev: &'a Revision,
 }
 
-impl<'a, D> DeleteDocument<'a, D> where D: DocumentType {
+impl<'a> DeleteDocument<'a> {
 
     /// Send the command request and wait for the response.
     ///
@@ -53,22 +46,20 @@ impl<'a, D> DeleteDocument<'a, D> where D: DocumentType {
     }
 }
 
-impl<'a, D> Command for DeleteDocument<'a, D> where D: DocumentType {
+impl<'a> Command for DeleteDocument<'a> {
 
     type Output = ();
+    type State = ();
 
-    fn make_request(self) -> Result<Request, Error> {
-        let uri = document::new_uri::<D>(
-            &self.client_state.uri,
-            self.db_name,
-            self.doc_id);
+    fn make_request(self) -> Result<(Request, Self::State), Error> {
+        let uri = self.path.into_uri(self.client_state.uri.clone());
         let req = try!(Request::new(hyper::Delete, uri))
             .accept_application_json()
             .if_match_revision(Some(self.rev));
-        Ok(req)
+        Ok((req, ()))
     }
 
-    fn take_response(mut resp: hyper::client::Response)
+    fn take_response(mut resp: hyper::client::Response, _state: Self::State)
         -> Result<Self::Output, Error>
     {
         match resp.status {

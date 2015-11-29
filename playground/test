@@ -1,0 +1,62 @@
+#!/bin/sh
+
+set -e
+set -x
+
+die() {
+	echo "$@" >&2
+	exit 1
+}
+
+u=$(cat /tmp/couchdb/couchdb.uri | sed -e 's#/$##')
+
+curl -fX PUT $u/stuff
+
+curl -fX POST -d '@-' \
+-H 'Accept: application/json' \
+-H 'Content-Type: application/json' \
+$u/stuff <<EOF
+{
+	"name": "Craig Biggio",
+	"hrs": 291,
+	"hits": 3060
+}
+EOF
+
+curl -fX POST -d '@-' \
+-H 'Accept: application/json' \
+-H 'Content-Type: application/json' \
+$u/stuff <<EOF
+{
+	"name": "Babe Ruth",
+	"hits": 2873,
+	"hrs": 714
+}
+EOF
+
+curl -fX PUT -d '@-' \
+-H 'Accept: application/json' \
+-H 'Content-Type: application/json' \
+$u/stuff/_design/stats <<EOF
+{
+	"views": {
+		"by_name": {
+			"map": "function(doc) { if (doc.name) { emit(doc.name); }}"
+		},
+		"by_hrs": {
+			"map": "function(doc) { if (doc.name && doc.hrs) { emit(doc.name, doc.hrs); }}",
+			"reduce": "function(keys, values) { return sum(values); }"
+		},
+		"by_hits": {
+			"map": "function(doc) { if (doc.name && doc.hits) { emit(doc.name, doc.hits); }}",
+			"reduce": "function(keys, values) { return sum(values); }"
+		}
+	}
+}
+EOF
+
+curl -fX GET $u/stuff/_design/stats/_view/by_name
+#curl -fX GET $u/stuff/_design/stats/_view/by_hrs?reduce=false
+#curl -fX GET $u/stuff/_design/stats/_view/by_hrs?reduce=true
+#curl -fX GET $u/stuff/_all_docs'?'include_docs=true
+

@@ -1,47 +1,34 @@
 use hyper;
-use std;
 
 use client::ClientState;
-use document::{self, DocumentType, Revision};
+use docpath::DocumentPath;
+use document::Revision;
 use error::{self, Error};
 use transport::{self, Command, Request};
 
 #[doc(hidden)]
-pub fn new_head_document<'a, D>(
-    client_state: &'a ClientState,
-    db_name: &'a str,
-    doc_id: &'a str)
-    -> HeadDocument<'a, D>
-    where D: DocumentType
+pub fn new_head_document<'a>(client_state: &'a ClientState, path: DocumentPath)
+    -> HeadDocument<'a>
 {
     HeadDocument {
         client_state: client_state,
-        doc_type: std::marker::PhantomData,
-        db_name: db_name,
-        doc_id: doc_id,
+        path: path,
         if_none_match: None,
     }
 }
 
 /// Command to get document meta-information.
-pub struct HeadDocument<'a, D>
-    where D: DocumentType
+pub struct HeadDocument<'a>
 {
     client_state: &'a ClientState,
-    doc_type: std::marker::PhantomData<D>,
-    db_name: &'a str,
-    doc_id: &'a str,
+    path: DocumentPath,
     if_none_match: Option<&'a Revision>,
 }
 
-impl<'a, D> HeadDocument<'a, D> where D: DocumentType {
-
+impl<'a> HeadDocument<'a>
+{
     /// Set the If-None-Match header.
-    pub fn if_none_match(
-        mut self,
-        rev: &'a Revision)
-        -> HeadDocument<'a, D>
-        where D: DocumentType
+    pub fn if_none_match(mut self, rev: &'a Revision) -> Self
     {
         self.if_none_match = Some(rev);
         self
@@ -66,21 +53,19 @@ impl<'a, D> HeadDocument<'a, D> where D: DocumentType {
     }
 }
 
-impl<'a, D> Command for HeadDocument<'a, D> where D: DocumentType {
-
+impl<'a> Command for HeadDocument<'a>
+{
     type Output = Option<()>;
+    type State = ();
 
-    fn make_request(self) -> Result<Request, Error> {
-        let uri = document::new_uri::<D>(
-            &self.client_state.uri,
-            self.db_name,
-            self.doc_id);
+    fn make_request(self) -> Result<(Request, Self::State), Error> {
+        let uri = self.path.into_uri(self.client_state.uri.clone());
         let req = try!(Request::new(hyper::Head, uri))
             .if_none_match_revision(self.if_none_match);
-        Ok(req)
+        Ok((req, ()))
     }
 
-    fn take_response(mut resp: hyper::client::Response)
+    fn take_response(mut resp: hyper::client::Response, _state: Self::State)
         -> Result<Self::Output, Error>
     {
         match resp.status {

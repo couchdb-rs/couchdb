@@ -1,26 +1,24 @@
 use hyper;
 
 use client::ClientState;
-use database;
+use dbpath::DatabasePath;
 use error::Error;
 use transport::{self, Command, Request};
 
 #[doc(hidden)]
-pub fn new_head_database<'a>(
-    client_state: &'a ClientState,
-    db_name: &'a str)
+pub fn new_head_database<'a>(client_state: &'a ClientState, path: DatabasePath)
     -> HeadDatabase<'a>
 {
     HeadDatabase {
         client_state: client_state,
-        db_name: db_name,
+        path: path,
     }
 }
 
 /// Command to get database meta-information.
 pub struct HeadDatabase<'a> {
     client_state: &'a ClientState,
-    db_name: &'a str,
+    path: DatabasePath,
 }
 
 impl<'a> HeadDatabase<'a> {
@@ -41,13 +39,15 @@ impl<'a> HeadDatabase<'a> {
 impl<'a> Command for HeadDatabase<'a> {
 
     type Output = ();
+    type State = ();
 
-    fn make_request(self) -> Result<Request, Error> {
-        let uri = database::new_uri(&self.client_state.uri, self.db_name);
-        Request::new(hyper::Head, uri)
+    fn make_request(self) -> Result<(Request, Self::State), Error> {
+        let uri = self.path.into_uri(self.client_state.uri.clone());
+        let req = try!(Request::new(hyper::Head, uri));
+        Ok((req, ()))
     }
 
-    fn take_response(resp: hyper::client::Response)
+    fn take_response(resp: hyper::client::Response, _state: Self::State)
         -> Result<Self::Output, Error>
     {
         match resp.status {

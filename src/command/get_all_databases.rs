@@ -1,6 +1,7 @@
 use hyper;
 
 use client::{self, ClientState};
+use dbpath::DatabasePath;
 use error::Error;
 use transport::{self, Command, Request};
 
@@ -26,16 +27,17 @@ impl<'a> GetAllDatabases<'a> {
     ///
     /// This command has no specific errors.
     ///
-    pub fn run(self) -> Result<Vec<String>, Error> {
+    pub fn run(self) -> Result<Vec<DatabasePath>, Error> {
         transport::run_command(self)
     }
 }
 
 impl<'a> Command for GetAllDatabases<'a> {
 
-    type Output = Vec<String>;
+    type Output = Vec<DatabasePath>;
+    type State = ();
 
-    fn make_request(self) -> Result<Request, Error> {
+    fn make_request(self) -> Result<(Request, Self::State), Error> {
         let uri = {
             let mut uri = self.client_state.uri.clone();
             uri.path_mut().unwrap()[0] = "_all_dbs".to_string();
@@ -43,16 +45,16 @@ impl<'a> Command for GetAllDatabases<'a> {
         };
         let req = try!(Request::new(hyper::Get, uri))
             .accept_application_json();
-        Ok(req)
+        Ok((req, ()))
     }
 
-    fn take_response(mut resp: hyper::client::Response)
+    fn take_response(mut resp: hyper::client::Response, _state: Self::State)
         -> Result<Self::Output, Error>
     {
         match resp.status {
             hyper::status::StatusCode::Ok => {
                 let s = try!(client::read_json_response(&mut resp));
-                Ok(try!(client::decode_json::<Vec<String>>(&s)))
+                Ok(try!(client::decode_json::<Vec<DatabasePath>>(&s)))
             },
             _ => Err(Error::UnexpectedHttpStatus {
                 got: resp.status,

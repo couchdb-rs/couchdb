@@ -6,6 +6,7 @@ Release date: n/a
 
 API changes:
 
+* Replace string path parameters with stronger path types.
 * Change crate dependency versions from * to explicit range values.
 
 Other changes:

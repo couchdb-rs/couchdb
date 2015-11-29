@@ -7,22 +7,17 @@ use client::{self, ClientState};
 use design::{ViewResult, ViewRow};
 use error::{self, Error};
 use transport::{self, Command, Request};
+use viewpath::ViewPath;
 
 #[doc(hidden)]
-pub fn new_get_view<'a, K, V>(
-    client_state: &'a ClientState,
-    db_name: &'a str,
-    ddoc_id: &'a str,
-    view_name: &'a str)
+pub fn new_get_view<'a, K, V>(client_state: &'a ClientState, path: ViewPath)
     -> GetView<'a, K, V>
     where K: serde::Deserialize,
           V: serde::Deserialize
 {
     GetView {
         client_state: client_state,
-        db_name: db_name,
-        ddoc_id: ddoc_id,
-        view_name: view_name,
+        path: path,
         reduce: None,
         endkey: None,
         startkey: None,
@@ -32,14 +27,12 @@ pub fn new_get_view<'a, K, V>(
 }
 
 /// Command to run a view.
-pub struct GetView<'a, K, V> where
-    K: serde::Deserialize, // serialize needed for endkey and startkey
-    V: serde::Deserialize
+pub struct GetView<'a, K, V>
+    where K: serde::Deserialize, // serialize needed for endkey and startkey
+          V: serde::Deserialize
 {
     client_state: &'a ClientState,
-    db_name: &'a str,
-    ddoc_id: &'a str,
-    view_name: &'a str,
+    path: ViewPath,
 
     reduce: Option<bool>,
     endkey: Option<K>,
@@ -49,9 +42,9 @@ pub struct GetView<'a, K, V> where
     _phantom_value: std::marker::PhantomData<V>,
 }
 
-impl<'a, K, V> GetView<'a, K, V> where
-    K: serde::Deserialize + serde::Serialize,
-    V: serde::Deserialize
+impl<'a, K, V> GetView<'a, K, V>
+    where K: serde::Deserialize + serde::Serialize,
+          V: serde::Deserialize
 {
     pub fn reduce(mut self, v: bool) -> Self {
         self.reduce = Some(v);
@@ -87,27 +80,18 @@ impl<'a, K, V> GetView<'a, K, V> where
     }
 }
 
-impl<'a, K, V> Command for GetView<'a, K, V> where
-    K: serde::Deserialize + serde::Serialize,
-    V: serde::Deserialize
+impl<'a, K, V> Command for GetView<'a, K, V>
+    where K: serde::Deserialize + serde::Serialize,
+          V: serde::Deserialize
 {
     type Output = ViewResult<K, V>;
+    type State = ();
 
-    fn make_request(self) -> Result<Request, Error> {
+    fn make_request(self) -> Result<(Request, Self::State), Error> {
 
         let uri = {
 
-            let mut uri = self.client_state.uri.clone();
-
-            {
-                let mut p = uri.path_mut().unwrap();
-                p.clear();
-                p.push(self.db_name.to_string());
-                p.push("_design".to_string());
-                p.push(self.ddoc_id.to_string());
-                p.push("_view".to_string());
-                p.push(self.view_name.to_string());
-            }
+            let mut uri = self.path.into_uri(self.client_state.uri.clone());
 
             {
                 let mut query_pairs = Vec::<(&'static str, String)>::new();
@@ -143,10 +127,10 @@ impl<'a, K, V> Command for GetView<'a, K, V> where
 
         let req = try!(Request::new(hyper::Get, uri))
             .accept_application_json();
-        Ok(req)
+        Ok((req, ()))
     }
 
-    fn take_response(mut resp: hyper::client::Response)
+    fn take_response(mut resp: hyper::client::Response, _state: Self::State)
         -> Result<Self::Output, Error>
     {
         match resp.status {
