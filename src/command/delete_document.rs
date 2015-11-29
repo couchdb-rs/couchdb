@@ -2,8 +2,8 @@ use hyper;
 
 use client::{self, ClientState};
 use docpath::DocumentPath;
-use document::Revision;
 use error::{self, Error};
+use revision::Revision;
 use transport::{self, Command, Request};
 
 #[doc(hidden)]

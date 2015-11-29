@@ -5,8 +5,8 @@ use std;
 
 use client::{self, ClientState};
 use docpath::DocumentPath;
-use document::{self, Revision};
 use error::{self, Error};
+use revision::Revision;
 use transport::{self, Command, Request};
 
 #[doc(hidden)]
@@ -104,7 +104,7 @@ impl<'a, T> Command for PutDocument<'a, T> where T: 'a + serde::Serialize
                             x, String::new()),
                         _ => { return None; },
                     };
-                    let rev = document::new_revision_from_string(rev);
+                    let rev = Revision::from(rev);
                     Some(rev)
                 })()
                 .ok_or(Error::UnexpectedContent { got: s } )

@@ -34,6 +34,8 @@ $u/stuff <<EOF
 }
 EOF
 
+exit 0
+
 curl -fX PUT -d '@-' \
 -H 'Accept: application/json' \
 -H 'Content-Type: application/json' \

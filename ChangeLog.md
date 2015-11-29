@@ -7,6 +7,9 @@ Release date: n/a
 API changes:
 
 * Replace string path parameters with stronger path types.
+* Replace `Revision` constructor with `From` implementations.
+* Change `Revision` comparison to be case-insensitive, matching CouchDB
+  semantics.
 * Change crate dependency versions from * to explicit range values.
 
 Other changes:

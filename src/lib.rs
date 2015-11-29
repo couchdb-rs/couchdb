@@ -146,6 +146,7 @@ mod design;
 mod docpath;
 mod document;
 mod error;
+mod revision;
 mod server;
 mod transport;
 mod viewpath;
@@ -160,7 +161,8 @@ pub use design::{
     ViewResult,
     ViewRow};
 pub use docpath::{DocumentId, DocumentPath};
-pub use document::{Document, Revision};
+pub use document::Document;
 pub use error::{Error, ErrorResponse};
+pub use revision::Revision;
 pub use server::Server;
 pub use viewpath::ViewPath;

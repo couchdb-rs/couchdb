@@ -6,8 +6,8 @@ use command;
 use dbpath::DatabasePath;
 use design::Design;
 use docpath::DocumentPath;
-use document::Revision;
 use error::{self, Error};
+use revision::Revision;
 use viewpath::ViewPath;
 
 /// Trait for converting some types into a URI.

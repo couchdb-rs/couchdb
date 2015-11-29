@@ -1,7 +1,7 @@
 use hyper;
 
-use document::Revision;
 use error::{Error, TransportCause};
+use revision::Revision;
 
 pub struct Request {
 	request: hyper::client::Request<hyper::net::Fresh>,

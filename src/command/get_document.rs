@@ -5,8 +5,9 @@ use std;
 
 use client::{self, ClientState};
 use docpath::{DocumentId, DocumentPath};
-use document::{self, Document, Revision};
+use document::Document;
 use error::{self, Error};
+use revision::Revision;
 use transport::{self, Command, Request};
 
 #[doc(hidden)]
@@ -93,7 +94,7 @@ impl<'a, T> Command for GetDocument<'a, T>
                                 _ => { return None; },
                             },
                         };
-                        let rev = document::new_revision_from_string(rev);
+                        let rev = Revision::from(rev);
                         let id = match dot.remove("_id") {
                             None => { return None; },
                             Some(x) => match x {
