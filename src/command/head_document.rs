@@ -6,17 +6,6 @@ use error::{self, Error};
 use revision::Revision;
 use transport::{self, Command, Request};
 
-#[doc(hidden)]
-pub fn new_head_document<'a>(client_state: &'a ClientState, path: DocumentPath)
-    -> HeadDocument<'a>
-{
-    HeadDocument {
-        client_state: client_state,
-        path: path,
-        if_none_match: None,
-    }
-}
-
 /// Command to get document meta-information.
 pub struct HeadDocument<'a>
 {
@@ -27,6 +16,17 @@ pub struct HeadDocument<'a>
 
 impl<'a> HeadDocument<'a>
 {
+    #[doc(hidden)]
+    pub fn new_head_document(client_state: &'a ClientState, path: DocumentPath)
+        -> Self
+    {
+        HeadDocument {
+            client_state: client_state,
+            path: path,
+            if_none_match: None,
+        }
+    }
+
     /// Set the If-None-Match header.
     pub fn if_none_match(mut self, rev: &'a Revision) -> Self
     {

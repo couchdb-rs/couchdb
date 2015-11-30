@@ -8,16 +8,6 @@ use dbpath::DatabasePath;
 use error::{self, Error};
 use transport::{self, Command, Request};
 
-#[doc(hidden)]
-pub fn new_get_database<'a>(client_state: &'a ClientState, path: DatabasePath)
-    -> GetDatabase<'a>
-{
-    GetDatabase {
-        client_state: client_state,
-        path: path,
-    }
-}
-
 /// Command to get a database.
 pub struct GetDatabase<'a> {
     client_state: &'a ClientState,
@@ -25,6 +15,16 @@ pub struct GetDatabase<'a> {
 }
 
 impl<'a> GetDatabase<'a> {
+
+    #[doc(hidden)]
+    pub fn new_get_database(client_state: &'a ClientState, path: DatabasePath)
+        -> Self
+    {
+        GetDatabase {
+            client_state: client_state,
+            path: path,
+        }
+    }
 
     /// Send the command request and wait for the response.
     ///

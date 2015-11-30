@@ -9,23 +9,6 @@ use error::{self, Error};
 use transport::{self, Command, Request};
 use viewpath::ViewPath;
 
-#[doc(hidden)]
-pub fn new_get_view<'a, K, V>(client_state: &'a ClientState, path: ViewPath)
-    -> GetView<'a, K, V>
-    where K: serde::Deserialize,
-          V: serde::Deserialize
-{
-    GetView {
-        client_state: client_state,
-        path: path,
-        reduce: None,
-        endkey: None,
-        startkey: None,
-        _phantom_key: std::marker::PhantomData,
-        _phantom_value: std::marker::PhantomData,
-    }
-}
-
 /// Command to run a view.
 pub struct GetView<'a, K, V>
     where K: serde::Deserialize, // serialize needed for endkey and startkey
@@ -46,6 +29,23 @@ impl<'a, K, V> GetView<'a, K, V>
     where K: serde::Deserialize + serde::Serialize,
           V: serde::Deserialize
 {
+    #[doc(hidden)]
+    pub fn new_get_view(client_state: &'a ClientState, path: ViewPath)
+        -> Self
+        where K: serde::Deserialize,
+              V: serde::Deserialize
+    {
+        GetView {
+            client_state: client_state,
+            path: path,
+            reduce: None,
+            endkey: None,
+            startkey: None,
+            _phantom_key: std::marker::PhantomData,
+            _phantom_value: std::marker::PhantomData,
+        }
+    }
+
     pub fn reduce(mut self, v: bool) -> Self {
         self.reduce = Some(v);
         self

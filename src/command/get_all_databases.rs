@@ -5,19 +5,19 @@ use dbpath::DatabasePath;
 use error::Error;
 use transport::{self, Command, Request};
 
-#[doc(hidden)]
-pub fn new_get_all_databases(client_state: &ClientState) -> GetAllDatabases {
-    GetAllDatabases {
-        client_state: client_state,
-    }
-}
-
 /// Command to get all database names.
 pub struct GetAllDatabases<'a> {
     client_state: &'a ClientState,
 }
 
 impl<'a> GetAllDatabases<'a> {
+
+    #[doc(hidden)]
+    pub fn new_get_all_databases(client_state: &'a ClientState) -> Self {
+        GetAllDatabases {
+            client_state: client_state,
+        }
+    }
 
     /// Send the command request and wait for the response.
     ///

@@ -5,16 +5,6 @@ use dbpath::DatabasePath;
 use error::Error;
 use transport::{self, Command, Request};
 
-#[doc(hidden)]
-pub fn new_head_database<'a>(client_state: &'a ClientState, path: DatabasePath)
-    -> HeadDatabase<'a>
-{
-    HeadDatabase {
-        client_state: client_state,
-        path: path,
-    }
-}
-
 /// Command to get database meta-information.
 pub struct HeadDatabase<'a> {
     client_state: &'a ClientState,
@@ -22,6 +12,16 @@ pub struct HeadDatabase<'a> {
 }
 
 impl<'a> HeadDatabase<'a> {
+
+    #[doc(hidden)]
+    pub fn new_head_database(client_state: &'a ClientState, path: DatabasePath)
+        -> Self
+    {
+        HeadDatabase {
+            client_state: client_state,
+            path: path,
+        }
+    }
 
     /// Send the command request and wait for the response.
     ///

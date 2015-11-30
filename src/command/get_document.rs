@@ -11,19 +11,6 @@ use error::{self, Error};
 use revision::Revision;
 use transport::{self, Command, Request};
 
-#[doc(hidden)]
-pub fn new_get_document<'a, T>(client_state: &'a ClientState, path: DocumentPath)
-    -> GetDocument<'a, T>
-    where T: serde::Deserialize
-{
-    GetDocument {
-        client_state: client_state,
-        path: path,
-        if_none_match: None,
-        _content_type: std::marker::PhantomData,
-    }
-}
-
 /// Command to get a document.
 pub struct GetDocument<'a, T> where T: serde::Deserialize
 {
@@ -35,6 +22,18 @@ pub struct GetDocument<'a, T> where T: serde::Deserialize
 
 impl<'a, T> GetDocument<'a, T> where T: serde::Deserialize
 {
+    #[doc(hidden)]
+    pub fn new_get_document(client_state: &'a ClientState, path: DocumentPath)
+        -> Self
+    {
+        GetDocument {
+            client_state: client_state,
+            path: path,
+            if_none_match: None,
+            _content_type: std::marker::PhantomData,
+        }
+    }
+
     /// Set the If-None-Match header.
     pub fn if_none_match(mut self, rev: &'a Revision) -> Self {
         self.if_none_match = Some(rev);

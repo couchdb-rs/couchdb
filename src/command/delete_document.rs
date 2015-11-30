@@ -6,20 +6,6 @@ use error::{self, Error};
 use revision::Revision;
 use transport::{self, Command, Request};
 
-#[doc(hidden)]
-pub fn new_delete_document<'a>(
-    client_state: &'a ClientState,
-    path: DocumentPath,
-    rev: &'a Revision)
-    -> DeleteDocument<'a>
-{
-    DeleteDocument {
-        client_state: client_state,
-        path: path,
-        rev: rev,
-    }
-}
-
 /// Command to delete a document.
 pub struct DeleteDocument<'a>
 {
@@ -29,6 +15,20 @@ pub struct DeleteDocument<'a>
 }
 
 impl<'a> DeleteDocument<'a> {
+
+    #[doc(hidden)]
+    pub fn new_delete_document(
+        client_state: &'a ClientState,
+        path: DocumentPath,
+        rev: &'a Revision)
+        -> Self
+    {
+        DeleteDocument {
+            client_state: client_state,
+            path: path,
+            rev: rev,
+        }
+    }
 
     /// Send the command request and wait for the response.
     ///

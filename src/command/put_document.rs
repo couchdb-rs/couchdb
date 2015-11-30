@@ -9,22 +9,6 @@ use error::{self, Error};
 use revision::Revision;
 use transport::{self, Command, Request};
 
-#[doc(hidden)]
-pub fn new_put_document<'a, T>(
-    client_state: &'a ClientState,
-    path: DocumentPath,
-    doc_content: &'a T)
-    -> PutDocument<'a, T>
-    where T: serde::Serialize
-{
-    PutDocument {
-        client_state: client_state,
-        path: path,
-        doc_content: doc_content,
-        if_match: None,
-    }
-}
-
 /// Command to create a document.
 pub struct PutDocument<'a, T> where T: 'a + serde::Serialize
 {
@@ -36,6 +20,22 @@ pub struct PutDocument<'a, T> where T: 'a + serde::Serialize
 
 impl<'a, T> PutDocument<'a, T> where T: 'a + serde::Serialize
 {
+    #[doc(hidden)]
+    pub fn new_put_document(
+        client_state: &'a ClientState,
+        path: DocumentPath,
+        doc_content: &'a T)
+        -> Self
+        where T: serde::Serialize
+    {
+        PutDocument {
+            client_state: client_state,
+            path: path,
+            doc_content: doc_content,
+            if_match: None,
+        }
+    }
+
     /// Set the If-Match header.
     pub fn if_match(mut self, rev: &'a Revision) -> Self {
         self.if_match = Some(rev);

@@ -58,42 +58,42 @@ impl<'a> Client {
 
     /// Build a command to GET all database names.
     pub fn get_all_databases(&'a self) -> command::GetAllDatabases<'a> {
-        command::new_get_all_databases(&self.state)
+        command::GetAllDatabases::new_get_all_databases(&self.state)
     }
 
     /// Build a command to HEAD a database.
     pub fn head_database<P>(&'a self, path: P)
         -> command::HeadDatabase<'a> where P: Into<DatabasePath>
     {
-        command::new_head_database(&self.state, path.into())
+        command::HeadDatabase::new_head_database(&self.state, path.into())
     }
 
     /// Build a command to GET a database.
     pub fn get_database<P>(&'a self, path: P)
         -> command::GetDatabase<'a> where P: Into<DatabasePath>
     {
-        command::new_get_database(&self.state, path.into())
+        command::GetDatabase::new_get_database(&self.state, path.into())
     }
 
     /// Build a command to PUT a database.
     pub fn put_database<P>(&'a self, path: P)
         -> command::PutDatabase<'a> where P: Into<DatabasePath>
     {
-        command::new_put_database(&self.state, path.into())
+        command::PutDatabase::new_put_database(&self.state, path.into())
     }
 
     /// Build a command to DELETE a database.
     pub fn delete_database<P>(&'a self, path: P)
         -> command::DeleteDatabase<'a> where P: Into<DatabasePath>
     {
-        command::new_delete_database(&self.state, path.into())
+        command::DeleteDatabase::new_delete_database(&self.state, path.into())
     }
 
     /// Build a command to HEAD a document.
     pub fn head_document<P>(&'a self, path: P)
         -> command::HeadDocument<'a> where P: Into<DocumentPath>
     {
-        command::new_head_document(&self.state, path.into())
+        command::HeadDocument::new_head_document(&self.state, path.into())
     }
 
     /// Build a command to GET a document.
@@ -102,7 +102,7 @@ impl<'a> Client {
         where P: Into<DocumentPath>,
               T: serde::Deserialize
     {
-        command::new_get_document(&self.state, path.into())
+        command::GetDocument::new_get_document(&self.state, path.into())
     }
 
     /// Build a command to PUT a document.
@@ -111,21 +111,21 @@ impl<'a> Client {
         where P: Into<DocumentPath>,
               T: serde::Serialize
     {
-        command::new_put_document(&self.state, path.into(), doc_content)
+        command::PutDocument::new_put_document(&self.state, path.into(), doc_content)
     }
 
     /// Build a command to DELETE a document.
     pub fn delete_document<P>(&'a self, path: P, rev: &'a Revision)
         -> command::DeleteDocument<'a> where P: Into<DocumentPath>
     {
-        command::new_delete_document(&self.state, path.into(), rev)
+        command::DeleteDocument::new_delete_document(&self.state, path.into(), rev)
     }
 
     /// Build a command to HEAD a design document.
     pub fn head_design_document<P>(&'a self, path: P)
         -> command::HeadDocument<'a> where P: Into<DocumentPath>
     {
-        command::new_head_document(&self.state, path.into())
+        command::HeadDocument::new_head_document(&self.state, path.into())
     }
 
     /// Build a command to GET a design document.
@@ -133,7 +133,7 @@ impl<'a> Client {
         -> command::GetDocument<'a, Design>
         where P: Into<DocumentPath>
     {
-        command::new_get_document(&self.state, path.into())
+        command::GetDocument::new_get_document(&self.state, path.into())
     }
 
     /// Build a command to PUT a design document.
@@ -141,14 +141,14 @@ impl<'a> Client {
         -> command::PutDocument<'a, Design>
         where P: Into<DocumentPath>
     {
-        command::new_put_document(&self.state, path.into(), ddoc_content)
+        command::PutDocument::new_put_document(&self.state, path.into(), ddoc_content)
     }
 
     /// Build a command to DELETE a design document.
     pub fn delete_design_document<P>(&'a self, path: P, rev: &'a Revision)
         -> command::DeleteDocument<'a> where P: Into<DocumentPath>
     {
-        command::new_delete_document(&self.state, path.into(), rev)
+        command::DeleteDocument::new_delete_document(&self.state, path.into(), rev)
     }
 
     /// Build a command to GET a view.
@@ -158,7 +158,7 @@ impl<'a> Client {
               K: serde::Deserialize + serde::Serialize,
               V: serde::Deserialize
     {
-        command::new_get_view(&self.state, path.into())
+        command::GetView::new_get_view(&self.state, path.into())
     }
 }
 

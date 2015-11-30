@@ -5,16 +5,6 @@ use dbpath::DatabasePath;
 use error::{self, Error};
 use transport::{self, Command, Request};
 
-#[doc(hidden)]
-pub fn new_put_database<'a>(client_state: &'a ClientState, path: DatabasePath)
-    -> PutDatabase<'a>
-{
-    PutDatabase {
-        client_state: client_state,
-        path: path,
-    }
-}
-
 /// Command to create a database.
 pub struct PutDatabase<'a> {
     client_state: &'a ClientState,
@@ -22,6 +12,16 @@ pub struct PutDatabase<'a> {
 }
 
 impl<'a> PutDatabase<'a> {
+
+    #[doc(hidden)]
+    pub fn new_put_database(client_state: &'a ClientState, path: DatabasePath)
+        -> Self
+    {
+        PutDatabase {
+            client_state: client_state,
+            path: path,
+        }
+    }
 
     /// Send the command request and wait for the response.
     ///
