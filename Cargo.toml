@@ -9,12 +9,12 @@ documentation = "https://couchdb-rs.github.io/couchdb/doc/latest/couchdb/"
 keywords = ["couch", "couchdb", "database", "nosql"]
 
 [dependencies]
-hyper = "0.6"
+hyper = "0.7"
 regex = "0.1"
 serde = "0.6"
 serde_json = "0.6"
 tempdir = "0.3"
-url = "0.2"
+url = "0.5"
 
 [lib]
 name = "couchdb"
