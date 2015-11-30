@@ -269,7 +269,7 @@ pub struct ViewRow<K, V> where
     K: serde::Deserialize,
     V: serde::Deserialize
 {
-    pub id: Option<String>,
+    pub id: Option<String>, // FIXME: Should be DocumentId
     pub key: Option<K>,
     pub value: V,
 }

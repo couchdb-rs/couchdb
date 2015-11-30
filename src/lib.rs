@@ -143,6 +143,7 @@ mod client;
 mod database;
 mod dbpath;
 mod design;
+mod docid;
 mod docpath;
 mod document;
 mod error;
@@ -160,7 +161,8 @@ pub use design::{
     ViewFunctionMap,
     ViewResult,
     ViewRow};
-pub use docpath::{DocumentId, DocumentPath};
+pub use docid::DocumentId;
+pub use docpath::DocumentPath;
 pub use document::Document;
 pub use error::{Error, ErrorResponse};
 pub use revision::Revision;

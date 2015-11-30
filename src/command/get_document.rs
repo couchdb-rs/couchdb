@@ -4,7 +4,8 @@ use serde_json;
 use std;
 
 use client::{self, ClientState};
-use docpath::{DocumentId, DocumentPath};
+use docid::DocumentId;
+use docpath::DocumentPath;
 use document::Document;
 use error::{self, Error};
 use revision::Revision;
