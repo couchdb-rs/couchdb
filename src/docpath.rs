@@ -47,6 +47,7 @@ impl DocumentPath {
     }
 
     /// Return the database path part of the document path.
+    // FIXME: Add '_ref' suffix to name?
     pub fn database_path(&self) -> &DatabasePath {
         &self.0
     }

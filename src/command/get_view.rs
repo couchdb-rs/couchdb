@@ -4,10 +4,12 @@ use serde_json;
 use std;
 
 use client::{self, ClientState};
-use design::{ViewResult, ViewRow};
+use dbpath::DatabasePath;
+use dbtype;
 use error::{self, Error};
 use transport::{self, Command, Request};
 use viewpath::ViewPath;
+use viewresult::ViewResult;
 
 /// Command to run a view.
 pub struct GetView<'a, K, V>
@@ -85,9 +87,11 @@ impl<'a, K, V> Command for GetView<'a, K, V>
           V: serde::Deserialize
 {
     type Output = ViewResult<K, V>;
-    type State = ();
+    type State = DatabasePath;
 
     fn make_request(self) -> Result<(Request, Self::State), Error> {
+
+        let db_path = self.path.document_path().database_path().clone();
 
         let uri = {
 
@@ -127,67 +131,17 @@ impl<'a, K, V> Command for GetView<'a, K, V>
 
         let req = try!(Request::new(hyper::Get, uri))
             .accept_application_json();
-        Ok((req, ()))
+        Ok((req, db_path))
     }
 
-    fn take_response(mut resp: hyper::client::Response, _state: Self::State)
+    fn take_response(mut resp: hyper::client::Response, db_path: Self::State)
         -> Result<Self::Output, Error>
     {
         match resp.status {
             hyper::status::StatusCode::Ok => {
                 let s = try!(client::read_json_response(&mut resp));
-                let mut resp_body = try!(client::decode_json::<serde_json::Value>(&s));
-                match (|| {
-                    let (total_rows, offset, mut raw_rows) = {
-                        let mut dot = match resp_body.as_object_mut() {
-                            None => { return None; },
-                            Some(x) => x,
-                        };
-                        let total_rows = match dot.remove("total_rows") {
-                            None => 0u64,
-                            Some(x) => match x.as_u64() {
-                                None => { return None; },
-                                Some(x) => x,
-                            }
-                        };
-                        let offset = match dot.remove("offset") {
-                            None => 0u64,
-                            Some(x) => match x.as_u64() {
-                                None => { return None; },
-                                Some(x) => x,
-                            }
-                        };
-                        let raw_rows = match dot.remove("rows") {
-                            None => { return None; },
-                            Some(mut x) => match x.as_array_mut() {
-                                None => { return None; },
-                                Some(x) => std::mem::replace(x, Vec::<serde_json::Value>::new()),
-                            }
-                        };
-                        (total_rows, offset, raw_rows)
-                    };
-                    let rows = raw_rows.iter_mut()
-                        .map(|x| {
-                            let v = std::mem::replace(x, serde_json::Value::Null);
-                            serde_json::from_value::<ViewRow<K, V>>(v)
-                        })
-                        .take_while(|x| x.is_ok() )
-                        .map(|x| x.unwrap() )
-                        .collect::<Vec<ViewRow<K, V>>>();
-                    if rows.len() != raw_rows.len() {
-                        return None; // at least one element didn't deserialize
-                    }
-                    Some(
-                        ViewResult::<K, V> {
-                            total_rows: total_rows,
-                            offset: offset,
-                            rows: rows,
-                        }
-                    )
-                })() {
-                    None => Err(Error::UnexpectedContent { got: s } ),
-                    Some(x) => Ok(x),
-                }
+                let db_result = try!(client::decode_json::<dbtype::ViewResult<K, V>>(&s));
+                Ok(ViewResult::new_from_db_view_result(&db_path, db_result))
             },
             hyper::status::StatusCode::BadRequest =>
                 Err(error::new_because_invalid_request(&mut resp)),

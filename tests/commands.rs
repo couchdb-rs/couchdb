@@ -620,8 +620,8 @@ fn get_view() {
     let result = client.get_view::<_, String, u32>(View::ByName)
         .run()
         .unwrap();
-    assert_eq!(0, result.total_rows);
-    assert_eq!(0, result.offset);
+    assert_eq!(Some(0), result.total_rows);
+    assert_eq!(Some(0), result.offset);
     assert!(result.rows.is_empty());
 
     // Populate the database with some documents.
@@ -642,18 +642,18 @@ fn get_view() {
 
     let result = client.get_view::<_, String, String>(View::ByName)
         .run().unwrap();
-    assert_eq!(2, result.total_rows);
-    assert_eq!(0, result.offset);
+    assert_eq!(Some(2), result.total_rows);
+    assert_eq!(Some(0), result.offset);
     assert_eq!(
         result.rows,
         vec![
             couchdb::ViewRow::<String, String> {
-                id: Some("babe_ruth".to_string()),
+                path: Some(Doc::BabeRuth.into()),
                 key: Some("Babe Ruth".to_string()),
                 value: "Babe Ruth".to_string(),
             },
             couchdb::ViewRow::<String, String> {
-                id: Some("hank_aaron".to_string()),
+                path: Some(Doc::HankAaron.into()),
                 key: Some("Hank Aaron".to_string()),
                 value: "Hank Aaron".to_string(),
             },
@@ -664,18 +664,18 @@ fn get_view() {
     let result = client.get_view::<_, String, u32>(View::ByHr)
         .reduce(false)
         .run().unwrap();
-    assert_eq!(2, result.total_rows);
-    assert_eq!(0, result.offset);
+    assert_eq!(Some(2), result.total_rows);
+    assert_eq!(Some(0), result.offset);
     assert_eq!(
         result.rows,
         vec![
             couchdb::ViewRow::<String, u32> {
-                id: Some("babe_ruth".to_string()),
+                path: Some(Doc::BabeRuth.into()),
                 key: Some("Babe Ruth".to_string()),
                 value: 714,
             },
             couchdb::ViewRow::<String, u32> {
-                id: Some("hank_aaron".to_string()),
+                path: Some(Doc::HankAaron.into()),
                 key: Some("Hank Aaron".to_string()),
                 value: 755,
             },
@@ -685,13 +685,13 @@ fn get_view() {
 
     let result = client.get_view::<_, String, u32>(View::ByHr)
         .run().unwrap();
-    assert_eq!(0, result.total_rows);
-    assert_eq!(0, result.offset);
+    assert_eq!(None, result.total_rows);
+    assert_eq!(None, result.offset);
     assert_eq!(
         result.rows,
         vec![
             couchdb::ViewRow::<String, u32> {
-                id: None,
+                path: None,
                 key: None,
                 value: 714 + 755,
             },
@@ -702,13 +702,13 @@ fn get_view() {
         .reduce(false)
         .startkey("h".to_string())
         .run().unwrap();
-    assert_eq!(2, result.total_rows);
-    assert_eq!(1, result.offset);
+    assert_eq!(Some(2), result.total_rows);
+    assert_eq!(Some(1), result.offset);
     assert_eq!(
         result.rows,
         vec![
             couchdb::ViewRow::<String, u32> {
-                id: Some("hank_aaron".to_string()),
+                path: Some(Doc::HankAaron.into()),
                 key: Some("Hank Aaron".to_string()),
                 value: 755,
             },
@@ -719,13 +719,13 @@ fn get_view() {
         .reduce(false)
         .endkey("h".to_string())
         .run().unwrap();
-    assert_eq!(2, result.total_rows);
-    assert_eq!(0, result.offset);
+    assert_eq!(Some(2), result.total_rows);
+    assert_eq!(Some(0), result.offset);
     assert_eq!(
         result.rows,
         vec![
             couchdb::ViewRow::<String, u32> {
-                id: Some("babe_ruth".to_string()),
+                path: Some(Doc::BabeRuth.into()),
                 key: Some("Babe Ruth".to_string()),
                 value: 714,
             },
