@@ -30,6 +30,13 @@ impl DatabasePath {
 
         uri
     }
+
+    /// Return the database name part of the database path.
+    pub fn database_name(&self) -> &String {
+        let DatabasePath(ref db_name) = *self;
+        db_name
+    }
+
 }
 
 impl AsRef<String> for DatabasePath {
@@ -160,5 +167,11 @@ mod tests
         let uri = DatabasePath::from("foo").into_uri(base);
         let exp = hyper::Url::parse("http://example.com:1234/bar/foo").unwrap();
         assert_eq!(uri, exp);
+    }
+
+    #[test]
+    fn test_database_path_accessors() {
+        let db_path = DatabasePath::from("foo");
+        assert_eq!(*db_path.database_name(), "foo".to_string());
     }
 }
