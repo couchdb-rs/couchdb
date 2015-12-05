@@ -25,14 +25,14 @@ impl<K, V> ViewResult<K, V>
           V: serde::Deserialize
 {
     #[doc(hidden)]
-    pub fn new_from_db_view_result(
+    pub fn from_db_view_result(
         db_path: &DatabasePath,
         mut db_result: dbtype::ViewResult<K, V>)
         -> Self
     {
         let db_rows = std::mem::replace(&mut db_result.rows, Vec::new());
         let dst_rows = db_rows.into_iter()
-            .map(|db_row| { ViewRow::new_from_db_view_row(db_path, db_row) })
+            .map(|db_row| { ViewRow::from_db_view_row(db_path, db_row) })
             .collect();
         ViewResult {
             total_rows: db_result.total_rows,
@@ -73,7 +73,7 @@ mod tests {
                 },
             ],
         };
-        let got = ViewResult::new_from_db_view_result(&db_path, src);
+        let got = ViewResult::from_db_view_result(&db_path, src);
         let exp = ViewResult {
             total_rows: Some(123),
             offset: Some(66),
@@ -104,7 +104,7 @@ mod tests {
                 },
             ],
         };
-        let got = ViewResult::new_from_db_view_result(&db_path, src);
+        let got = ViewResult::from_db_view_result(&db_path, src);
         let exp = ViewResult {
             total_rows: Some(123),
             offset: Some(66),

@@ -141,7 +141,7 @@ impl<'a, K, V> Command for GetView<'a, K, V>
             hyper::status::StatusCode::Ok => {
                 let s = try!(client::read_json_response(&mut resp));
                 let db_result = try!(client::decode_json::<dbtype::ViewResult<K, V>>(&s));
-                Ok(ViewResult::new_from_db_view_result(&db_path, db_result))
+                Ok(ViewResult::from_db_view_result(&db_path, db_result))
             },
             hyper::status::StatusCode::BadRequest =>
                 Err(error::new_because_invalid_request(&mut resp)),

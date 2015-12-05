@@ -17,7 +17,7 @@ impl<K, V> serde::Deserialize for ViewResult<K, V>
     where K: serde::Deserialize,
           V: serde::Deserialize
 {
-    fn deserialize<D>(d: &mut D) -> Result<ViewResult<K, V>, D::Error>
+    fn deserialize<D>(d: &mut D) -> Result<Self, D::Error>
         where D: serde::Deserializer
     {
 
@@ -27,18 +27,16 @@ impl<K, V> serde::Deserialize for ViewResult<K, V>
             Rows,
         }
 
-        impl serde::Deserialize for Field
-        {
-            fn deserialize<D>(d: &mut D) -> Result<Field, D::Error>
+        impl serde::Deserialize for Field {
+            fn deserialize<D>(d: &mut D) -> Result<Self, D::Error>
                 where D: serde::Deserializer
             {
                 struct Visitor;
 
-                impl serde::de::Visitor for Visitor
-                {
+                impl serde::de::Visitor for Visitor {
                     type Value = Field;
 
-                    fn visit_str<E>(&mut self, value: &str) -> Result<Field, E>
+                    fn visit_str<E>(&mut self, value: &str) -> Result<Self::Value, E>
                         where E: serde::de::Error
                     {
                         match value {
@@ -68,8 +66,7 @@ impl<K, V> serde::Deserialize for ViewResult<K, V>
         {
             type Value = ViewResult<K2, V2>;
 
-            fn visit_map<Vis>(&mut self, mut visitor: Vis)
-                -> Result<ViewResult<K2, V2>, Vis::Error>
+            fn visit_map<Vis>(&mut self, mut visitor: Vis) -> Result<Self::Value, Vis::Error>
                     where Vis: serde::de::MapVisitor
             {
                 let mut total_rows = None;
@@ -79,14 +76,14 @@ impl<K, V> serde::Deserialize for ViewResult<K, V>
                     match try!(visitor.visit_key()) {
                         Some(Field::TotalRows) => {
                             total_rows = Some(try!(visitor.visit_value()));
-                        }
+                        },
                         Some(Field::Offset) => {
                             offset = Some(try!(visitor.visit_value()));
-                        }
+                        },
                         Some(Field::Rows) => {
                             rows = Some(try!(visitor.visit_value()));
-                        }
-                        None => { break; }
+                        },
+                        None => { break; },
                     }
                 }
 

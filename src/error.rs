@@ -97,7 +97,7 @@ pub enum Error {
     /// expect.
     #[doc(hidden)]
     UnexpectedContent {
-        got: String,
+        kind: UnexpectedContentKind,
     },
 
     /// The CouchDB server responded with a Content-Type header that the client
@@ -142,11 +142,11 @@ impl std::error::Error for Error {
             Transport { .. } => "An HTTP transport error occurred",
             Unauthorized { .. } => "The client is unauthorized to carry out the operation",
             UnexpectedContent { .. } =>
-                "The CouchDB server responded with content that the client did not expect",
+                "The CouchDB server responded with content the client did not expect",
             UnexpectedContentTypeHeader { .. } =>
-                "The CouchDB server responded with a Content-Type header that the client did not expect",
+                "The CouchDB server responded with a Content-Type header the client did not expect",
             UnexpectedHttpStatus { .. } =>
-                "The CouchDB server responded with an HTTP status code that the client did not expect",
+                "The CouchDB server responded with an HTTP status code the client did not expect",
             UriParse { .. } => "Invalid URI argument",
         }
     }
@@ -173,7 +173,7 @@ impl std::error::Error for Error {
                 }
             },
             Unauthorized { .. } => None,
-            UnexpectedContent { .. } => None,
+            UnexpectedContent { ref kind } => kind.cause(),
             UnexpectedContentTypeHeader { .. }  => None,
             UnexpectedHttpStatus { .. } => None,
             UriParse { ref cause } => Some(cause),
@@ -211,7 +211,7 @@ impl std::fmt::Display for Error {
             Transport { ref cause } => write!(f, "{}: {}", self.description(), cause),
             Unauthorized { ref response } =>
                 write!(f, "{}: {}: {}", self.description(), response.error, response.reason),
-            UnexpectedContent { ref got } => write!(f, "{}: Got {}", self.description(), got),
+            UnexpectedContent { ref kind } => write!(f, "{}: {}", self.description(), kind),
             UnexpectedContentTypeHeader { ref expected, ref got } =>
                 write!(f, "{}: Expected '{}', got '{}'", self.description(), expected, got),
             UnexpectedHttpStatus { ref got } => write!(f, "{}: Got {}", self.description(), got),
@@ -243,6 +243,40 @@ impl std::fmt::Display for TransportCause {
         match *self {
             Hyper(ref e) => e.fmt(f),
             Io(ref e) => e.fmt(f),
+        }
+    }
+}
+
+#[derive(Debug)]
+pub enum UnexpectedContentKind {
+    // FIXME: Replace the Raw variant with more specific variants.
+    Raw {
+        got: String,
+    },
+    InstanceStartTime {
+        got: String,
+        cause: std::num::ParseIntError,
+    },
+}
+
+impl UnexpectedContentKind {
+    fn cause(&self) -> Option<&std::error::Error> {
+        use self::UnexpectedContentKind::*;
+        match *self {
+            InstanceStartTime { ref cause, .. } => Some(cause),
+            Raw { .. } => None,
+        }
+    }
+}
+
+impl std::fmt::Display for UnexpectedContentKind {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> Result<(), std::fmt::Error> {
+        use self::UnexpectedContentKind::*;
+        match *self {
+            InstanceStartTime { ref got, ref cause } =>
+                write!(f, "Could not convert instance_start_time to numeric type: {}: got {}",
+                       cause, got),
+            Raw { ref got } => write!(f, "Got {}", got),
         }
     }
 }
@@ -292,7 +326,7 @@ fn extract_couchdb_error_and_reason(resp: &mut hyper::client::Response)
         };
         Some((error, reason))
     })()
-    .ok_or(Error::UnexpectedContent { got: s } )
+    .ok_or(Error::UnexpectedContent { kind: UnexpectedContentKind::Raw { got: s } } )
 }
 
 pub fn new_because_database_exists(resp: &mut hyper::client::Response) -> Error {

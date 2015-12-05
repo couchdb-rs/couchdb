@@ -107,7 +107,7 @@ impl<'a, T> Command for PutDocument<'a, T> where T: 'a + serde::Serialize
                     let rev = Revision::from(rev);
                     Some(rev)
                 })()
-                .ok_or(Error::UnexpectedContent { got: s } )
+                .ok_or(Error::UnexpectedContent { kind: error::UnexpectedContentKind::Raw { got: s } } )
             },
             hyper::status::StatusCode::BadRequest =>
                 Err(error::new_because_invalid_request(&mut resp)),

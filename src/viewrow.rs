@@ -24,7 +24,7 @@ impl<K, V> ViewRow<K, V>
           V: serde::Deserialize
 {
     #[doc(hidden)]
-    pub fn new_from_db_view_row(
+    pub fn from_db_view_row(
         db_path: &DatabasePath,
         db_row: dbtype::ViewRow<K, V>)
         -> Self
@@ -58,7 +58,7 @@ mod tests {
             key: Some("blah".to_string()),
             value: 42,
         };
-        let got = ViewRow::new_from_db_view_row(&db_path, src);
+        let got = ViewRow::from_db_view_row(&db_path, src);
         let exp = ViewRow {
             path: Some(DocumentPath::from("dbpath/docid")),
             key: Some("blah".to_string()),
@@ -72,7 +72,7 @@ mod tests {
             key: Some("blah".to_string()),
             value: 42,
         };
-        let got = ViewRow::new_from_db_view_row(&db_path, src);
+        let got = ViewRow::from_db_view_row(&db_path, src);
         let exp = ViewRow {
             path: None,
             key: Some("blah".to_string()),

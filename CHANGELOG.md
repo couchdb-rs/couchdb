@@ -2,6 +2,11 @@
 
 ## [Unreleased (0.3.0)]
 
+### Added
+
+* Add all missing fields to the `Database` type. The type now includes
+  all information returned by the CouchDB server.
+
 ### Changed
 
 * Replace string-based types for resource names with new stronger types:

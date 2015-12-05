@@ -124,7 +124,7 @@ impl<'a, T> Command for GetDocument<'a, T>
                         }
                     )
                 })() {
-                    None => Err(Error::UnexpectedContent { got: s } ),
+                    None => Err(Error::UnexpectedContent { kind: error::UnexpectedContentKind::Raw { got: s } } ),
                     Some(x) => Ok(Some(x)),
                 }
             },

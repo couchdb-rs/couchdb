@@ -187,6 +187,7 @@ pub fn require_content_type_application_json(headers: &hyper::header::Headers)
 }
 
 /// Helper function for reading application/json content from an HTTP response.
+// FIXME: Move to transport module?
 pub fn read_json_response(resp: &mut hyper::client::Response) -> Result<String, Error> {
     use std::io::Read;
     try!(require_content_type_application_json(&resp.headers));
@@ -201,6 +202,7 @@ pub fn read_json_response(resp: &mut hyper::client::Response) -> Result<String, 
 }
 
 /// Helper function for decoding a JSON string.
+// FIXME: Move to transport module?
 pub fn decode_json<T: serde::Deserialize>(s: &String) -> Result<T, Error> {
     let x = try!(
         serde_json::from_str::<T>(&s)

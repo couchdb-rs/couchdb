@@ -15,7 +15,7 @@ impl<K, V> serde::Deserialize for ViewRow<K, V>
     where K: serde::Deserialize,
           V: serde::Deserialize
 {
-    fn deserialize<D>(d: &mut D) -> Result<ViewRow<K, V>, D::Error>
+    fn deserialize<D>(d: &mut D) -> Result<Self, D::Error>
         where D: serde::Deserializer
     {
         enum Field {
@@ -26,16 +26,15 @@ impl<K, V> serde::Deserialize for ViewRow<K, V>
 
         impl serde::Deserialize for Field
         {
-            fn deserialize<D>(d: &mut D) -> Result<Field, D::Error>
+            fn deserialize<D>(d: &mut D) -> Result<Self, D::Error>
                 where D: serde::Deserializer
             {
                 struct Visitor;
 
-                impl serde::de::Visitor for Visitor
-                {
+                impl serde::de::Visitor for Visitor {
                     type Value = Field;
 
-                    fn visit_str<E>(&mut self, value: &str) -> Result<Field, E>
+                    fn visit_str<E>(&mut self, value: &str) -> Result<Self::Value, E>
                         where E: serde::de::Error
                     {
                         match value {
@@ -66,7 +65,7 @@ impl<K, V> serde::Deserialize for ViewRow<K, V>
             type Value = ViewRow<K2, V2>;
 
             fn visit_map<Vis>(&mut self, mut visitor: Vis)
-                -> Result<ViewRow<K2, V2>, Vis::Error>
+                -> Result<Self::Value, Vis::Error>
                     where Vis: serde::de::MapVisitor
             {
                 let mut id = None;
@@ -76,14 +75,14 @@ impl<K, V> serde::Deserialize for ViewRow<K, V>
                     match try!(visitor.visit_key()) {
                         Some(Field::Id) => {
                             id = Some(try!(visitor.visit_value()));
-                        }
+                        },
                         Some(Field::Key) => {
                             key = try!(visitor.visit_value()); // allow null
-                        }
+                        },
                         Some(Field::Value) => {
                             value = Some(try!(visitor.visit_value()));
-                        }
-                        None => { break; }
+                        },
+                        None => { break; },
                     }
                 }
 
