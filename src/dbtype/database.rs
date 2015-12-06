@@ -219,18 +219,12 @@ impl serde::Deserialize for Database {
 mod tests {
 
     use serde_json;
-    use std;
 
     use super::*;
+    use dbtype::json::*;
 
     #[test]
-    fn test_database_serialization() {
-
-        // This function tests deserialization of the JSON string multiple
-        // times, one time with the full object, which should succeed, and each
-        // other time with one of the fields missing, which should fail. We
-        // construct these JSON strings at runtime, using the following array
-        // and helper functions.
+    fn test_deserialization() {
 
         let fields = [
             r#""db_name": "stuff""#,
@@ -246,41 +240,8 @@ mod tests {
             r#""committed_update_seq": 8"#,
         ];
 
-        fn append(mut acc: String, item: & &str) -> String {
-            if !acc.ends_with("{") {
-                acc.push_str(", ");
-            }
-            acc.push_str(item);
-            acc
-        }
-
-        fn join_json_string<'a, I, J>(head: I, tail: J) -> String
-            where I: Iterator<Item = &'a &'a str>,
-                  J: Iterator<Item = &'a &'a str>
-        {
-            let s = head.fold("{".to_string(), append);
-            let s = tail.fold(s, append);
-            let mut s = s;
-            s.push_str("}");
-            s
-        }
-
-        let complete_json_string = || {
-            join_json_string(std::iter::empty(), fields.into_iter())
-        };
-
-        let incomplete_json_string = |key| {
-            let key = format!(r#""{}""#, key);
-            let pos = fields.into_iter().position(|&item| {
-                item.starts_with(&key)
-            }).unwrap();
-            join_json_string(
-                fields.into_iter().take(pos),
-                fields.into_iter().skip(pos+1))
-        };
-
         // Verify: All fields present.
-        let s = complete_json_string();
+        let s = make_complete_json_object(&fields);
         let v = serde_json::from_str::<Database>(&s).unwrap();
         assert_eq!(v.committed_update_seq, 8);
         assert_eq!(v.compact_running, false);
@@ -295,27 +256,27 @@ mod tests {
         assert_eq!(v.update_seq, 3);
 
         // Verify: Each field missing, one at a time.
-        let s = incomplete_json_string("db_name");
+        let s = make_json_object_with_missing_field(&fields, "db_name");
         assert!(serde_json::from_str::<Database>(&s).is_err());
-        let s = incomplete_json_string("doc_count");
+        let s = make_json_object_with_missing_field(&fields, "doc_count");
         assert!(serde_json::from_str::<Database>(&s).is_err());
-        let s = incomplete_json_string("doc_del_count");
+        let s = make_json_object_with_missing_field(&fields, "doc_del_count");
         assert!(serde_json::from_str::<Database>(&s).is_err());
-        let s = incomplete_json_string("update_seq");
+        let s = make_json_object_with_missing_field(&fields, "update_seq");
         assert!(serde_json::from_str::<Database>(&s).is_err());
-        let s = incomplete_json_string("purge_seq");
+        let s = make_json_object_with_missing_field(&fields, "purge_seq");
         assert!(serde_json::from_str::<Database>(&s).is_err());
-        let s = incomplete_json_string("compact_running");
+        let s = make_json_object_with_missing_field(&fields, "compact_running");
         assert!(serde_json::from_str::<Database>(&s).is_err());
-        let s = incomplete_json_string("disk_size");
+        let s = make_json_object_with_missing_field(&fields, "disk_size");
         assert!(serde_json::from_str::<Database>(&s).is_err());
-        let s = incomplete_json_string("data_size");
+        let s = make_json_object_with_missing_field(&fields, "data_size");
         assert!(serde_json::from_str::<Database>(&s).is_err());
-        let s = incomplete_json_string("instance_start_time");
+        let s = make_json_object_with_missing_field(&fields, "instance_start_time");
         assert!(serde_json::from_str::<Database>(&s).is_err());
-        let s = incomplete_json_string("disk_format_version");
+        let s = make_json_object_with_missing_field(&fields, "disk_format_version");
         assert!(serde_json::from_str::<Database>(&s).is_err());
-        let s = incomplete_json_string("committed_update_seq");
+        let s = make_json_object_with_missing_field(&fields, "committed_update_seq");
         assert!(serde_json::from_str::<Database>(&s).is_err());
     }
 }

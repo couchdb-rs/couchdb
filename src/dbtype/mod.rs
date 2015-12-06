@@ -3,9 +3,12 @@
 // crate exports.
 
 mod database;
+mod json;
+mod putdocresponse;
 mod viewresult;
 mod viewrow;
 
 pub use self::database::Database;
+pub use self::putdocresponse::PutDocumentResponse;
 pub use self::viewresult::ViewResult;
 pub use self::viewrow::ViewRow;

@@ -1,9 +1,9 @@
 use hyper;
 use serde;
 use serde_json;
-use std;
 
 use client::{self, ClientState};
+use dbtype::PutDocumentResponse;
 use docpath::DocumentPath;
 use error::{self, Error};
 use revision::Revision;
@@ -89,25 +89,9 @@ impl<'a, T> Command for PutDocument<'a, T> where T: 'a + serde::Serialize
         match resp.status {
             hyper::status::StatusCode::Created => {
                 let s = try!(client::read_json_response(&mut resp));
-                let mut resp_body = try!(client::decode_json::<serde_json::Value>(&s));
-                (|| {
-                    let dot = match resp_body.as_object_mut() {
-                        None => { return None; },
-                        Some(x) => x,
-                    };
-                    let rev = match dot.get_mut("rev") {
-                        None => { return None; },
-                        Some(x) => x,
-                    };
-                    let rev = match *rev {
-                        serde_json::Value::String(ref mut x) => std::mem::replace(
-                            x, String::new()),
-                        _ => { return None; },
-                    };
-                    let rev = Revision::from(rev);
-                    Some(rev)
-                })()
-                .ok_or(Error::UnexpectedContent { kind: error::UnexpectedContentKind::Raw { got: s } } )
+                let resp = try!(client::decode_json::<PutDocumentResponse>(&s));
+                let rev: Revision = resp.rev.into();
+                Ok(rev)
             },
             hyper::status::StatusCode::BadRequest =>
                 Err(error::new_because_invalid_request(&mut resp)),
