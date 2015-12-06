@@ -1,6 +1,6 @@
 use hyper;
 
-use client::{self, ClientState};
+use client::ClientState;
 use dbpath::DatabasePath;
 use error::{self, Error};
 use transport::{self, Command, Request};
@@ -54,7 +54,7 @@ impl<'a> Command for PutDatabase<'a> {
     {
         match resp.status {
             hyper::status::StatusCode::Created =>
-                Ok(try!(client::require_content_type_application_json(&resp.headers))),
+                transport::content_type_must_be_application_json(&resp.headers),
             hyper::status::StatusCode::BadRequest =>
                 Err(error::new_because_invalid_database_name(&mut resp)),
             hyper::status::StatusCode::Unauthorized =>

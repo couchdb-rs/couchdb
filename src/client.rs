@@ -1,12 +1,11 @@
 use hyper;
 use serde;
-use serde_json;
 
 use command;
 use dbpath::DatabasePath;
 use design::Design;
 use docpath::DocumentPath;
-use error::{self, Error};
+use error::Error;
 use revision::Revision;
 use viewpath::ViewPath;
 
@@ -160,55 +159,4 @@ impl<'a> Client {
     {
         command::GetView::new_get_view(&self.state, path.into())
     }
-}
-
-/// Helper function for checking that an HTTP response has application/json
-/// Content-Type and returning an error if not.
-pub fn require_content_type_application_json(headers: &hyper::header::Headers)
-                                             -> Result<(), Error > {
-    match headers.get::<hyper::header::ContentType>() {
-        None => Err(Error::NoContentTypeHeader {
-            expected: "application/json",
-        }),
-        Some(content_type) => {
-            use hyper::mime::*;
-            let exp = hyper::mime::Mime(TopLevel::Application, SubLevel::Json, vec![]);
-            let &hyper::header::ContentType(ref got) = content_type;
-            if *got != exp {
-                Err(Error::UnexpectedContentTypeHeader {
-                    expected: "application/json",
-                    got: format!("{}", got)
-                })
-            } else {
-                Ok(())
-            }
-        },
-    }
-}
-
-/// Helper function for reading application/json content from an HTTP response.
-// FIXME: Move to transport module?
-pub fn read_json_response(resp: &mut hyper::client::Response) -> Result<String, Error> {
-    use std::io::Read;
-    try!(require_content_type_application_json(&resp.headers));
-    let mut s = String::new();
-    try!(
-        resp.read_to_string(&mut s)
-        .or_else(|e| {
-            Err(Error::Transport { cause: error::TransportCause::Io(e) } )
-        })
-    );
-    Ok(s)
-}
-
-/// Helper function for decoding a JSON string.
-// FIXME: Move to transport module?
-pub fn decode_json<T: serde::Deserialize>(s: &String) -> Result<T, Error> {
-    let x = try!(
-        serde_json::from_str::<T>(&s)
-        .or_else(|e| {
-            Err(Error::Decode { cause: e } )
-        })
-    );
-    Ok(x)
 }

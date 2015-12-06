@@ -1,12 +1,11 @@
 use hyper;
 use serde;
-use serde_json;
 use std;
 
-use client::{self, ClientState};
-use docid::DocumentId;
+use client::ClientState;
+use dbpath::DatabasePath;
 use docpath::DocumentPath;
-use document::Document;
+use document::{self, Document};
 use error::{self, Error};
 use revision::Revision;
 use transport::{self, Command, Request};
@@ -64,69 +63,25 @@ impl<'a, T> Command for GetDocument<'a, T>
     where T: serde::Deserialize
 {
     type Output = Option<Document<T>>;
-    type State = ();
+    type State = DatabasePath;
 
     fn make_request(self) -> Result<(Request, Self::State), Error> {
+        let db_path = self.path.database_path().clone();
         let uri = self.path.into_uri(self.client_state.uri.clone());
         let req = try!(Request::new(hyper::Get, uri))
             .accept_application_json()
             .if_none_match_revision(self.if_none_match);
-        Ok((req, ()))
+        Ok((req, db_path))
     }
 
-    fn take_response(mut resp: hyper::client::Response, _state: Self::State)
+    fn take_response(mut resp: hyper::client::Response, db_path: Self::State)
         -> Result<Self::Output, Error>
     {
         match resp.status {
             hyper::status::StatusCode::Ok => {
-                let s = try!(client::read_json_response(&mut resp));
-                let mut resp_body = try!(client::decode_json::<serde_json::Value>(&s));
-                match (|| {
-                    let (rev, id) = {
-                        let mut dot = match resp_body.as_object_mut() {
-                            None => { return None; },
-                            Some(x) => x,
-                        };
-                        let rev = match dot.remove("_rev") {
-                            None => { return None; },
-                            Some(x) => match x {
-                                serde_json::Value::String(x) => x,
-                                _ => { return None; },
-                            },
-                        };
-                        let rev = Revision::from(rev);
-                        let id = match dot.remove("_id") {
-                            None => { return None; },
-                            Some(x) => match x {
-                                serde_json::Value::String(x) =>
-                                    DocumentId::from(x),
-                                _ => { return None; },
-                            },
-                        };
-                        //body_map.remove("_deleted");
-                        //body_map.remove("_attachments");
-                        //body_map.remove("_conflicts");
-                        //body_map.remove("_deleted_conflicts");
-                        //body_map.remove("_local_seq");
-                        //body_map.remove("_revs_info");
-                        //body_map.remove("_revisions");
-                        (rev, id)
-                    };
-                    let content = match serde_json::from_value::<T>(resp_body) {
-                        Ok(x) => x,
-                        Err(_) => { return None; },
-                    };
-                    Some(
-                        Document::<T> {
-                            content: content,
-                            revision: rev,
-                            id: id,
-                        }
-                    )
-                })() {
-                    None => Err(Error::UnexpectedContent { kind: error::UnexpectedContentKind::Raw { got: s } } ),
-                    Some(x) => Ok(Some(x)),
-                }
+                try!(transport::content_type_must_be_application_json(&resp.headers));
+                let doc = try!(document::document_from_json(&mut resp, db_path));
+                Ok(Some(doc))
             },
             hyper::status::StatusCode::NotModified => Ok(None),
             hyper::status::StatusCode::BadRequest =>

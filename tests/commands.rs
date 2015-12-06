@@ -3,7 +3,6 @@ extern crate serde_json;
 
 use couchdb::{
     DatabasePath,
-    DocumentId,
     DocumentPath,
     ViewPath,
 };
@@ -22,6 +21,7 @@ impl Into<DatabasePath> for Db {
     }
 }
 
+#[derive(Debug)]
 enum Doc {
     BabeRuth,
     HankAaron,
@@ -244,9 +244,9 @@ fn get_document() {
     // Verify: Getting an existing document succeeds.
     let doc1 = client.get_document::<_, serde_json::Value>(Doc::BabeRuth)
         .run().unwrap().unwrap();
-    assert!(doc1.id == DocumentId::Normal("babe_ruth".to_string()));
-    assert!(doc1.revision == rev1);
-    assert!(doc1.content == pdoc);
+    assert_eq!(doc1.path, Doc::BabeRuth.into());
+    assert_eq!(doc1.revision, rev1);
+    assert_eq!(doc1.content, pdoc);
 
     // Verify: Getting a non-existing document fails.
     let e = client.get_document::<_, serde_json::Value>(Doc::HankAaron)
@@ -445,7 +445,7 @@ fn get_design_document() {
         .run()
         .unwrap()
         .unwrap();
-    assert_eq!(ddoc.id, DocumentId::Design("my_design".to_string()));
+    assert_eq!(ddoc.path, Doc::MyDesign.into());
     assert_eq!(ddoc.revision, rev1);
 
     // Verify: Getting a non-existing design document fails.

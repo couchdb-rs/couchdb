@@ -2,7 +2,7 @@ use hyper;
 use serde;
 use serde_json;
 
-use client::{self, ClientState};
+use client::ClientState;
 use dbtype::PutDocumentResponse;
 use docpath::DocumentPath;
 use error::{self, Error};
@@ -88,9 +88,9 @@ impl<'a, T> Command for PutDocument<'a, T> where T: 'a + serde::Serialize
     {
         match resp.status {
             hyper::status::StatusCode::Created => {
-                let s = try!(client::read_json_response(&mut resp));
-                let resp = try!(client::decode_json::<PutDocumentResponse>(&s));
-                let rev: Revision = resp.rev.into();
+                try!(transport::content_type_must_be_application_json(&resp.headers));
+                let content = try!(transport::decode_json::<_, PutDocumentResponse>(resp));
+                let rev: Revision = content.rev.into();
                 Ok(rev)
             },
             hyper::status::StatusCode::BadRequest =>

@@ -21,7 +21,7 @@ pub enum Error {
     /// JSON-decoding error.
     Decode {
         #[doc(hidden)]
-        cause: serde_json::error::Error,
+        kind: DecodeKind,
     },
 
     /// The client request conflicts with an existing document.
@@ -93,13 +93,6 @@ pub enum Error {
         response: ErrorResponse,
     },
 
-    /// The CouchDB server responded with content that the client did not
-    /// expect.
-    #[doc(hidden)]
-    UnexpectedContent {
-        kind: UnexpectedContentKind,
-    },
-
     /// The CouchDB server responded with a Content-Type header that the client
     /// didn't expect.
     #[doc(hidden)]
@@ -141,8 +134,6 @@ impl std::error::Error for Error {
             ReceiveFromThread { ref description, .. } => description,
             Transport { .. } => "An HTTP transport error occurred",
             Unauthorized { .. } => "The client is unauthorized to carry out the operation",
-            UnexpectedContent { .. } =>
-                "The CouchDB server responded with content the client did not expect",
             UnexpectedContentTypeHeader { .. } =>
                 "The CouchDB server responded with a Content-Type header the client did not expect",
             UnexpectedHttpStatus { .. } =>
@@ -155,7 +146,7 @@ impl std::error::Error for Error {
         use self::Error::*;
         match *self {
             DatabaseExists { .. } => None,
-            Decode { ref cause } => Some(cause),
+            Decode { ref kind } => kind.cause(),
             DocumentConflict { .. } => None,
             Encode { ref cause } => Some(cause),
             InternalServerError { .. } => None,
@@ -173,7 +164,6 @@ impl std::error::Error for Error {
                 }
             },
             Unauthorized { .. } => None,
-            UnexpectedContent { ref kind } => kind.cause(),
             UnexpectedContentTypeHeader { .. }  => None,
             UnexpectedHttpStatus { .. } => None,
             UriParse { ref cause } => Some(cause),
@@ -186,9 +176,10 @@ impl std::fmt::Display for Error {
         use std::error::Error;
         use self::Error::*;
         match *self {
+            // FIXME: Implement Display for ErrorResponse.
             DatabaseExists { ref response } =>
                 write!(f, "{}: {}: {}", self.description(), response.error, response.reason),
-            Decode { ref cause } => write!(f, "{}: {}", self.description(), cause),
+            Decode { ref kind } => write!(f, "{}: {}", self.description(), kind),
             DocumentConflict { ref response } =>
                 write!(f, "{}: {}: {}", self.description(), response.error, response.reason),
             Encode { ref cause } => write!(f, "{}: {}", self.description(), cause),
@@ -211,7 +202,6 @@ impl std::fmt::Display for Error {
             Transport { ref cause } => write!(f, "{}: {}", self.description(), cause),
             Unauthorized { ref response } =>
                 write!(f, "{}: {}: {}", self.description(), response.error, response.reason),
-            UnexpectedContent { ref kind } => write!(f, "{}: {}", self.description(), kind),
             UnexpectedContentTypeHeader { ref expected, ref got } =>
                 write!(f, "{}: Expected '{}', got '{}'", self.description(), expected, got),
             UnexpectedHttpStatus { ref got } => write!(f, "{}: Got {}", self.description(), got),
@@ -232,6 +222,50 @@ pub struct ErrorResponse {
 }
 
 #[derive(Debug)]
+pub enum DecodeKind {
+    // FIXME: Replace the Raw variant with more specific variants.
+    Raw {
+        got: String,
+    },
+    InstanceStartTime {
+        got: String,
+        cause: std::num::ParseIntError,
+    },
+    InvalidDocument {
+        what: &'static str,
+    },
+    Serde {
+        cause: serde_json::Error,
+    },
+}
+
+impl DecodeKind {
+    fn cause(&self) -> Option<&std::error::Error> {
+        use self::DecodeKind::*;
+        match *self {
+            InstanceStartTime { ref cause, .. } => Some(cause),
+            InvalidDocument { .. } => None,
+            Raw { .. } => None,
+            Serde { ref cause } => Some(cause),
+        }
+    }
+}
+
+impl std::fmt::Display for DecodeKind {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> Result<(), std::fmt::Error> {
+        use self::DecodeKind::*;
+        match *self {
+            InstanceStartTime { ref got, ref cause } =>
+                write!(f, "Could not convert `instance_start_time` field to numeric type: {}: \
+                       got {}", cause, got),
+            InvalidDocument { ref what } => write!(f, "Unexpected document content: {}", what),
+            Raw { ref got } => write!(f, "Got {}", got),
+            Serde { ref cause } => cause.fmt(f),
+        }
+    }
+}
+
+#[derive(Debug)]
 pub enum TransportCause {
     Hyper(hyper::error::Error),
     Io(std::io::Error),
@@ -247,40 +281,7 @@ impl std::fmt::Display for TransportCause {
     }
 }
 
-#[derive(Debug)]
-pub enum UnexpectedContentKind {
-    // FIXME: Replace the Raw variant with more specific variants.
-    Raw {
-        got: String,
-    },
-    InstanceStartTime {
-        got: String,
-        cause: std::num::ParseIntError,
-    },
-}
-
-impl UnexpectedContentKind {
-    fn cause(&self) -> Option<&std::error::Error> {
-        use self::UnexpectedContentKind::*;
-        match *self {
-            InstanceStartTime { ref cause, .. } => Some(cause),
-            Raw { .. } => None,
-        }
-    }
-}
-
-impl std::fmt::Display for UnexpectedContentKind {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> Result<(), std::fmt::Error> {
-        use self::UnexpectedContentKind::*;
-        match *self {
-            InstanceStartTime { ref got, ref cause } =>
-                write!(f, "Could not convert instance_start_time to numeric type: {}: got {}",
-                       cause, got),
-            Raw { ref got } => write!(f, "Got {}", got),
-        }
-    }
-}
-
+// FIXME: Replace with dbtype type.
 fn extract_couchdb_error_and_reason(resp: &mut hyper::client::Response)
                                     -> Result<(String, String), Error> {
     let mut s = String::new();
@@ -296,7 +297,7 @@ fn extract_couchdb_error_and_reason(resp: &mut hyper::client::Response)
     let s = s;
     let mut v = try!(
         serde_json::from_str::<serde_json::Value>(&s)
-        .or_else(|e| { Err(Error::Decode { cause: e } ) })
+        .or_else(|e| { Err(Error::Decode { kind: DecodeKind::Serde { cause: e } } ) })
     );
 
     (|| {
@@ -326,7 +327,7 @@ fn extract_couchdb_error_and_reason(resp: &mut hyper::client::Response)
         };
         Some((error, reason))
     })()
-    .ok_or(Error::UnexpectedContent { kind: UnexpectedContentKind::Raw { got: s } } )
+    .ok_or(Error::Decode { kind: DecodeKind::Raw { got: s } } )
 }
 
 pub fn new_because_database_exists(resp: &mut hyper::client::Response) -> Error {

@@ -1,6 +1,6 @@
 use hyper;
 
-use client::{self, ClientState};
+use client::ClientState;
 use dbpath::DatabasePath;
 use error::Error;
 use transport::{self, Command, Request};
@@ -48,13 +48,13 @@ impl<'a> Command for GetAllDatabases<'a> {
         Ok((req, ()))
     }
 
-    fn take_response(mut resp: hyper::client::Response, _state: Self::State)
+    fn take_response(resp: hyper::client::Response, _state: Self::State)
         -> Result<Self::Output, Error>
     {
         match resp.status {
             hyper::status::StatusCode::Ok => {
-                let s = try!(client::read_json_response(&mut resp));
-                Ok(try!(client::decode_json::<Vec<DatabasePath>>(&s)))
+                try!(transport::content_type_must_be_application_json(&resp.headers));
+                transport::decode_json::<_, Vec<DatabasePath>>(resp)
             },
             _ => Err(Error::UnexpectedHttpStatus {
                 got: resp.status,

@@ -1,6 +1,6 @@
 use hyper;
 
-use client::{self, ClientState};
+use client::ClientState;
 use database::Database;
 use dbpath::DatabasePath;
 use dbtype;
@@ -55,8 +55,8 @@ impl<'a> Command for GetDatabase<'a> {
     {
         match resp.status {
             hyper::status::StatusCode::Ok => {
-                let s = try!(client::read_json_response(&mut resp));
-                let db = try!(client::decode_json::<dbtype::Database>(&s));
+                try!(transport::content_type_must_be_application_json(&resp.headers));
+                let db = try!(transport::decode_json::<_, dbtype::Database>(resp));
                 Database::from_db_database(db)
             },
             hyper::status::StatusCode::NotFound =>

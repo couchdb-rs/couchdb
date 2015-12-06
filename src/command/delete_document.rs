@@ -64,7 +64,7 @@ impl<'a> Command for DeleteDocument<'a> {
     {
         match resp.status {
             hyper::status::StatusCode::Ok =>
-                Ok(try!(client::require_content_type_application_json(&resp.headers))),
+                transport::content_type_must_be_application_json(&resp.headers),
             hyper::status::StatusCode::BadRequest =>
                 Err(error::new_because_invalid_request(&mut resp)),
             hyper::status::StatusCode::Unauthorized =>

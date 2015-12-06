@@ -1,6 +1,9 @@
 use hyper;
+use serde;
+use serde_json;
+use std;
 
-use error::{Error, TransportCause};
+use error::{DecodeKind, Error, TransportCause};
 use revision::Revision;
 
 pub struct Request {
@@ -129,4 +132,45 @@ pub fn run_command<C>(cmd: C) -> Result<C::Output, Error> where C: Command
         (resp, state)
     };
     C::take_response(resp, state)
+}
+
+// Returns an error if the HTTP response doesn't have a Content-Type of
+// `application/json`.
+pub fn content_type_must_be_application_json(headers: &hyper::header::Headers)
+    -> Result<(), Error >
+{
+    match headers.get::<hyper::header::ContentType>() {
+        None => Err(Error::NoContentTypeHeader {
+            expected: "application/json",
+        }),
+        Some(content_type) => {
+            use hyper::mime::*;
+            let exp = hyper::mime::Mime(TopLevel::Application, SubLevel::Json, vec![]);
+            let &hyper::header::ContentType(ref got) = content_type;
+            if *got != exp {
+                Err(Error::UnexpectedContentTypeHeader {
+                    expected: "application/json",
+                    got: format!("{}", got)
+                })
+            } else {
+                Ok(())
+            }
+        },
+    }
+}
+
+// Decodes JSON from a reader, returning the appropriate error variant in case
+// of error.
+pub fn decode_json<R, T>(r: R) -> Result<T, Error>
+    where R: std::io::Read,
+          T: serde::Deserialize
+{
+    serde_json::from_reader::<_, T>(r)
+        .map_err(|e| {
+            match e {
+                serde_json::Error::IoError(e) =>
+                    Error::Transport { cause: TransportCause::Io(e) },
+                _ => Error::Decode { kind: DecodeKind::Serde { cause: e } },
+            }
+        })
 }

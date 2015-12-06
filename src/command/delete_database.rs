@@ -1,6 +1,6 @@
 use hyper;
 
-use client::{self, ClientState};
+use client::ClientState;
 use dbpath::DatabasePath;
 use error::{self, Error};
 use transport::{self, Command, Request};
@@ -56,7 +56,7 @@ impl<'a> Command for DeleteDatabase<'a> {
     {
         match resp.status {
             hyper::status::StatusCode::Ok =>
-                Ok(try!(client::require_content_type_application_json(&resp.headers))),
+                transport::content_type_must_be_application_json(&resp.headers),
             hyper::status::StatusCode::BadRequest =>
                 // The CouchDB spec says this status may also mean the document id has been
                 // "forgotten"--whatever that means!
