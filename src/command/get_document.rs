@@ -5,7 +5,7 @@ use std;
 use client::ClientState;
 use dbpath::DatabasePath;
 use docpath::DocumentPath;
-use document::{self, Document};
+use document::Document;
 use error::{Error, ErrorResponse};
 use revision::Revision;
 use transport::{self, Command, Request};
@@ -80,7 +80,7 @@ impl<'a, T> Command for GetDocument<'a, T>
         match resp.status {
             hyper::status::StatusCode::Ok => {
                 try!(transport::content_type_must_be_application_json(&resp.headers));
-                let doc = try!(document::document_from_json(resp, db_path));
+                let doc = try!(Document::from_reader(resp, db_path));
                 Ok(Some(doc))
             },
             hyper::status::StatusCode::NotModified => Ok(None),

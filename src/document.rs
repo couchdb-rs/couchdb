@@ -17,63 +17,62 @@ pub struct Document<T: serde::Deserialize> {
     pub content: T,
 }
 
-pub fn document_from_json<R, T>(r: R, db_path: DatabasePath) -> Result<Document<T>, Error>
-    where R: std::io::Read,
-          T: serde::Deserialize
-{
-    // The CouchDB API document resource mixes at the top level of the same JSON
-    // object both meta fields (e.g., `id` and `rev`) and application-defined
-    // fields. Serde does not provide a feature for directly deserializing a
-    // doubly typed JSON object. We work around this by deserializing to a
-    // generic Value instance, then selectively dividing the fields
-    // appropriately.
+impl<T> Document<T> where T: serde::Deserialize {
+    pub fn from_reader<R>(r: R, db_path: DatabasePath) -> Result<Self, Error>
+        where R: std::io::Read
+    {
+        // The CouchDB API document resource mixes at the top level of the same
+        // JSON object both meta fields (e.g., `id` and `rev`) and
+        // application-defined fields. Serde does not provide a feature for
+        // directly deserializing a doubly typed JSON object. We work around
+        // this by deserializing to a generic Value instance, then selectively
+        // dividing the fields appropriately.
 
-    fn make_error(what: &'static str) -> Error {
-        Error::Decode { kind: DecodeKind::InvalidDocument { what: what } }
+        fn make_error(what: &'static str) -> Error {
+            Error::Decode { kind: DecodeKind::InvalidDocument { what: what } }
+        }
+
+        let mut top = try!(transport::decode_json::<_, serde_json::Value>(r));
+
+        let (id, rev) = {
+
+            let mut dot = match top.as_object_mut() {
+                Some(x) => x,
+                None => { return Err(make_error("Document is not a JSON object")); },
+            };
+
+            let rev = match dot.remove("_rev") {
+                Some(x) => match x {
+                    serde_json::Value::String(x) => Revision::from(x),
+                    _ => { return Err(make_error("The `_rev` field is not a string")); },
+                },
+                None => { return Err(make_error("The `_rev` field is missing")); },
+            };
+
+            let id = match dot.remove("_id") {
+                Some(x) => match x {
+                    serde_json::Value::String(x) => { DocumentId::from(x) },
+                    _ => { return Err(make_error("The `_id` field is not a string")); },
+                },
+                None => { return Err(make_error("The `_id` field is missing")); },
+            };
+
+            (id, rev)
+        };
+
+        let content = try!(
+            serde_json::from_value(top)
+                .map_err(|e| { Error::Decode { kind: DecodeKind::Serde { cause: e } } })
+        );
+
+        let doc = Document {
+            path: DocumentPath::new(db_path, id),
+            revision: rev,
+            content: content,
+        };
+
+        Ok(doc)
     }
-
-    // FIXME: Test this function.
-
-    let mut top = try!(transport::decode_json::<_, serde_json::Value>(r));
-
-    let (id, rev) = {
-
-        let mut dot = match top.as_object_mut() {
-            Some(x) => x,
-            None => { return Err(make_error("Document is not a JSON object")); },
-        };
-
-        let rev = match dot.remove("_rev") {
-            Some(x) => match x {
-                serde_json::Value::String(x) => Revision::from(x),
-                _ => { return Err(make_error("The `_rev` field is not a string")); },
-            },
-            None => { return Err(make_error("The `_rev` field is missing")); },
-        };
-
-        let id = match dot.remove("_id") {
-            Some(x) => match x {
-                serde_json::Value::String(x) => { DocumentId::from(x) },
-                _ => { return Err(make_error("The `_id` field is not a string")); },
-            },
-            None => { return Err(make_error("The `_id` field is missing")); },
-        };
-
-        (id, rev)
-    };
-
-    let content = try!(
-        serde_json::from_value(top)
-            .map_err(|e| { Error::Decode { kind: DecodeKind::Serde { cause: e } } })
-    );
-
-    let doc = Document {
-        path: DocumentPath::new(db_path, id),
-        revision: rev,
-        content: content,
-    };
-
-    Ok(doc)
 }
 
 #[cfg(test)]
@@ -106,7 +105,7 @@ mod tests {
         }"#;
 
         let got: Document<serde_json::Value> =
-            document_from_json(s.as_bytes(), db_path.clone()).unwrap();
+            Document::from_reader(s.as_bytes(), db_path.clone()).unwrap();
         assert_eq!(got.path, DocumentPath::from("db/docid"));
         assert_eq!(got.revision, Revision::from("1-abcd"));
         assert_eq!(got.content, exp_content);
@@ -115,7 +114,7 @@ mod tests {
 
         let s = r#"["stuff"]"#;
 
-        document_from_json::<_, serde_json::Value>(s.as_bytes(), db_path.clone()).unwrap_err();
+        Document::<serde_json::Value>::from_reader(s.as_bytes(), db_path.clone()).unwrap_err();
 
         // Verify: Missing the "_id" field.
 
@@ -125,7 +124,7 @@ mod tests {
             "bar": "yep"
         }"#;
 
-        document_from_json::<_, serde_json::Value>(s.as_bytes(), db_path.clone()).unwrap_err();
+        Document::<serde_json::Value>::from_reader(s.as_bytes(), db_path.clone()).unwrap_err();
 
         // Verify: The "_id" field is not a string.
 
@@ -136,7 +135,7 @@ mod tests {
             "bar": "yep"
         }"#;
 
-        document_from_json::<_, serde_json::Value>(s.as_bytes(), db_path.clone()).unwrap_err();
+        Document::<serde_json::Value>::from_reader(s.as_bytes(), db_path.clone()).unwrap_err();
 
         // Verify: Missing the "_rev" field.
 
@@ -146,7 +145,7 @@ mod tests {
             "bar": "yep"
         }"#;
 
-        document_from_json::<_, serde_json::Value>(s.as_bytes(), db_path.clone()).unwrap_err();
+        Document::<serde_json::Value>::from_reader(s.as_bytes(), db_path.clone()).unwrap_err();
 
         // Verify: The "_rev" field is not a string.
 
@@ -157,6 +156,6 @@ mod tests {
             "bar": "yep"
         }"#;
 
-        document_from_json::<_, serde_json::Value>(s.as_bytes(), db_path.clone()).unwrap_err();
+        Document::<serde_json::Value>::from_reader(s.as_bytes(), db_path.clone()).unwrap_err();
     }
 }

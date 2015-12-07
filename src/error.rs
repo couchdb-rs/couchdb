@@ -231,7 +231,7 @@ pub struct ErrorResponse {
 }
 
 impl ErrorResponse {
-    pub fn from_reader<R>(r: R) -> Result<ErrorResponse, Error>
+    pub fn from_reader<R>(r: R) -> Result<Self, Error>
         where R: std::io::Read
     {
         serde_json::from_reader::<_, dbtype::ErrorResponse>(r)
@@ -300,84 +300,3 @@ impl std::fmt::Display for TransportCause {
         }
     }
 }
-
-/*
-pub fn new_because_database_exists(resp: hyper::client::Response) -> Error {
-    decode_error_response(resp)
-        .map(|error_response| {
-            Error::DatabaseExists { response: error_response }
-        })
-}
-
-pub fn new_because_document_conflict(resp: &mut hyper::client::Response) -> Error {
-    match decode_error_response(resp) {
-        Err(e) => e,
-        Ok((error, reason)) => Error::DocumentConflict {
-            response: ErrorResponse {
-                error: error,
-                reason: reason,
-            }
-        },
-    }
-}
-
-pub fn new_because_internal_server_error(resp: &mut hyper::client::Response) -> Error {
-    match decode_error_response(resp) {
-        Err(e) => e,
-        Ok((error, reason)) => Error::InternalServerError {
-            response: ErrorResponse {
-                error: error,
-                reason: reason,
-            },
-        },
-    }
-}
-
-pub fn new_because_invalid_database_name(resp: &mut hyper::client::Response) -> Error {
-    match decode_error_response(resp) {
-        Err(e) => e,
-        Ok((error, reason)) => Error::InvalidDatabaseName {
-            response: ErrorResponse {
-                error: error,
-                reason: reason,
-            },
-        },
-    }
-}
-
-pub fn new_because_invalid_request(resp: &mut hyper::client::Response) -> Error {
-    match decode_error_response(resp) {
-        Err(e) => e,
-        Ok((error, reason)) => Error::InvalidRequest {
-            response: ErrorResponse {
-                error: error,
-                reason: reason,
-            },
-        },
-    }
-}
-
-pub fn new_because_not_found(resp: &mut hyper::client::Response) -> Error {
-    match decode_error_response(resp) {
-        Err(e) => e,
-        Ok((error, reason)) => Error::NotFound {
-            response: Some(ErrorResponse {
-                error: error,
-                reason: reason,
-            }),
-        },
-    }
-}
-
-pub fn new_because_unauthorized(resp: &mut hyper::client::Response) -> Error {
-    match decode_error_response(resp) {
-        Err(e) => e,
-        Ok((error, reason)) => Error::Unauthorized {
-            response: ErrorResponse {
-                error: error,
-                reason: reason,
-            },
-        },
-    }
-}
-*/
