@@ -4,7 +4,7 @@ use client::ClientState;
 use database::Database;
 use dbpath::DatabasePath;
 use dbtype;
-use error::{self, Error};
+use error::{Error, ErrorResponse};
 use transport::{self, Command, Request};
 
 /// Command to get a database.
@@ -50,7 +50,7 @@ impl<'a> Command for GetDatabase<'a> {
         Ok((req, ()))
     }
 
-    fn take_response(mut resp: hyper::client::Response, _state: Self::State)
+    fn take_response(resp: hyper::client::Response, _state: Self::State)
         -> Result<Self::Output, Error>
     {
         match resp.status {
@@ -60,7 +60,7 @@ impl<'a> Command for GetDatabase<'a> {
                 Database::from_db_database(db)
             },
             hyper::status::StatusCode::NotFound =>
-                Err(error::new_because_not_found(&mut resp)),
+                Err(Error::NotFound { response: Some(try!(ErrorResponse::from_reader(resp))) }),
             _ => Err(Error::UnexpectedHttpStatus { got: resp.status } ),
         }
     }

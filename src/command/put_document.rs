@@ -5,7 +5,7 @@ use serde_json;
 use client::ClientState;
 use dbtype::PutDocumentResponse;
 use docpath::DocumentPath;
-use error::{self, Error};
+use error::{Error, ErrorResponse};
 use revision::Revision;
 use transport::{self, Command, Request};
 
@@ -83,7 +83,7 @@ impl<'a, T> Command for PutDocument<'a, T> where T: 'a + serde::Serialize
         Ok((req, ()))
     }
 
-    fn take_response(mut resp: hyper::client::Response, _state: Self::State)
+    fn take_response(resp: hyper::client::Response, _state: Self::State)
         -> Result<Self::Output, Error>
     {
         match resp.status {
@@ -94,13 +94,13 @@ impl<'a, T> Command for PutDocument<'a, T> where T: 'a + serde::Serialize
                 Ok(rev)
             },
             hyper::status::StatusCode::BadRequest =>
-                Err(error::new_because_invalid_request(&mut resp)),
+                Err(Error::InvalidRequest { response: try!(ErrorResponse::from_reader(resp)) }),
             hyper::status::StatusCode::Unauthorized =>
-                Err(error::new_because_unauthorized(&mut resp)),
+                Err(Error::Unauthorized { response: try!(ErrorResponse::from_reader(resp)) }),
             hyper::status::StatusCode::NotFound =>
-                Err(error::new_because_not_found(&mut resp)),
+                Err(Error::NotFound { response: Some(try!(ErrorResponse::from_reader(resp))) }),
             hyper::status::StatusCode::Conflict =>
-                Err(error::new_because_document_conflict(&mut resp)),
+                Err(Error::DocumentConflict { response: try!(ErrorResponse::from_reader(resp)) }),
             _ => Err(Error::UnexpectedHttpStatus{ got: resp.status } ),
         }
     }

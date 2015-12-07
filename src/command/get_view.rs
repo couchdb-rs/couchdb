@@ -6,7 +6,7 @@ use std;
 use client::ClientState;
 use dbpath::DatabasePath;
 use dbtype;
-use error::{self, Error};
+use error::{Error, ErrorResponse};
 use transport::{self, Command, Request};
 use viewpath::ViewPath;
 use viewresult::ViewResult;
@@ -134,7 +134,7 @@ impl<'a, K, V> Command for GetView<'a, K, V>
         Ok((req, db_path))
     }
 
-    fn take_response(mut resp: hyper::client::Response, db_path: Self::State)
+    fn take_response(resp: hyper::client::Response, db_path: Self::State)
         -> Result<Self::Output, Error>
     {
         match resp.status {
@@ -145,13 +145,13 @@ impl<'a, K, V> Command for GetView<'a, K, V>
                 Ok(view_result)
             },
             hyper::status::StatusCode::BadRequest =>
-                Err(error::new_because_invalid_request(&mut resp)),
+                Err(Error::InvalidRequest { response: try!(ErrorResponse::from_reader(resp)) }),
             hyper::status::StatusCode::Unauthorized =>
-                Err(error::new_because_unauthorized(&mut resp)),
+                Err(Error::Unauthorized { response: try!(ErrorResponse::from_reader(resp)) }),
             hyper::status::StatusCode::NotFound =>
-                Err(error::new_because_not_found(&mut resp)),
+                Err(Error::NotFound { response: Some(try!(ErrorResponse::from_reader(resp))) }),
             hyper::status::StatusCode::InternalServerError =>
-                Err(error::new_because_internal_server_error(&mut resp)),
+                Err(Error::InternalServerError { response: try!(ErrorResponse::from_reader(resp)) }),
             _ => Err(Error::UnexpectedHttpStatus { got: resp.status } ),
         }
     }

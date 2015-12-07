@@ -3,6 +3,8 @@ use serde_json;
 use std;
 use url;
 
+use dbtype;
+
 /// Principal error type.
 ///
 /// The public API guarantees only the non-hidden variants and non-hidden
@@ -215,18 +217,38 @@ impl std::fmt::Display for Error {
 pub struct ErrorResponse {
 
     /// Error string returned by CouchDB Server.
+    ///
+    /// This is a high-level description of the error—e.g., “file_exists”.
+
     pub error: String,
 
     /// Reason string returned by CouchDB Server.
+    ///
+    /// This is a low-level description of the error—e.g., “The database could
+    /// not be created, the file already exists.”
+    ///
     pub reason: String,
+}
+
+impl ErrorResponse {
+    pub fn from_reader<R>(r: R) -> Result<ErrorResponse, Error>
+        where R: std::io::Read
+    {
+        serde_json::from_reader::<_, dbtype::ErrorResponse>(r)
+            .map_err(|e| {
+                Error::Decode { kind: DecodeKind::Serde { cause: e } }
+            })
+            .map(|x| {
+                ErrorResponse {
+                    error: x.error,
+                    reason: x.reason,
+                }
+            })
+    }
 }
 
 #[derive(Debug)]
 pub enum DecodeKind {
-    // FIXME: Replace the Raw variant with more specific variants.
-    Raw {
-        got: String,
-    },
     InstanceStartTime {
         got: String,
         cause: std::num::ParseIntError,
@@ -245,7 +267,6 @@ impl DecodeKind {
         match *self {
             InstanceStartTime { ref cause, .. } => Some(cause),
             InvalidDocument { .. } => None,
-            Raw { .. } => None,
             Serde { ref cause } => Some(cause),
         }
     }
@@ -259,7 +280,6 @@ impl std::fmt::Display for DecodeKind {
                 write!(f, "Could not convert `instance_start_time` field to numeric type: {}: \
                        got {}", cause, got),
             InvalidDocument { ref what } => write!(f, "Unexpected document content: {}", what),
-            Raw { ref got } => write!(f, "Got {}", got),
             Serde { ref cause } => cause.fmt(f),
         }
     }
@@ -281,69 +301,16 @@ impl std::fmt::Display for TransportCause {
     }
 }
 
-// FIXME: Replace with dbtype type.
-fn extract_couchdb_error_and_reason(resp: &mut hyper::client::Response)
-                                    -> Result<(String, String), Error> {
-    let mut s = String::new();
-    {
-        use std::io::Read;
-        try!(
-            resp.read_to_string(&mut s)
-            .or_else(|e| {
-                Err(Error::Transport { cause: TransportCause::Io(e), } )
-            })
-        );
-    }
-    let s = s;
-    let mut v = try!(
-        serde_json::from_str::<serde_json::Value>(&s)
-        .or_else(|e| { Err(Error::Decode { kind: DecodeKind::Serde { cause: e } } ) })
-    );
-
-    (|| {
-        let dot = match v.as_object_mut() {
-            Some(x) => x,
-            None => { return None; },
-        };
-        let error = {
-            let x = match dot.get_mut("error") {
-                Some(x) => x,
-                None => { return None; },
-            };
-            match *x {
-                serde_json::Value::String(ref mut x) => std::mem::replace(x, String::new()),
-                _ => { return None; },
-            }
-        };
-        let reason = {
-            let x = match dot.get_mut("reason") {
-                Some(x) => x,
-                None => { return None; },
-            };
-            match *x {
-                serde_json::Value::String(ref mut x) => std::mem::replace(x, String::new()),
-                _ => { return None; },
-            }
-        };
-        Some((error, reason))
-    })()
-    .ok_or(Error::Decode { kind: DecodeKind::Raw { got: s } } )
-}
-
-pub fn new_because_database_exists(resp: &mut hyper::client::Response) -> Error {
-    match extract_couchdb_error_and_reason(resp) {
-        Err(e) => e,
-        Ok((error, reason)) => Error::DatabaseExists {
-            response: ErrorResponse {
-                error: error,
-                reason: reason,
-            },
-        },
-    }
+/*
+pub fn new_because_database_exists(resp: hyper::client::Response) -> Error {
+    decode_error_response(resp)
+        .map(|error_response| {
+            Error::DatabaseExists { response: error_response }
+        })
 }
 
 pub fn new_because_document_conflict(resp: &mut hyper::client::Response) -> Error {
-    match extract_couchdb_error_and_reason(resp) {
+    match decode_error_response(resp) {
         Err(e) => e,
         Ok((error, reason)) => Error::DocumentConflict {
             response: ErrorResponse {
@@ -355,7 +322,7 @@ pub fn new_because_document_conflict(resp: &mut hyper::client::Response) -> Erro
 }
 
 pub fn new_because_internal_server_error(resp: &mut hyper::client::Response) -> Error {
-    match extract_couchdb_error_and_reason(resp) {
+    match decode_error_response(resp) {
         Err(e) => e,
         Ok((error, reason)) => Error::InternalServerError {
             response: ErrorResponse {
@@ -367,7 +334,7 @@ pub fn new_because_internal_server_error(resp: &mut hyper::client::Response) -> 
 }
 
 pub fn new_because_invalid_database_name(resp: &mut hyper::client::Response) -> Error {
-    match extract_couchdb_error_and_reason(resp) {
+    match decode_error_response(resp) {
         Err(e) => e,
         Ok((error, reason)) => Error::InvalidDatabaseName {
             response: ErrorResponse {
@@ -379,7 +346,7 @@ pub fn new_because_invalid_database_name(resp: &mut hyper::client::Response) -> 
 }
 
 pub fn new_because_invalid_request(resp: &mut hyper::client::Response) -> Error {
-    match extract_couchdb_error_and_reason(resp) {
+    match decode_error_response(resp) {
         Err(e) => e,
         Ok((error, reason)) => Error::InvalidRequest {
             response: ErrorResponse {
@@ -391,7 +358,7 @@ pub fn new_because_invalid_request(resp: &mut hyper::client::Response) -> Error 
 }
 
 pub fn new_because_not_found(resp: &mut hyper::client::Response) -> Error {
-    match extract_couchdb_error_and_reason(resp) {
+    match decode_error_response(resp) {
         Err(e) => e,
         Ok((error, reason)) => Error::NotFound {
             response: Some(ErrorResponse {
@@ -403,7 +370,7 @@ pub fn new_because_not_found(resp: &mut hyper::client::Response) -> Error {
 }
 
 pub fn new_because_unauthorized(resp: &mut hyper::client::Response) -> Error {
-    match extract_couchdb_error_and_reason(resp) {
+    match decode_error_response(resp) {
         Err(e) => e,
         Ok((error, reason)) => Error::Unauthorized {
             response: ErrorResponse {
@@ -413,3 +380,4 @@ pub fn new_because_unauthorized(resp: &mut hyper::client::Response) -> Error {
         },
     }
 }
+*/

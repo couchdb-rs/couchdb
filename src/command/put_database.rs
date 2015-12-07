@@ -2,7 +2,7 @@ use hyper;
 
 use client::ClientState;
 use dbpath::DatabasePath;
-use error::{self, Error};
+use error::{Error, ErrorResponse};
 use transport::{self, Command, Request};
 
 /// Command to create a database.
@@ -49,21 +49,19 @@ impl<'a> Command for PutDatabase<'a> {
         Ok((req, ()))
     }
 
-    fn take_response(mut resp: hyper::client::Response, _state: Self::State)
+    fn take_response(resp: hyper::client::Response, _state: Self::State)
         -> Result<Self::Output, Error>
     {
         match resp.status {
             hyper::status::StatusCode::Created =>
                 transport::content_type_must_be_application_json(&resp.headers),
             hyper::status::StatusCode::BadRequest =>
-                Err(error::new_because_invalid_database_name(&mut resp)),
+                Err(Error::InvalidDatabaseName { response: try!(ErrorResponse::from_reader(resp)) }),
             hyper::status::StatusCode::Unauthorized =>
-                Err(error::new_because_unauthorized(&mut resp)),
+                Err(Error::Unauthorized { response: try!(ErrorResponse::from_reader(resp)) }),
             hyper::status::StatusCode::PreconditionFailed =>
-                Err(error::new_because_database_exists(&mut resp)),
-            _ => Err(Error::UnexpectedHttpStatus {
-                got: resp.status,
-            })
+                Err(Error::DatabaseExists { response: try!(ErrorResponse::from_reader(resp)) }),
+            _ => Err(Error::UnexpectedHttpStatus { got: resp.status })
         }
     }
 }

@@ -2,7 +2,7 @@ use hyper;
 
 use client::ClientState;
 use docpath::DocumentPath;
-use error::{self, Error};
+use error::{Error, ErrorResponse};
 use revision::Revision;
 use transport::{self, Command, Request};
 
@@ -65,14 +65,14 @@ impl<'a> Command for HeadDocument<'a>
         Ok((req, ()))
     }
 
-    fn take_response(mut resp: hyper::client::Response, _state: Self::State)
+    fn take_response(resp: hyper::client::Response, _state: Self::State)
         -> Result<Self::Output, Error>
     {
         match resp.status {
             hyper::status::StatusCode::Ok => Ok(Some(())),
             hyper::status::StatusCode::NotModified => Ok(None),
             hyper::status::StatusCode::Unauthorized =>
-                Err(error::new_because_unauthorized(&mut resp)),
+                Err(Error::Unauthorized { response: try!(ErrorResponse::from_reader(resp)) }),
             hyper::status::StatusCode::NotFound =>
                 Err(Error::NotFound { response: None } ),
             _ => Err(Error::UnexpectedHttpStatus { got: resp.status } ),

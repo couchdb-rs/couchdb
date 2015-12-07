@@ -6,7 +6,7 @@ use client::ClientState;
 use dbpath::DatabasePath;
 use docpath::DocumentPath;
 use document::{self, Document};
-use error::{self, Error};
+use error::{Error, ErrorResponse};
 use revision::Revision;
 use transport::{self, Command, Request};
 
@@ -74,22 +74,22 @@ impl<'a, T> Command for GetDocument<'a, T>
         Ok((req, db_path))
     }
 
-    fn take_response(mut resp: hyper::client::Response, db_path: Self::State)
+    fn take_response(resp: hyper::client::Response, db_path: Self::State)
         -> Result<Self::Output, Error>
     {
         match resp.status {
             hyper::status::StatusCode::Ok => {
                 try!(transport::content_type_must_be_application_json(&resp.headers));
-                let doc = try!(document::document_from_json(&mut resp, db_path));
+                let doc = try!(document::document_from_json(resp, db_path));
                 Ok(Some(doc))
             },
             hyper::status::StatusCode::NotModified => Ok(None),
             hyper::status::StatusCode::BadRequest =>
-                Err(error::new_because_invalid_request(&mut resp)),
+                Err(Error::InvalidRequest { response: try!(ErrorResponse::from_reader(resp)) }),
             hyper::status::StatusCode::Unauthorized =>
-                Err(error::new_because_unauthorized(&mut resp)),
+                Err(Error::Unauthorized { response: try!(ErrorResponse::from_reader(resp)) }),
             hyper::status::StatusCode::NotFound =>
-                Err(error::new_because_not_found(&mut resp)),
+                Err(Error::NotFound { response: Some(try!(ErrorResponse::from_reader(resp))) }),
             _ => Err(Error::UnexpectedHttpStatus { got: resp.status } ),
         }
     }
