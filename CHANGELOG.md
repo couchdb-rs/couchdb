@@ -17,6 +17,9 @@
   * Wrap `total_rows` and `offset` fields using `Option`.
 * Replace `Revision` special constructor with `From` implementations to
   be more idiomatic Rust.
+* Replace the `Error::UnexpectedContent` variant with the existing
+  `Error::Decode` variant because both variants signify a decoding
+  error.
 * Change crate dependency versions from `*` to explicit range values.
 
 ### Fixed
