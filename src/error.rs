@@ -178,32 +178,30 @@ impl std::fmt::Display for Error {
         use std::error::Error;
         use self::Error::*;
         match *self {
-            // FIXME: Implement Display for ErrorResponse.
             DatabaseExists { ref response } =>
-                write!(f, "{}: {}: {}", self.description(), response.error, response.reason),
+                write!(f, "{}: {}", self.description(), response),
             Decode { ref kind } => write!(f, "{}: {}", self.description(), kind),
             DocumentConflict { ref response } =>
-                write!(f, "{}: {}: {}", self.description(), response.error, response.reason),
+                write!(f, "{}: {}", self.description(), response),
             Encode { ref cause } => write!(f, "{}: {}", self.description(), cause),
             InternalServerError { ref response } =>
-                write!(f, "{}: {}: {}", self.description(), response.error, response.reason),
+                write!(f, "{}: {}", self.description(), response),
             InvalidDatabaseName { ref response } =>
-                write!(f, "{}: {}: {}", self.description(), response.error, response.reason),
+                write!(f, "{}: {}", self.description(), response),
             InvalidRequest { ref response } =>
-                write!(f, "{}: {}: {}", self.description(), response.error, response.reason),
+                write!(f, "{}: {}", self.description(), response),
             Io { ref cause, .. } => write!(f, "{}: {}", self.description(), cause),
             NoContentTypeHeader { ref expected } =>
                 write!(f, "{}: Expected '{}'", self.description(), expected),
             NotFound { ref response } => match *response {
                 Some(ref response) =>
-                    write!(f, "{}: {}: {}", self.description(), response.error, response.reason),
+                    write!(f, "{}: {}", self.description(), response),
                 None => write!(f, "{}", self.description()),
             },
             ReceiveFromThread { ref cause, .. } =>
                 write!(f, "{}: {}", self.description(), cause),
             Transport { ref cause } => write!(f, "{}: {}", self.description(), cause),
-            Unauthorized { ref response } =>
-                write!(f, "{}: {}: {}", self.description(), response.error, response.reason),
+            Unauthorized { ref response } => write!(f, "{}: {}", self.description(), response),
             UnexpectedContentTypeHeader { ref expected, ref got } =>
                 write!(f, "{}: Expected '{}', got '{}'", self.description(), expected, got),
             UnexpectedHttpStatus { ref got } => write!(f, "{}: Got {}", self.description(), got),
@@ -244,6 +242,12 @@ impl ErrorResponse {
                     reason: x.reason,
                 }
             })
+    }
+}
+
+impl std::fmt::Display for ErrorResponse {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> Result<(), std::fmt::Error> {
+        write!(f, "{}: {}", self.error, self.reason)
     }
 }
 
