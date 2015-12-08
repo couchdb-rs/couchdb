@@ -11,7 +11,6 @@ use dbtype;
 /// variant fields. Do not match against hidden variants or hidden variant
 /// fields.
 ///
-///
 #[derive(Debug)]
 pub enum Error {
 
@@ -87,7 +86,7 @@ pub enum Error {
     /// HTTP-transport error.
     Transport {
         #[doc(hidden)]
-        cause: TransportCause,
+        kind: TransportKind,
     },
 
     /// The client is unauthorized to carry out the operation.
@@ -158,13 +157,7 @@ impl std::error::Error for Error {
             NoContentTypeHeader { .. } => None,
             NotFound { .. } => None,
             ReceiveFromThread { ref cause, .. } => Some(cause),
-            Transport { ref cause }  => {
-                use self::TransportCause::*;
-                match *cause {
-                    Hyper(ref cause) => Some(cause),
-                    Io(ref cause) => Some(cause),
-                }
-            },
+            Transport { ref kind }  => kind.cause(),
             Unauthorized { .. } => None,
             UnexpectedContentTypeHeader { .. }  => None,
             UnexpectedHttpStatus { .. } => None,
@@ -200,7 +193,7 @@ impl std::fmt::Display for Error {
             },
             ReceiveFromThread { ref cause, .. } =>
                 write!(f, "{}: {}", self.description(), cause),
-            Transport { ref cause } => write!(f, "{}: {}", self.description(), cause),
+            Transport { ref kind } => write!(f, "{}: {}", self.description(), kind),
             Unauthorized { ref response } => write!(f, "{}: {}", self.description(), response),
             UnexpectedContentTypeHeader { ref expected, ref got } =>
                 write!(f, "{}: Expected '{}', got '{}'", self.description(), expected, got),
@@ -290,14 +283,24 @@ impl std::fmt::Display for DecodeKind {
 }
 
 #[derive(Debug)]
-pub enum TransportCause {
+pub enum TransportKind {
     Hyper(hyper::error::Error),
     Io(std::io::Error),
 }
 
-impl std::fmt::Display for TransportCause {
+impl TransportKind {
+    fn cause(&self) -> std::option::Option<&std::error::Error> {
+        use self::TransportKind::*;
+        match *self {
+            Hyper(ref e) => Some(e),
+            Io(ref e) => Some(e),
+        }
+    }
+}
+
+impl std::fmt::Display for TransportKind {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> Result<(), std::fmt::Error> {
-        use self::TransportCause::*;
+        use self::TransportKind::*;
         match *self {
             Hyper(ref e) => e.fmt(f),
             Io(ref e) => e.fmt(f),

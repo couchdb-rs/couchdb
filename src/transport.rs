@@ -3,7 +3,7 @@ use serde;
 use serde_json;
 use std;
 
-use error::{DecodeKind, Error, TransportCause};
+use error::{DecodeKind, Error, TransportKind};
 use revision::Revision;
 
 pub struct Request {
@@ -21,7 +21,7 @@ impl Request {
         let r = try!(
             hyper::client::Request::new(method, uri)
                 .map_err(|e| {
-                    Error::Transport { cause: TransportCause::Hyper(e) }
+                    Error::Transport { kind: TransportKind::Hyper(e) }
                 })
         );
 
@@ -110,14 +110,14 @@ pub fn run_command<C>(cmd: C) -> Result<C::Output, Error> where C: Command
         let (req, state) = try!(cmd.make_request());
         let mut stream = try!(
             req.request.start().map_err(|e| {
-                Error::Transport { cause: TransportCause::Hyper(e) }
+                Error::Transport { kind: TransportKind::Hyper(e) }
             })
         );
         try!(
             stream.write_all(&req.body)
                 .map_err(|e| {
                     Error::Transport {
-                        cause: TransportCause::Io(e),
+                        kind: TransportKind::Io(e),
                     }
                 })
         );
@@ -125,7 +125,7 @@ pub fn run_command<C>(cmd: C) -> Result<C::Output, Error> where C: Command
             stream.send()
                 .map_err(|e| {
                     Error::Transport {
-                        cause: TransportCause::Hyper(e),
+                        kind: TransportKind::Hyper(e),
                     }
                 })
         );
@@ -169,7 +169,7 @@ pub fn decode_json<R, T>(r: R) -> Result<T, Error>
         .map_err(|e| {
             match e {
                 serde_json::Error::IoError(e) =>
-                    Error::Transport { cause: TransportCause::Io(e) },
+                    Error::Transport { kind: TransportKind::Io(e) },
                 _ => Error::Decode { kind: DecodeKind::Serde { cause: e } },
             }
         })
