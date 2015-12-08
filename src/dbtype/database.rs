@@ -221,7 +221,7 @@ mod tests {
     use serde_json;
 
     use super::*;
-    use dbtype::json::*;
+    use jsontest;
 
     #[test]
     fn test_deserialization() {
@@ -241,7 +241,7 @@ mod tests {
         ];
 
         // Verify: All fields present.
-        let s = make_complete_json_object(&fields);
+        let s = jsontest::make_complete_json_object(&fields);
         let v = serde_json::from_str::<Database>(&s).unwrap();
         assert_eq!(v.committed_update_seq, 8);
         assert_eq!(v.compact_running, false);
@@ -256,27 +256,27 @@ mod tests {
         assert_eq!(v.update_seq, 3);
 
         // Verify: Each field missing, one at a time.
-        let s = make_json_object_with_missing_field(&fields, "db_name");
+        let s = jsontest::make_json_object_with_missing_field(&fields, "db_name");
         assert!(serde_json::from_str::<Database>(&s).is_err());
-        let s = make_json_object_with_missing_field(&fields, "doc_count");
+        let s = jsontest::make_json_object_with_missing_field(&fields, "doc_count");
         assert!(serde_json::from_str::<Database>(&s).is_err());
-        let s = make_json_object_with_missing_field(&fields, "doc_del_count");
+        let s = jsontest::make_json_object_with_missing_field(&fields, "doc_del_count");
         assert!(serde_json::from_str::<Database>(&s).is_err());
-        let s = make_json_object_with_missing_field(&fields, "update_seq");
+        let s = jsontest::make_json_object_with_missing_field(&fields, "update_seq");
         assert!(serde_json::from_str::<Database>(&s).is_err());
-        let s = make_json_object_with_missing_field(&fields, "purge_seq");
+        let s = jsontest::make_json_object_with_missing_field(&fields, "purge_seq");
         assert!(serde_json::from_str::<Database>(&s).is_err());
-        let s = make_json_object_with_missing_field(&fields, "compact_running");
+        let s = jsontest::make_json_object_with_missing_field(&fields, "compact_running");
         assert!(serde_json::from_str::<Database>(&s).is_err());
-        let s = make_json_object_with_missing_field(&fields, "disk_size");
+        let s = jsontest::make_json_object_with_missing_field(&fields, "disk_size");
         assert!(serde_json::from_str::<Database>(&s).is_err());
-        let s = make_json_object_with_missing_field(&fields, "data_size");
+        let s = jsontest::make_json_object_with_missing_field(&fields, "data_size");
         assert!(serde_json::from_str::<Database>(&s).is_err());
-        let s = make_json_object_with_missing_field(&fields, "instance_start_time");
+        let s = jsontest::make_json_object_with_missing_field(&fields, "instance_start_time");
         assert!(serde_json::from_str::<Database>(&s).is_err());
-        let s = make_json_object_with_missing_field(&fields, "disk_format_version");
+        let s = jsontest::make_json_object_with_missing_field(&fields, "disk_format_version");
         assert!(serde_json::from_str::<Database>(&s).is_err());
-        let s = make_json_object_with_missing_field(&fields, "committed_update_seq");
+        let s = jsontest::make_json_object_with_missing_field(&fields, "committed_update_seq");
         assert!(serde_json::from_str::<Database>(&s).is_err());
     }
 }

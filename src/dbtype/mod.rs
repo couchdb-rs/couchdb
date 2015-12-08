@@ -3,7 +3,6 @@
 // crate exports.
 
 mod database;
-mod json;
 mod errorresponse;
 mod putdocresponse;
 mod viewresult;

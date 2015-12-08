@@ -100,7 +100,7 @@ mod tests {
     use serde_json;
 
     use super::*;
-    use dbtype::json::*;
+    use jsontest;
 
     #[test]
     fn test_deserialization() {
@@ -112,18 +112,18 @@ mod tests {
         ];
 
         // Verify: All fields present.
-        let s = make_complete_json_object(&fields);
+        let s = jsontest::make_complete_json_object(&fields);
         let v = serde_json::from_str::<PutDocumentResponse>(&s).unwrap();
         assert_eq!(v.id, "stuff".to_string());
         assert_eq!(v.ok, true);
         assert_eq!(v.rev, "1-1234abcd".to_string());
 
         // Verify: Each field missing, one at a time.
-        let s = make_json_object_with_missing_field(&fields, "id");
+        let s = jsontest::make_json_object_with_missing_field(&fields, "id");
         assert!(serde_json::from_str::<PutDocumentResponse>(&s).is_err());
-        let s = make_json_object_with_missing_field(&fields, "ok");
+        let s = jsontest::make_json_object_with_missing_field(&fields, "ok");
         assert!(serde_json::from_str::<PutDocumentResponse>(&s).is_err());
-        let s = make_json_object_with_missing_field(&fields, "rev");
+        let s = jsontest::make_json_object_with_missing_field(&fields, "rev");
         assert!(serde_json::from_str::<PutDocumentResponse>(&s).is_err());
     }
 }

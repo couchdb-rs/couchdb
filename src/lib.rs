@@ -139,6 +139,7 @@ extern crate tempdir;
 extern crate url;
 
 pub mod command;
+
 mod client;
 mod database;
 mod dbpath;
@@ -151,16 +152,19 @@ mod error;
 mod revision;
 mod server;
 mod transport;
+mod viewfunction;
 mod viewpath;
 mod viewresult;
 mod viewrow;
+
+#[cfg(test)]
+mod jsontest;
 
 pub use client::{Client, IntoUrl};
 pub use database::Database;
 pub use dbpath::DatabasePath;
 pub use design::{
     Design,
-    ViewFunction,
     ViewFunctionMap};
 pub use docid::DocumentId;
 pub use docpath::DocumentPath;
@@ -171,3 +175,4 @@ pub use server::Server;
 pub use viewpath::ViewPath;
 pub use viewresult::ViewResult;
 pub use viewrow::ViewRow;
+pub use viewfunction::ViewFunction;
