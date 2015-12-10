@@ -1,4 +1,8 @@
 use serde;
+use std;
+
+/// Associative collection for view functions.
+pub type ViewFunctionMap = std::collections::HashMap<String, ViewFunction>;
 
 /// JavaScript function for a CouchDB view.
 #[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]

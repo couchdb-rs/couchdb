@@ -163,16 +163,14 @@ mod jsontest;
 pub use client::{Client, IntoUrl};
 pub use database::Database;
 pub use dbpath::DatabasePath;
-pub use design::{
-    Design,
-    ViewFunctionMap};
+pub use design::Design;
 pub use docid::DocumentId;
 pub use docpath::DocumentPath;
 pub use document::Document;
 pub use error::{Error, ErrorResponse};
 pub use revision::Revision;
 pub use server::Server;
+pub use viewfunction::{ViewFunction, ViewFunctionMap};
 pub use viewpath::ViewPath;
 pub use viewresult::ViewResult;
 pub use viewrow::ViewRow;
-pub use viewfunction::ViewFunction;

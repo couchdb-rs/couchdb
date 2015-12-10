@@ -1,10 +1,7 @@
 use serde;
 use std;
 
-use ViewFunction;
-
-/// Associative collection for view functions.
-pub type ViewFunctionMap = std::collections::BTreeMap<String, ViewFunction>;
+use ViewFunctionMap;
 
 /// Design document content.
 #[derive(Debug)]
@@ -136,6 +133,7 @@ mod tests {
 
     use super::*;
     use ViewFunction;
+    use ViewFunctionMap;
 
     #[test]
     fn test_serialization_design() {

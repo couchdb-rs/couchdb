@@ -20,6 +20,7 @@
 * Replace the `Error::UnexpectedContent` variant with the existing
   `Error::Decode` variant because both variants signify a decoding
   error.
+* Change `ViewFunctionMap` from `BTreeMap` to `HashMap`.
 * Change crate dependency versions from `*` to explicit range values.
 
 ### Fixed
