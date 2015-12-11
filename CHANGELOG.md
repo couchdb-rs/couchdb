@@ -2,34 +2,57 @@
 
 ## [Unreleased (0.3.0)]
 
+An API overhaul, strengthening type-safety and making the crate more
+Rust-idiomatic.
+
 ### Added
 
-* Add all missing fields to the `Database` type. The type now includes
-  all information returned by the CouchDB server.
+* New path types: `DatabasePath`, `DocumentPath`, and `ViewPath`. These
+  types provide stronger type-safety than raw strings.
+* New `DocumentId` type to specify name _and_ distinguish type of
+  document (e.g., normal document vs design document).
+* Add missing fields to the `Database` type. The `Database` type now
+  includes all information returned by the CouchDB server.
 * New `DesignBuilder` type to make it easier to construct `Design`
   instances.
+* Implement `Clone`, `Hash`, `Eq`, `PartialEq`, `Ord`, and `PartialOrd`
+  for the `Database` type.
+* Implement `Clone` for the `Design` type.
+* Implement `Display` for the `ErrorResponse` type.
+* Implement `Hash`, `From<String>`, and `From<&str>` for the `Revision`
+  type.
+* Implement `Clone`, `Hash`, `Ord`, and `PartialOrd` for the
+  `ViewFunction` type.
+* Implement `Clone`, `Hash`, `Eq`, `PartialEq`, `Ord`, and `PartialOrd`
+  for the `ViewResult` type.
+* Implement `Clone`, `Hash`, `Ord`, and `PartialOrd` for the `ViewRow`
+  type.
 
 ### Changed
 
-* Replace string-based types for resource names with new stronger types:
-  `DatabasePath`, `DocumentPath`, and `ViewPath`.
-* Strengthen field types in `ViewPath` struct.
-  * Replace string-based `id` field with new `path` field of type
-    `DocumentPath`.
-  * Wrap `total_rows` and `offset` fields using `Option`.
-* Replace `Revision` special constructor with `From` implementations to
-  be more idiomatic Rust.
-* Replace the `Error::UnexpectedContent` variant with the existing
-  `Error::Decode` variant because both variants signify a decoding
-  error.
-* Change `ViewFunctionMap` from `BTreeMap` to `HashMap`.
+* Replace raw-string path types with new type-safe path types.
+  * Client commands.
+  * `Document` type.
+  * `ViewRow` type.
+* Wrap the `total_rows` and `offset` fields with `Option` in the
+  `ViewResult` type.
+* Return the `Error::Decode` variant for all JSON-decoding errors.
+  Previously, some decoding errors were reported as an undocumented
+  variant.
+* Change underlying type of `ViewFunctionMap` from `BTreeMap` to
+  `HashMap`.
 * Change crate dependency versions from `*` to explicit range values.
 
 ### Fixed
 
 * Change `Revision` comparison to be case-insensitive, matching CouchDB
   semantics.
-* Eliminate CPU spin in `Server` on Windows (partially resolve issue #8).
+* Eliminate CPU spin in `Server` on Windows. This partially resolves
+  issue #8.
+
+### Removed
+
+* Remove `Command` trait.
 
 ## [0.2.0] - 2015-10-17
 
