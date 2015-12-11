@@ -3,7 +3,6 @@ use serde;
 
 use command;
 use dbpath::DatabasePath;
-use design::Design;
 use docpath::DocumentPath;
 use error::Error;
 use revision::Revision;
@@ -115,36 +114,6 @@ impl<'a> Client {
 
     /// Build a command to DELETE a document.
     pub fn delete_document<P>(&'a self, path: P, rev: &'a Revision)
-        -> command::DeleteDocument<'a> where P: Into<DocumentPath>
-    {
-        command::DeleteDocument::new_delete_document(&self.state, path.into(), rev)
-    }
-
-    /// Build a command to HEAD a design document.
-    pub fn head_design_document<P>(&'a self, path: P)
-        -> command::HeadDocument<'a> where P: Into<DocumentPath>
-    {
-        command::HeadDocument::new_head_document(&self.state, path.into())
-    }
-
-    /// Build a command to GET a design document.
-    pub fn get_design_document<P>(&'a self, path: P)
-        -> command::GetDocument<'a, Design>
-        where P: Into<DocumentPath>
-    {
-        command::GetDocument::new_get_document(&self.state, path.into())
-    }
-
-    /// Build a command to PUT a design document.
-    pub fn put_design_document<P>(&'a self, path: P, ddoc_content: &'a Design)
-        -> command::PutDocument<'a, Design>
-        where P: Into<DocumentPath>
-    {
-        command::PutDocument::new_put_document(&self.state, path.into(), ddoc_content)
-    }
-
-    /// Build a command to DELETE a design document.
-    pub fn delete_design_document<P>(&'a self, path: P, rev: &'a Revision)
         -> command::DeleteDocument<'a> where P: Into<DocumentPath>
     {
         command::DeleteDocument::new_delete_document(&self.state, path.into(), rev)

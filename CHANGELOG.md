@@ -52,7 +52,10 @@ Rust-idiomatic.
 
 ### Removed
 
-* Remove `Command` trait.
+* Make the `Command` trait private. This is an implementation detail.
+* Remove client commands specific to design documents, e.g.,
+  `get_design_document`, etc.. These commands are made redundant by the
+  new path types.
 
 ## [0.2.0] - 2015-10-17
 
