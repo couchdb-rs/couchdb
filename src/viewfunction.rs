@@ -32,10 +32,10 @@ impl serde::Serialize for ViewFunction {
             fn visit<S>(&mut self, s: &mut S) -> Result<Option<()>, S::Error>
                 where S: serde::Serializer
             {
-                let Visitor(value) = *self;
+                let Visitor(view_func) = *self;
 
-                try!(s.visit_struct_elt("map", &value.map));
-                for v in value.reduce.iter() {
+                try!(s.visit_struct_elt("map", &view_func.map));
+                for v in view_func.reduce.iter() {
                     try!(s.visit_struct_elt("reduce", v));
                 }
 

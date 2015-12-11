@@ -163,7 +163,7 @@ mod jsontest;
 pub use client::{Client, IntoUrl};
 pub use database::Database;
 pub use dbpath::DatabasePath;
-pub use design::Design;
+pub use design::{Design, DesignBuilder};
 pub use docid::DocumentId;
 pub use docpath::DocumentPath;
 pub use document::Document;

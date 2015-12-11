@@ -6,6 +6,8 @@
 
 * Add all missing fields to the `Database` type. The type now includes
   all information returned by the CouchDB server.
+* New `DesignBuilder` type to make it easier to construct `Design`
+  instances.
 
 ### Changed
 
