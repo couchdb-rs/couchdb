@@ -24,8 +24,9 @@
   1. Edit `Cargo.toml` to declare the correct version for this
      crate—e.g., remove the `+master` suffix.
 
-  1. Edit `CHANGELOG.md` and ensure it's up-to-date, clear, and well
-     formatted.
+  1. Edit `CHANGELOG.md` to add the date for the new release and remove
+     the “unreleased” adjective. Ensure the change log is up-to-date,
+     clear, and well formatted.
 
   1. Commit changes.
 
@@ -76,5 +77,5 @@
   1. Edit `Cargo.toml` to increment the version, adding the `+master`
      suffix.
 
-  1. Edit `CHANGELOG.md` to add the new section for the next version (in
-     development).
+  1. Edit `CHANGELOG.md` to add the new “unreleased” section for the
+     next version.

@@ -1,6 +1,10 @@
 # CouchDB-rs Change Log
 
-## [Unreleased (0.3.0)]
+## [Unreleased (0.3.1)]
+
+No changes yet.
+
+## [0.3.0] - 2015-12-12
 
 An API overhaul, strengthening type-safety and making the crate more
 Rust-idiomatic.
