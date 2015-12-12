@@ -13,7 +13,7 @@ pub struct HeadDatabase<'a> {
 
 impl<'a> HeadDatabase<'a> {
     #[doc(hidden)]
-    pub fn new_head_database(client_state: &'a ClientState, path: DatabasePath) -> Self {
+    pub fn new(client_state: &'a ClientState, path: DatabasePath) -> Self {
         HeadDatabase {
             client_state: client_state,
             path: path,

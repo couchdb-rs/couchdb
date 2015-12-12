@@ -23,7 +23,7 @@ pub struct GetDocument<'a, T>
 impl<'a, T> GetDocument<'a, T> where T: serde::Deserialize
 {
     #[doc(hidden)]
-    pub fn new_get_document(client_state: &'a ClientState, path: DocumentPath) -> Self {
+    pub fn new(client_state: &'a ClientState, path: DocumentPath) -> Self {
         GetDocument {
             client_state: client_state,
             path: path,

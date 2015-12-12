@@ -12,7 +12,7 @@ pub struct GetAllDatabases<'a> {
 
 impl<'a> GetAllDatabases<'a> {
     #[doc(hidden)]
-    pub fn new_get_all_databases(client_state: &'a ClientState) -> Self {
+    pub fn new(client_state: &'a ClientState) -> Self {
         GetAllDatabases { client_state: client_state }
     }
 

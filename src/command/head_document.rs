@@ -15,7 +15,7 @@ pub struct HeadDocument<'a> {
 
 impl<'a> HeadDocument<'a> {
     #[doc(hidden)]
-    pub fn new_head_document(client_state: &'a ClientState, path: DocumentPath) -> Self {
+    pub fn new(client_state: &'a ClientState, path: DocumentPath) -> Self {
         HeadDocument {
             client_state: client_state,
             path: path,

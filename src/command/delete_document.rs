@@ -15,7 +15,7 @@ pub struct DeleteDocument<'a> {
 
 impl<'a> DeleteDocument<'a> {
     #[doc(hidden)]
-    pub fn new_delete_document(client_state: &'a ClientState, path: DocumentPath, rev: &'a Revision) -> Self {
+    pub fn new(client_state: &'a ClientState, path: DocumentPath, rev: &'a Revision) -> Self {
         DeleteDocument {
             client_state: client_state,
             path: path,

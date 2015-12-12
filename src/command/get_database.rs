@@ -15,7 +15,7 @@ pub struct GetDatabase<'a> {
 
 impl<'a> GetDatabase<'a> {
     #[doc(hidden)]
-    pub fn new_get_database(client_state: &'a ClientState, path: DatabasePath) -> Self {
+    pub fn new(client_state: &'a ClientState, path: DatabasePath) -> Self {
         GetDatabase {
             client_state: client_state,
             path: path,

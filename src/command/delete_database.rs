@@ -13,7 +13,7 @@ pub struct DeleteDatabase<'a> {
 
 impl<'a> DeleteDatabase<'a> {
     #[doc(hidden)]
-    pub fn new_delete_database(client_state: &'a ClientState, path: DatabasePath) -> Self {
+    pub fn new(client_state: &'a ClientState, path: DatabasePath) -> Self {
         DeleteDatabase {
             client_state: client_state,
             path: path,

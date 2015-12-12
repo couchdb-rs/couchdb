@@ -22,7 +22,7 @@ pub struct PutDocument<'a, T>
 impl<'a, T> PutDocument<'a, T> where T: 'a + serde::Serialize
 {
     #[doc(hidden)]
-    pub fn new_put_document(client_state: &'a ClientState, path: DocumentPath, doc_content: &'a T) -> Self
+    pub fn new(client_state: &'a ClientState, path: DocumentPath, doc_content: &'a T) -> Self
         where T: serde::Serialize
     {
         PutDocument {

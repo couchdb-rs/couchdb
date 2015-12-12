@@ -13,7 +13,7 @@ pub struct PutDatabase<'a> {
 
 impl<'a> PutDatabase<'a> {
     #[doc(hidden)]
-    pub fn new_put_database(client_state: &'a ClientState, path: DatabasePath) -> Self {
+    pub fn new(client_state: &'a ClientState, path: DatabasePath) -> Self {
         PutDatabase {
             client_state: client_state,
             path: path,

@@ -32,7 +32,7 @@ impl<'a, K, V> GetView<'a, K, V>
           V: serde::Deserialize
 {
     #[doc(hidden)]
-    pub fn new_get_view(client_state: &'a ClientState, path: ViewPath) -> Self
+    pub fn new(client_state: &'a ClientState, path: ViewPath) -> Self
         where K: serde::Deserialize,
               V: serde::Deserialize
     {
