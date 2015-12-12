@@ -17,11 +17,10 @@ impl Drop for AutoKillProcess {
 
 /// RAII wrapper for running a CouchDB server process.
 ///
-/// # Remarks
-///
-/// The Server type is provided for testing purposes. The database persists to
+/// The `Server` type is provided for testing purposes. The database persists to
 /// the system's default temporary directory (e.g., `/tmp`) and is deleted when
-/// the Server instance drops.
+/// the `Server` instance drops.
+///
 pub struct Server {
     // Rust drops structure fields in forward order, not reverse order. The child process must exit
     // before we remove the temporary directory.

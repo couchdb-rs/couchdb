@@ -18,7 +18,10 @@ Rust-idiomatic.
 * Implement `Clone`, `Hash`, `Eq`, `PartialEq`, `Ord`, and `PartialOrd`
   for the `Database` type.
 * Implement `Clone` for the `Design` type.
-* Implement `Display` for the `ErrorResponse` type.
+* Implement `Clone`, `Hash`, `Eq`, `PartialEq`, `Ord`, and `PartialOrd`
+  for the `Database` type.
+* Implement `Clone`, `Display` `Eq`, `Hash`, `Ord`, `PartialEq`, and
+  `PartialOrd` for the `ErrorResponse` type.
 * Implement `Hash`, `From<String>`, and `From<&str>` for the `Revision`
   type.
 * Implement `Clone`, `Hash`, `Ord`, and `PartialOrd` for the

@@ -4,22 +4,16 @@ use std;
 /// Associative collection for view functions.
 pub type ViewFunctionMap = std::collections::HashMap<String, ViewFunction>;
 
-/// JavaScript function for a CouchDB view.
+/// JavaScript `map` and `reduce` functions for a CouchDB view.
 #[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct ViewFunction {
 
-    /// JavaScript function that accepts a document argument and emits zero or
-    /// more key-value pairs.
-    ///
-    /// See your CouchDB documentation for more details.
-    ///
+    /// JavaScript function that takes a document and emits zero or more
+    /// key-value pairs.
     pub map: String,
 
-    /// JavaScript function to reduce multiple values emitted from the map
+    /// JavaScript function that reduces multiple values emitted from the map
     /// function into a single value.
-    ///
-    /// See your CouchDB documentation for more details.
-    ///
     pub reduce: Option<String>,
 }
 

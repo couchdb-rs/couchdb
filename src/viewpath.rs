@@ -11,8 +11,8 @@ use docpath::DocumentPath;
 ///
 /// `ViewPath` provides additional type-safety over working with raw strings.
 ///
-#[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
-pub struct ViewPath(DocumentPath, String);
+#[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)] pub struct
+ViewPath(DocumentPath, String);
 
 impl ViewPath {
     pub fn new<T, U>(doc_path: T, view_name: U)

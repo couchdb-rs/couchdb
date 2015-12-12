@@ -4,18 +4,24 @@ use dbpath::DatabasePath;
 use dbtype;
 use docpath::DocumentPath;
 
-/// View row.
-///
-/// `ViewRow` is a single row within the response from getting a view.
-///
+/// Single row contained within the response resulting from executing a view.
 #[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct ViewRow<K, V>
     where K: serde::Deserialize,
           V: serde::Deserialize
 {
-    // FIXME: Document these fields.
+    /// Path for this document.
+    ///
+    /// The `path` field replaces the `id` field returned by the CouchDB server.
+    /// The `path` field provides stronger type-safety because it binds the
+    /// database name with the document id.
+    ///
     pub path: Option<DocumentPath>,
+
+    /// Key emitted by the view function.
     pub key: Option<K>,
+
+    /// Value emitted by the view function.
     pub value: V,
 }
 

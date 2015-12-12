@@ -45,7 +45,7 @@ impl<'a, T> GetDocument<'a, T> where T: serde::Deserialize
     ///
     /// Return `None` if an If-None-Match revision is given and the document
     /// hasn't been modified since that revision. Otherwise, return `Some` with
-    /// the document meta-information and content.
+    /// the document meta-information and application-defined content.
     ///
     /// # Errors
     ///

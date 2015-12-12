@@ -8,15 +8,10 @@ use ViewFunction;
 /// CouchDB design documents contain many fields. However, the `Design` type
 /// currently supports only views.
 ///
-/// See your CouchDB documentation for more details about design documents.
-///
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Design {
 
     /// Map of view names to the view function for each name.
-    ///
-    /// See your CouchDB documentation for more details.
-    ///
     pub views: ViewFunctionMap,
 }
 

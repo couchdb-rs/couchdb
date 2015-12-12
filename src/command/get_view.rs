@@ -48,17 +48,20 @@ impl<'a, K, V> GetView<'a, K, V>
         }
     }
 
+    /// Set whether to run the `reduce` view function.
     pub fn reduce(mut self, v: bool) -> Self {
         self.reduce = Some(v);
         self
     }
 
+    /// Set the minimum key for rows contained within the result.
     pub fn endkey(mut self, key: K) -> Self
     {
         self.endkey = Some(key);
         self
     }
 
+    /// Set the maximum key for rows contained within the result.
     pub fn startkey(mut self, key: K) -> Self
     {
         self.startkey = Some(key);

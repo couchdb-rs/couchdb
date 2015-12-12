@@ -5,18 +5,29 @@ use dbpath::DatabasePath;
 use dbtype;
 use viewrow::ViewRow;
 
-/// View result.
-///
-/// `ViewResult` is the response from getting a view.
-///
+/// Response resulting from executing a view.
 #[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct ViewResult<K, V>
     where K: serde::Deserialize,
           V: serde::Deserialize
 {
-    // FIXME: Document these fields.
+    /// Total number of rows in the view, including those not contained within
+    /// this result.
     pub total_rows: Option<u64>,
+
+    /// Zero-based offset of the first row contained within this result.
+    ///
+    /// The `offset` field specifies the number of rows in the view whose key is
+    /// less than the key of the first row in the `rows` field.
+    ///
     pub offset: Option<u64>,
+
+    /// Rows contained within this result.
+    ///
+    /// A view may have rows not contained within this result. For example, this
+    /// may happen when using the `startkey` or `endkey` parameters when
+    /// executing the view.
+    ///
     pub rows: Vec<ViewRow<K, V>>,
 }
 

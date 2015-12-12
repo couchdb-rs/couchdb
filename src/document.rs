@@ -9,11 +9,22 @@ use error::{DecodeKind, Error};
 use revision::Revision;
 use transport;
 
-/// Document, including meta-information and content.
-#[derive(Debug)]
+/// Document, including both meta-information and application-defined content.
+#[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct Document<T: serde::Deserialize> {
+
+    /// Path for this document.
+    ///
+    /// The `path` field replaces the `id` field returned by the CouchDB server.
+    /// The `path` field provides stronger type-safety because it binds the
+    /// database name with the document id.
+    ///
     pub path: DocumentPath,
+
+    /// Revision of this document.
     pub revision: Revision,
+
+    /// Application-defined content of this document.
     pub content: T,
 }
 

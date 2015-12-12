@@ -204,13 +204,13 @@ impl std::fmt::Display for Error {
 }
 
 /// Response content from the CouchDB server in case of error.
-#[derive(Debug)]
+#[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct ErrorResponse {
 
     /// Error string returned by CouchDB Server.
     ///
-    /// This is a high-level description of the error—e.g., “file_exists”.
-
+    /// This is the high-level name of the error—e.g., “file_exists”.
+    ///
     pub error: String,
 
     /// Reason string returned by CouchDB Server.
