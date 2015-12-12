@@ -33,18 +33,13 @@ pub struct Client {
 }
 
 impl<'a> Client {
-
     /// Construct a CouchDB client.
     pub fn new<U: IntoUrl>(uri: U) -> Result<Client, Error> {
         Ok(Client {
             state: ClientState {
                 http_client: hyper::Client::new(),
-                uri: try!(
-                    uri.into_url()
-                    .or_else(|e| {
-                        Err(Error::UriParse { cause: e } )
-                    })
-                ),
+                uri: try!(uri.into_url()
+                             .or_else(|e| Err(Error::UriParse { cause: e }))),
             },
         })
     }
@@ -60,43 +55,42 @@ impl<'a> Client {
     }
 
     /// Build a command to HEAD a database.
-    pub fn head_database<P>(&'a self, path: P)
-        -> command::HeadDatabase<'a> where P: Into<DatabasePath>
+    pub fn head_database<P>(&'a self, path: P) -> command::HeadDatabase<'a>
+        where P: Into<DatabasePath>
     {
         command::HeadDatabase::new_head_database(&self.state, path.into())
     }
 
     /// Build a command to GET a database.
-    pub fn get_database<P>(&'a self, path: P)
-        -> command::GetDatabase<'a> where P: Into<DatabasePath>
+    pub fn get_database<P>(&'a self, path: P) -> command::GetDatabase<'a>
+        where P: Into<DatabasePath>
     {
         command::GetDatabase::new_get_database(&self.state, path.into())
     }
 
     /// Build a command to PUT a database.
-    pub fn put_database<P>(&'a self, path: P)
-        -> command::PutDatabase<'a> where P: Into<DatabasePath>
+    pub fn put_database<P>(&'a self, path: P) -> command::PutDatabase<'a>
+        where P: Into<DatabasePath>
     {
         command::PutDatabase::new_put_database(&self.state, path.into())
     }
 
     /// Build a command to DELETE a database.
-    pub fn delete_database<P>(&'a self, path: P)
-        -> command::DeleteDatabase<'a> where P: Into<DatabasePath>
+    pub fn delete_database<P>(&'a self, path: P) -> command::DeleteDatabase<'a>
+        where P: Into<DatabasePath>
     {
         command::DeleteDatabase::new_delete_database(&self.state, path.into())
     }
 
     /// Build a command to HEAD a document.
-    pub fn head_document<P>(&'a self, path: P)
-        -> command::HeadDocument<'a> where P: Into<DocumentPath>
+    pub fn head_document<P>(&'a self, path: P) -> command::HeadDocument<'a>
+        where P: Into<DocumentPath>
     {
         command::HeadDocument::new_head_document(&self.state, path.into())
     }
 
     /// Build a command to GET a document.
-    pub fn get_document<P, T>(&'a self, path: P)
-        -> command::GetDocument<'a, T>
+    pub fn get_document<P, T>(&'a self, path: P) -> command::GetDocument<'a, T>
         where P: Into<DocumentPath>,
               T: serde::Deserialize
     {
@@ -104,8 +98,7 @@ impl<'a> Client {
     }
 
     /// Build a command to PUT a document.
-    pub fn put_document<P, T>(&'a self, path: P, doc_content: &'a T)
-        -> command::PutDocument<'a, T>
+    pub fn put_document<P, T>(&'a self, path: P, doc_content: &'a T) -> command::PutDocument<'a, T>
         where P: Into<DocumentPath>,
               T: serde::Serialize
     {
@@ -113,15 +106,14 @@ impl<'a> Client {
     }
 
     /// Build a command to DELETE a document.
-    pub fn delete_document<P>(&'a self, path: P, rev: &'a Revision)
-        -> command::DeleteDocument<'a> where P: Into<DocumentPath>
+    pub fn delete_document<P>(&'a self, path: P, rev: &'a Revision) -> command::DeleteDocument<'a>
+        where P: Into<DocumentPath>
     {
         command::DeleteDocument::new_delete_document(&self.state, path.into(), rev)
     }
 
     /// Build a command to GET a view.
-    pub fn get_view<P, K, V>(&'a self, path: P)
-        -> command::GetView<'a, K, V>
+    pub fn get_view<P, K, V>(&'a self, path: P) -> command::GetView<'a, K, V>
         where P: Into<ViewPath>,
               K: serde::Deserialize + serde::Serialize,
               V: serde::Deserialize

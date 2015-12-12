@@ -10,30 +10,28 @@ use ViewFunction;
 ///
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Design {
-
     /// Map of view names to the view function for each name.
     pub views: ViewFunctionMap,
 }
 
 impl Design {
-
     /// Construct an empty design document.
     ///
     /// An empty design document contains no views.
     ///
-    pub fn new() -> Self{
-        Design {
-            views: ViewFunctionMap::new(),
-        }
+    pub fn new() -> Self {
+        Design { views: ViewFunctionMap::new() }
     }
 }
 
 impl serde::Serialize for Design {
-    fn serialize<S>(&self, s: &mut S) -> Result<(), S::Error> where S: serde::Serializer {
+    fn serialize<S>(&self, s: &mut S) -> Result<(), S::Error>
+        where S: serde::Serializer
+    {
 
         struct Visitor<'a>(&'a Design);
 
-        impl <'a> serde::ser::MapVisitor for Visitor<'a> {
+        impl<'a> serde::ser::MapVisitor for Visitor<'a> {
             fn visit<S>(&mut self, s: &mut S) -> Result<Option<()>, S::Error>
                 where S: serde::Serializer
             {
@@ -52,14 +50,18 @@ impl serde::Serialize for Design {
 }
 
 impl serde::Deserialize for Design {
-    fn deserialize<D>(d: &mut D) -> Result<Self, D::Error> where D: serde::Deserializer {
+    fn deserialize<D>(d: &mut D) -> Result<Self, D::Error>
+        where D: serde::Deserializer
+    {
 
         enum Field {
             Views,
         }
 
         impl serde::Deserialize for Field {
-            fn deserialize<D>(d: &mut D) -> Result<Self, D::Error> where D: serde::Deserializer {
+            fn deserialize<D>(d: &mut D) -> Result<Self, D::Error>
+                where D: serde::Deserializer
+            {
 
                 struct Visitor;
 
@@ -94,7 +96,9 @@ impl serde::Deserialize for Design {
                         Some(Field::Views) => {
                             views = Some(try!(visitor.visit_value()));
                         }
-                        None => { break; }
+                        None => {
+                            break;
+                        }
                     }
                 }
 
@@ -105,9 +109,7 @@ impl serde::Deserialize for Design {
                     None => ViewFunctionMap::new(),
                 };
 
-                let v = Design {
-                    views: views,
-                };
+                let v = Design { views: views };
 
                 Ok(v)
             }
@@ -125,14 +127,9 @@ pub struct DesignBuilder {
 }
 
 impl DesignBuilder {
-
     /// Construct a builder with an empty design document.
     pub fn new() -> Self {
-        DesignBuilder {
-            design: Design {
-                views: ViewFunctionMap::new(),
-            }
-        }
+        DesignBuilder { design: Design { views: ViewFunctionMap::new() } }
     }
 
     /// Return the design document.
@@ -171,27 +168,32 @@ mod tests {
         // VERIFY: All fields are present.
 
         let exp = ObjectBuilder::new()
-            .insert("views", ObjectBuilder::new()
-                .insert("alpha", ObjectBuilder::new()
-                    .insert("map", "function(doc) { emit(doc.name, doc.value); }")
-                    .insert("reduce", "function(keys, values) { return sum(values); }")
-                    .unwrap())
-                .insert("bravo", ObjectBuilder::new()
-                    .insert("map", "function(doc) { emit(doc.name, doc.other_value); }")
-                    .unwrap())
-                .unwrap())
-            .unwrap();
+                      .insert("views",
+                              ObjectBuilder::new()
+                                  .insert("alpha",
+                                          ObjectBuilder::new()
+                                              .insert("map", "function(doc) { emit(doc.name, doc.value); }")
+                                              .insert("reduce", "function(keys, values) { return sum(values); }")
+                                              .unwrap())
+                                  .insert("bravo",
+                                          ObjectBuilder::new()
+                                              .insert("map", "function(doc) { emit(doc.name, doc.other_value); }")
+                                              .unwrap())
+                                  .unwrap())
+                      .unwrap();
 
         let design = DesignBuilder::new()
-            .insert_view("alpha", ViewFunction {
-                    map: "function(doc) { emit(doc.name, doc.value); }".to_string(),
-                    reduce: Some("function(keys, values) { return sum(values); }".to_string()),
-                })
-            .insert_view("bravo", ViewFunction {
-                    map: "function(doc) { emit(doc.name, doc.other_value); }".to_string(),
-                    reduce: None,
-                })
-            .unwrap();
+                         .insert_view("alpha",
+                                      ViewFunction {
+                                          map: "function(doc) { emit(doc.name, doc.value); }".to_string(),
+                                          reduce: Some("function(keys, values) { return sum(values); }".to_string()),
+                                      })
+                         .insert_view("bravo",
+                                      ViewFunction {
+                                          map: "function(doc) { emit(doc.name, doc.other_value); }".to_string(),
+                                          reduce: None,
+                                      })
+                         .unwrap();
 
         let s = serde_json::to_string(&design).unwrap();
         let got = serde_json::from_str::<serde_json::Value>(&s).unwrap();
@@ -216,15 +218,17 @@ mod tests {
         // VERIFY: All fields are present.
 
         let exp = DesignBuilder::new()
-            .insert_view("alpha", ViewFunction {
-                    map: "function(doc) { emit(doc.name, doc.value); }".to_string(),
-                    reduce: Some("function(keys, values) { return sum(values); }".to_string()),
-                })
-            .insert_view("bravo", ViewFunction {
-                    map: "function(doc) { emit(doc.name, doc.other_value); }".to_string(),
-                    reduce: None,
-                })
-            .unwrap();
+                      .insert_view("alpha",
+                                   ViewFunction {
+                                       map: "function(doc) { emit(doc.name, doc.value); }".to_string(),
+                                       reduce: Some("function(keys, values) { return sum(values); }".to_string()),
+                                   })
+                      .insert_view("bravo",
+                                   ViewFunction {
+                                       map: "function(doc) { emit(doc.name, doc.other_value); }".to_string(),
+                                       reduce: None,
+                                   })
+                      .unwrap();
 
         let s = r#"{
             "views": {

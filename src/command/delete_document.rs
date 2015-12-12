@@ -7,22 +7,15 @@ use revision::Revision;
 use transport::{self, Command, Request};
 
 /// Command to delete a document.
-pub struct DeleteDocument<'a>
-{
+pub struct DeleteDocument<'a> {
     client_state: &'a client::ClientState,
     path: DocumentPath,
     rev: &'a Revision,
 }
 
 impl<'a> DeleteDocument<'a> {
-
     #[doc(hidden)]
-    pub fn new_delete_document(
-        client_state: &'a ClientState,
-        path: DocumentPath,
-        rev: &'a Revision)
-        -> Self
-    {
+    pub fn new_delete_document(client_state: &'a ClientState, path: DocumentPath, rev: &'a Revision) -> Self {
         DeleteDocument {
             client_state: client_state,
             path: path,
@@ -47,33 +40,33 @@ impl<'a> DeleteDocument<'a> {
 }
 
 impl<'a> Command for DeleteDocument<'a> {
-
     type Output = ();
     type State = ();
 
     fn make_request(self) -> Result<(Request, Self::State), Error> {
         let uri = self.path.into_uri(self.client_state.uri.clone());
         let req = try!(Request::new(hyper::Delete, uri))
-            .accept_application_json()
-            .if_match_revision(Some(self.rev));
+                      .accept_application_json()
+                      .if_match_revision(Some(self.rev));
         Ok((req, ()))
     }
 
-    fn take_response(resp: hyper::client::Response, _state: Self::State)
-        -> Result<Self::Output, Error>
-    {
+    fn take_response(resp: hyper::client::Response, _state: Self::State) -> Result<Self::Output, Error> {
         match resp.status {
-            hyper::status::StatusCode::Ok =>
-                transport::content_type_must_be_application_json(&resp.headers),
-            hyper::status::StatusCode::BadRequest =>
-                Err(Error::InvalidRequest { response: try!(ErrorResponse::from_reader(resp)) }),
-            hyper::status::StatusCode::Unauthorized =>
-                Err(Error::Unauthorized { response: try!(ErrorResponse::from_reader(resp)) }),
-            hyper::status::StatusCode::NotFound =>
-                Err(Error::NotFound { response: Some(try!(ErrorResponse::from_reader(resp))) }),
-            hyper::status::StatusCode::Conflict =>
-                Err(Error::DocumentConflict { response: try!(ErrorResponse::from_reader(resp)) }),
-            _ => Err(Error::UnexpectedHttpStatus { got: resp.status } ),
+            hyper::status::StatusCode::Ok => transport::content_type_must_be_application_json(&resp.headers),
+            hyper::status::StatusCode::BadRequest => {
+                Err(Error::InvalidRequest { response: try!(ErrorResponse::from_reader(resp)) })
+            }
+            hyper::status::StatusCode::Unauthorized => {
+                Err(Error::Unauthorized { response: try!(ErrorResponse::from_reader(resp)) })
+            }
+            hyper::status::StatusCode::NotFound => {
+                Err(Error::NotFound { response: Some(try!(ErrorResponse::from_reader(resp))) })
+            }
+            hyper::status::StatusCode::Conflict => {
+                Err(Error::DocumentConflict { response: try!(ErrorResponse::from_reader(resp)) })
+            }
+            _ => Err(Error::UnexpectedHttpStatus { got: resp.status }),
         }
     }
 }

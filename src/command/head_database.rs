@@ -12,11 +12,8 @@ pub struct HeadDatabase<'a> {
 }
 
 impl<'a> HeadDatabase<'a> {
-
     #[doc(hidden)]
-    pub fn new_head_database(client_state: &'a ClientState, path: DatabasePath)
-        -> Self
-    {
+    pub fn new_head_database(client_state: &'a ClientState, path: DatabasePath) -> Self {
         HeadDatabase {
             client_state: client_state,
             path: path,
@@ -37,7 +34,6 @@ impl<'a> HeadDatabase<'a> {
 }
 
 impl<'a> Command for HeadDatabase<'a> {
-
     type Output = ();
     type State = ();
 
@@ -47,14 +43,11 @@ impl<'a> Command for HeadDatabase<'a> {
         Ok((req, ()))
     }
 
-    fn take_response(resp: hyper::client::Response, _state: Self::State)
-        -> Result<Self::Output, Error>
-    {
+    fn take_response(resp: hyper::client::Response, _state: Self::State) -> Result<Self::Output, Error> {
         match resp.status {
             hyper::status::StatusCode::Ok => Ok(()),
-            hyper::status::StatusCode::NotFound =>
-                Err(Error::NotFound { response: None } ),
-            _ => Err(Error::UnexpectedHttpStatus { got: resp.status } ),
+            hyper::status::StatusCode::NotFound => Err(Error::NotFound { response: None }),
+            _ => Err(Error::UnexpectedHttpStatus { got: resp.status }),
         }
     }
 }

@@ -53,20 +53,20 @@
 //!
 //! ```ignore
 //! extern crate couchdb;
-//! 
+//!
 //! #[derive(Deserialize)]
 //! struct Player {
 //!   name: String,
 //!   hits: u32,
 //!   home_runs: u32,
 //! }
-//! 
+//!
 //! let client = couchdb::Client::new("http://your_database/").unwrap();
-//! 
+//!
 //! let doc = client.get_document::<_, Player>("baseball/babe_ruth").run()
 //!                                                                 .unwrap()
 //!                                                                 .unwrap();
-//! 
+//!
 //! assert_eq!(doc.path, "baseball/babe_ruth".into());
 //! assert_eq!(doc.content.name, "Babe Ruth".to_string());
 //! assert_eq!(doc.hits, 2873);

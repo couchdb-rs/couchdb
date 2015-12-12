@@ -7,19 +7,15 @@ use revision::Revision;
 use transport::{self, Command, Request};
 
 /// Command to get document meta-information.
-pub struct HeadDocument<'a>
-{
+pub struct HeadDocument<'a> {
     client_state: &'a ClientState,
     path: DocumentPath,
     if_none_match: Option<&'a Revision>,
 }
 
-impl<'a> HeadDocument<'a>
-{
+impl<'a> HeadDocument<'a> {
     #[doc(hidden)]
-    pub fn new_head_document(client_state: &'a ClientState, path: DocumentPath)
-        -> Self
-    {
+    pub fn new_head_document(client_state: &'a ClientState, path: DocumentPath) -> Self {
         HeadDocument {
             client_state: client_state,
             path: path,
@@ -28,8 +24,7 @@ impl<'a> HeadDocument<'a>
     }
 
     /// Set the If-None-Match header.
-    pub fn if_none_match(mut self, rev: &'a Revision) -> Self
-    {
+    pub fn if_none_match(mut self, rev: &'a Revision) -> Self {
         self.if_none_match = Some(rev);
         self
     }
@@ -53,29 +48,25 @@ impl<'a> HeadDocument<'a>
     }
 }
 
-impl<'a> Command for HeadDocument<'a>
-{
+impl<'a> Command for HeadDocument<'a> {
     type Output = Option<()>;
     type State = ();
 
     fn make_request(self) -> Result<(Request, Self::State), Error> {
         let uri = self.path.into_uri(self.client_state.uri.clone());
-        let req = try!(Request::new(hyper::Head, uri))
-            .if_none_match_revision(self.if_none_match);
+        let req = try!(Request::new(hyper::Head, uri)).if_none_match_revision(self.if_none_match);
         Ok((req, ()))
     }
 
-    fn take_response(resp: hyper::client::Response, _state: Self::State)
-        -> Result<Self::Output, Error>
-    {
+    fn take_response(resp: hyper::client::Response, _state: Self::State) -> Result<Self::Output, Error> {
         match resp.status {
             hyper::status::StatusCode::Ok => Ok(Some(())),
             hyper::status::StatusCode::NotModified => Ok(None),
-            hyper::status::StatusCode::Unauthorized =>
-                Err(Error::Unauthorized { response: try!(ErrorResponse::from_reader(resp)) }),
-            hyper::status::StatusCode::NotFound =>
-                Err(Error::NotFound { response: None } ),
-            _ => Err(Error::UnexpectedHttpStatus { got: resp.status } ),
+            hyper::status::StatusCode::Unauthorized => {
+                Err(Error::Unauthorized { response: try!(ErrorResponse::from_reader(resp)) })
+            }
+            hyper::status::StatusCode::NotFound => Err(Error::NotFound { response: None }),
+            _ => Err(Error::UnexpectedHttpStatus { got: resp.status }),
         }
     }
 }

@@ -11,7 +11,8 @@ use revision::Revision;
 use transport::{self, Command, Request};
 
 /// Command to get a document.
-pub struct GetDocument<'a, T> where T: serde::Deserialize
+pub struct GetDocument<'a, T>
+    where T: serde::Deserialize
 {
     client_state: &'a ClientState,
     path: DocumentPath,
@@ -22,9 +23,7 @@ pub struct GetDocument<'a, T> where T: serde::Deserialize
 impl<'a, T> GetDocument<'a, T> where T: serde::Deserialize
 {
     #[doc(hidden)]
-    pub fn new_get_document(client_state: &'a ClientState, path: DocumentPath)
-        -> Self
-    {
+    pub fn new_get_document(client_state: &'a ClientState, path: DocumentPath) -> Self {
         GetDocument {
             client_state: client_state,
             path: path,
@@ -59,8 +58,7 @@ impl<'a, T> GetDocument<'a, T> where T: serde::Deserialize
     }
 }
 
-impl<'a, T> Command for GetDocument<'a, T>
-    where T: serde::Deserialize
+impl<'a, T> Command for GetDocument<'a, T> where T: serde::Deserialize
 {
     type Output = Option<Document<T>>;
     type State = DatabasePath;
@@ -69,28 +67,29 @@ impl<'a, T> Command for GetDocument<'a, T>
         let db_path = self.path.database_path().clone();
         let uri = self.path.into_uri(self.client_state.uri.clone());
         let req = try!(Request::new(hyper::Get, uri))
-            .accept_application_json()
-            .if_none_match_revision(self.if_none_match);
+                      .accept_application_json()
+                      .if_none_match_revision(self.if_none_match);
         Ok((req, db_path))
     }
 
-    fn take_response(resp: hyper::client::Response, db_path: Self::State)
-        -> Result<Self::Output, Error>
-    {
+    fn take_response(resp: hyper::client::Response, db_path: Self::State) -> Result<Self::Output, Error> {
         match resp.status {
             hyper::status::StatusCode::Ok => {
                 try!(transport::content_type_must_be_application_json(&resp.headers));
                 let doc = try!(Document::from_reader(resp, db_path));
                 Ok(Some(doc))
-            },
+            }
             hyper::status::StatusCode::NotModified => Ok(None),
-            hyper::status::StatusCode::BadRequest =>
-                Err(Error::InvalidRequest { response: try!(ErrorResponse::from_reader(resp)) }),
-            hyper::status::StatusCode::Unauthorized =>
-                Err(Error::Unauthorized { response: try!(ErrorResponse::from_reader(resp)) }),
-            hyper::status::StatusCode::NotFound =>
-                Err(Error::NotFound { response: Some(try!(ErrorResponse::from_reader(resp))) }),
-            _ => Err(Error::UnexpectedHttpStatus { got: resp.status } ),
+            hyper::status::StatusCode::BadRequest => {
+                Err(Error::InvalidRequest { response: try!(ErrorResponse::from_reader(resp)) })
+            }
+            hyper::status::StatusCode::Unauthorized => {
+                Err(Error::Unauthorized { response: try!(ErrorResponse::from_reader(resp)) })
+            }
+            hyper::status::StatusCode::NotFound => {
+                Err(Error::NotFound { response: Some(try!(ErrorResponse::from_reader(resp))) })
+            }
+            _ => Err(Error::UnexpectedHttpStatus { got: resp.status }),
         }
     }
 }

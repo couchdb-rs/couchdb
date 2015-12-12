@@ -7,7 +7,6 @@ use error::{Error, DecodeKind};
 /// Database resource, as returned from a command to GET a database.
 #[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct Database {
-
     /// The path of the database—the value for specifying the location of this
     /// database in CouchDB commands.
     pub db_path: DatabasePath,
@@ -48,7 +47,6 @@ pub struct Database {
 }
 
 impl Database {
-
     #[doc(hidden)]
     pub fn from_db_database(mut db: dbtype::Database) -> Result<Self, Error> {
 
@@ -57,17 +55,8 @@ impl Database {
 
         let instance_start_time = {
             let s = std::mem::replace(&mut db.instance_start_time, String::new());
-            try!(
-                u64::from_str_radix(&s, 10)
-                    .map_err(|e| {
-                        Error::Decode {
-                            kind: DecodeKind::InstanceStartTime {
-                                got: s,
-                                cause: e,
-                            }
-                        }
-                    })
-            )
+            try!(u64::from_str_radix(&s, 10)
+                     .map_err(|e| Error::Decode { kind: DecodeKind::InstanceStartTime { got: s, cause: e } }))
         };
 
         let db = Database {
@@ -145,11 +134,17 @@ mod tests {
 
         let e = Database::from_db_database(db).unwrap_err();
         match e {
-            Error::Decode { kind } => match kind {
-                DecodeKind::InstanceStartTime { .. } => (),
-                _ => { panic!("Got unexpected error kind: {}", kind); },
-            },
-            _ => { panic!("Got unexpected error: {}", e); },
+            Error::Decode { kind } => {
+                match kind {
+                    DecodeKind::InstanceStartTime { .. } => (),
+                    _ => {
+                        panic!("Got unexpected error kind: {}", kind);
+                    }
+                }
+            }
+            _ => {
+                panic!("Got unexpected error: {}", e);
+            }
         }
     }
 }

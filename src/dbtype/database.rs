@@ -16,7 +16,9 @@ pub struct Database {
 }
 
 impl serde::Deserialize for Database {
-    fn deserialize<D>(d: &mut D) -> Result<Self, D::Error> where D: serde::Deserializer {
+    fn deserialize<D>(d: &mut D) -> Result<Self, D::Error>
+        where D: serde::Deserializer
+    {
 
         enum Field {
             CommittedUpdateSeq,
@@ -32,15 +34,13 @@ impl serde::Deserialize for Database {
             UpdateSeq,
         }
 
-        impl serde::Deserialize for Field
-        {
+        impl serde::Deserialize for Field {
             fn deserialize<D>(d: &mut D) -> Result<Field, D::Error>
                 where D: serde::Deserializer
             {
                 struct Visitor;
 
-                impl serde::de::Visitor for Visitor
-                {
+                impl serde::de::Visitor for Visitor {
                     type Value = Field;
 
                     fn visit_str<E>(&mut self, value: &str) -> Result<Field, E>
@@ -72,8 +72,8 @@ impl serde::Deserialize for Database {
         impl serde::de::Visitor for Visitor {
             type Value = Database;
 
-            fn visit_map<V>(&mut self, mut visitor: V)
-                -> Result<Self::Value, V::Error> where V: serde::de::MapVisitor
+            fn visit_map<V>(&mut self, mut visitor: V) -> Result<Self::Value, V::Error>
+                where V: serde::de::MapVisitor
             {
                 let mut committed_update_seq = None;
                 let mut compact_running = None;
@@ -90,38 +90,40 @@ impl serde::Deserialize for Database {
                     match try!(visitor.visit_key()) {
                         Some(Field::CommittedUpdateSeq) => {
                             committed_update_seq = Some(try!(visitor.visit_value()));
-                        },
+                        }
                         Some(Field::CompactRunning) => {
                             compact_running = Some(try!(visitor.visit_value()));
-                        },
+                        }
                         Some(Field::DbName) => {
                             db_name = Some(try!(visitor.visit_value()));
-                        },
+                        }
                         Some(Field::DiskFormatVersion) => {
                             disk_format_version = Some(try!(visitor.visit_value()));
-                        },
+                        }
                         Some(Field::DataSize) => {
                             data_size = Some(try!(visitor.visit_value()));
-                        },
+                        }
                         Some(Field::DiskSize) => {
                             disk_size = Some(try!(visitor.visit_value()));
-                        },
+                        }
                         Some(Field::DocCount) => {
                             doc_count = Some(try!(visitor.visit_value()));
-                        },
+                        }
                         Some(Field::DocDelCount) => {
                             doc_del_count = Some(try!(visitor.visit_value()));
-                        },
+                        }
                         Some(Field::InstanceStartTime) => {
                             instance_start_time = Some(try!(visitor.visit_value()));
-                        },
+                        }
                         Some(Field::PurgeSeq) => {
                             purge_seq = Some(try!(visitor.visit_value()));
-                        },
+                        }
                         Some(Field::UpdateSeq) => {
                             update_seq = Some(try!(visitor.visit_value()));
-                        },
-                        None => { break; },
+                        }
+                        None => {
+                            break;
+                        }
                     }
                 }
 
@@ -198,19 +200,17 @@ impl serde::Deserialize for Database {
             }
         }
 
-        static FIELDS: &'static [&'static str] = &[
-            "committed_update_seq",
-            "compact_running",
-            "db_name",
-            "disk_format_version",
-            "data_size",
-            "disk_size",
-            "doc_count",
-            "doc_del_count",
-            "instance_start_time",
-            "purge_seq",
-            "update_seq",
-        ];
+        static FIELDS: &'static [&'static str] = &["committed_update_seq",
+                                                   "compact_running",
+                                                   "db_name",
+                                                   "disk_format_version",
+                                                   "data_size",
+                                                   "disk_size",
+                                                   "doc_count",
+                                                   "doc_del_count",
+                                                   "instance_start_time",
+                                                   "purge_seq",
+                                                   "update_seq"];
         d.visit_struct("Database", FIELDS, Visitor)
     }
 }
@@ -226,19 +226,17 @@ mod tests {
     #[test]
     fn test_deserialization() {
 
-        let fields = [
-            r#""db_name": "stuff""#,
-            r#""doc_count": 1"#,
-            r#""doc_del_count": 2"#,
-            r#""update_seq": 3"#,
-            r#""purge_seq": 4"#,
-            r#""compact_running": false"#,
-            r#""disk_size": 5"#,
-            r#""data_size": 6"#,
-            r#""instance_start_time": "1234""#,
-            r#""disk_format_version": 7"#,
-            r#""committed_update_seq": 8"#,
-        ];
+        let fields = [r#""db_name": "stuff""#,
+                      r#""doc_count": 1"#,
+                      r#""doc_del_count": 2"#,
+                      r#""update_seq": 3"#,
+                      r#""purge_seq": 4"#,
+                      r#""compact_running": false"#,
+                      r#""disk_size": 5"#,
+                      r#""data_size": 6"#,
+                      r#""instance_start_time": "1234""#,
+                      r#""disk_format_version": 7"#,
+                      r#""committed_update_seq": 8"#];
 
         // Verify: All fields present.
         let s = jsontest::make_complete_json_object(&fields);

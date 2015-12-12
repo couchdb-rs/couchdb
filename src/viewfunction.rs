@@ -7,7 +7,6 @@ pub type ViewFunctionMap = std::collections::HashMap<String, ViewFunction>;
 /// JavaScript `map` and `reduce` functions for a CouchDB view.
 #[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct ViewFunction {
-
     /// JavaScript function that takes a document and emits zero or more
     /// key-value pairs.
     pub map: String,
@@ -18,11 +17,13 @@ pub struct ViewFunction {
 }
 
 impl serde::Serialize for ViewFunction {
-    fn serialize<S>(&self, s: &mut S) -> Result<(), S::Error> where S: serde::Serializer {
+    fn serialize<S>(&self, s: &mut S) -> Result<(), S::Error>
+        where S: serde::Serializer
+    {
 
         struct Visitor<'a>(&'a ViewFunction);
 
-        impl <'a> serde::ser::MapVisitor for Visitor<'a> {
+        impl<'a> serde::ser::MapVisitor for Visitor<'a> {
             fn visit<S>(&mut self, s: &mut S) -> Result<Option<()>, S::Error>
                 where S: serde::Serializer
             {
@@ -42,7 +43,9 @@ impl serde::Serialize for ViewFunction {
 }
 
 impl serde::Deserialize for ViewFunction {
-    fn deserialize<D>(d: &mut D) -> Result<Self, D::Error> where D: serde::Deserializer {
+    fn deserialize<D>(d: &mut D) -> Result<Self, D::Error>
+        where D: serde::Deserializer
+    {
 
         enum Field {
             Map,
@@ -50,7 +53,9 @@ impl serde::Deserialize for ViewFunction {
         }
 
         impl serde::Deserialize for Field {
-            fn deserialize<D>(d: &mut D) -> Result<Self, D::Error> where D: serde::Deserializer {
+            fn deserialize<D>(d: &mut D) -> Result<Self, D::Error>
+                where D: serde::Deserializer
+            {
 
                 struct Visitor;
 
@@ -90,7 +95,9 @@ impl serde::Deserialize for ViewFunction {
                         Some(Field::Reduce) => {
                             reduce = Some(try!(visitor.visit_value()));
                         }
-                        None => { break; }
+                        None => {
+                            break;
+                        }
                     }
                 }
 
@@ -129,9 +136,9 @@ mod tests {
         // VERIFY: All fields are present.
 
         let exp = serde_json::builder::ObjectBuilder::new()
-            .insert("map", "function(doc) { emit(doc.name, doc.value); }")
-            .insert("reduce", "function(keys, values) { return sum(values); }")
-            .unwrap();
+                      .insert("map", "function(doc) { emit(doc.name, doc.value); }")
+                      .insert("reduce", "function(keys, values) { return sum(values); }")
+                      .unwrap();
 
         let vf = ViewFunction {
             map: "function(doc) { emit(doc.name, doc.value); }".to_string(),
@@ -146,8 +153,8 @@ mod tests {
         // VERIFY: The `reduce` field is None.
 
         let exp = serde_json::builder::ObjectBuilder::new()
-            .insert("map", "function(doc) { emit(doc.name, doc.value); }")
-            .unwrap();
+                      .insert("map", "function(doc) { emit(doc.name, doc.value); }")
+                      .unwrap();
 
         let vf = ViewFunction {
             map: "function(doc) { emit(doc.name, doc.value); }".to_string(),

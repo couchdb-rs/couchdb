@@ -13,7 +13,6 @@ use dbtype;
 ///
 #[derive(Debug)]
 pub enum Error {
-
     /// The database already exists.
     DatabaseExists {
         response: ErrorResponse,
@@ -66,7 +65,6 @@ pub enum Error {
 
     /// The resource does not exist.
     NotFound {
-
         /// CouchDB server response.
         ///
         /// In case of a HEAD request, the response value is None (because the
@@ -117,28 +115,28 @@ pub enum Error {
 }
 
 impl std::error::Error for Error {
-
     fn description(&self) -> &str {
         use self::Error::*;
         match *self {
             DatabaseExists { .. } => "The database already exists",
-            Decode { .. }  => "The client failed to decode a JSON response from CouchDB server",
+            Decode { .. } => "The client failed to decode a JSON response from CouchDB server",
             DocumentConflict { .. } => "The client request conflicts with an existing document",
-            Encode { .. }  => "The client failed to encode a JSON request to CouchDB server",
+            Encode { .. } => "The client failed to encode a JSON request to CouchDB server",
             InternalServerError { .. } => "An internal server error occurred",
             InvalidDatabaseName { .. } => "The database name is invalid",
             InvalidRequest { .. } => "The client request is invalid",
             Io { ref description, .. } => description,
-            NoContentTypeHeader { .. } =>
-                "The CouchDB server responded without a Content-Type header",
+            NoContentTypeHeader { .. } => "The CouchDB server responded without a Content-Type header",
             NotFound { .. } => "The resource does not exist",
             ReceiveFromThread { ref description, .. } => description,
             Transport { .. } => "An HTTP transport error occurred",
             Unauthorized { .. } => "The client is unauthorized to carry out the operation",
-            UnexpectedContentTypeHeader { .. } =>
-                "The CouchDB server responded with a Content-Type header the client did not expect",
-            UnexpectedHttpStatus { .. } =>
-                "The CouchDB server responded with an HTTP status code the client did not expect",
+            UnexpectedContentTypeHeader { .. } => {
+                "The CouchDB server responded with a Content-Type header the client did not expect"
+            }
+            UnexpectedHttpStatus { .. } => {
+                "The CouchDB server responded with an HTTP status code the client did not expect"
+            }
             UriParse { .. } => "Invalid URI argument",
         }
     }
@@ -157,9 +155,9 @@ impl std::error::Error for Error {
             NoContentTypeHeader { .. } => None,
             NotFound { .. } => None,
             ReceiveFromThread { ref cause, .. } => Some(cause),
-            Transport { ref kind }  => kind.cause(),
+            Transport { ref kind } => kind.cause(),
             Unauthorized { .. } => None,
-            UnexpectedContentTypeHeader { .. }  => None,
+            UnexpectedContentTypeHeader { .. } => None,
             UnexpectedHttpStatus { .. } => None,
             UriParse { ref cause } => Some(cause),
         }
@@ -171,32 +169,31 @@ impl std::fmt::Display for Error {
         use std::error::Error;
         use self::Error::*;
         match *self {
-            DatabaseExists { ref response } =>
-                write!(f, "{}: {}", self.description(), response),
+            DatabaseExists { ref response } => write!(f, "{}: {}", self.description(), response),
             Decode { ref kind } => write!(f, "{}: {}", self.description(), kind),
-            DocumentConflict { ref response } =>
-                write!(f, "{}: {}", self.description(), response),
+            DocumentConflict { ref response } => write!(f, "{}: {}", self.description(), response),
             Encode { ref cause } => write!(f, "{}: {}", self.description(), cause),
-            InternalServerError { ref response } =>
-                write!(f, "{}: {}", self.description(), response),
-            InvalidDatabaseName { ref response } =>
-                write!(f, "{}: {}", self.description(), response),
-            InvalidRequest { ref response } =>
-                write!(f, "{}: {}", self.description(), response),
+            InternalServerError { ref response } => write!(f, "{}: {}", self.description(), response),
+            InvalidDatabaseName { ref response } => write!(f, "{}: {}", self.description(), response),
+            InvalidRequest { ref response } => write!(f, "{}: {}", self.description(), response),
             Io { ref cause, .. } => write!(f, "{}: {}", self.description(), cause),
-            NoContentTypeHeader { ref expected } =>
-                write!(f, "{}: Expected '{}'", self.description(), expected),
-            NotFound { ref response } => match *response {
-                Some(ref response) =>
-                    write!(f, "{}: {}", self.description(), response),
-                None => write!(f, "{}", self.description()),
-            },
-            ReceiveFromThread { ref cause, .. } =>
-                write!(f, "{}: {}", self.description(), cause),
+            NoContentTypeHeader { ref expected } => write!(f, "{}: Expected '{}'", self.description(), expected),
+            NotFound { ref response } => {
+                match *response {
+                    Some(ref response) => write!(f, "{}: {}", self.description(), response),
+                    None => write!(f, "{}", self.description()),
+                }
+            }
+            ReceiveFromThread { ref cause, .. } => write!(f, "{}: {}", self.description(), cause),
             Transport { ref kind } => write!(f, "{}: {}", self.description(), kind),
             Unauthorized { ref response } => write!(f, "{}: {}", self.description(), response),
-            UnexpectedContentTypeHeader { ref expected, ref got } =>
-                write!(f, "{}: Expected '{}', got '{}'", self.description(), expected, got),
+            UnexpectedContentTypeHeader { ref expected, ref got } => {
+                write!(f,
+                       "{}: Expected '{}', got '{}'",
+                       self.description(),
+                       expected,
+                       got)
+            }
             UnexpectedHttpStatus { ref got } => write!(f, "{}: Got {}", self.description(), got),
             UriParse { ref cause } => write!(f, "{}: {}", self.description(), cause),
         }
@@ -206,7 +203,6 @@ impl std::fmt::Display for Error {
 /// Response content from the CouchDB server in case of error.
 #[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct ErrorResponse {
-
     /// Error string returned by CouchDB Server.
     ///
     /// This is the high-level name of the error—e.g., “file_exists”.
@@ -226,9 +222,7 @@ impl ErrorResponse {
         where R: std::io::Read
     {
         serde_json::from_reader::<_, dbtype::ErrorResponse>(r)
-            .map_err(|e| {
-                Error::Decode { kind: DecodeKind::Serde { cause: e } }
-            })
+            .map_err(|e| Error::Decode { kind: DecodeKind::Serde { cause: e } })
             .map(|x| {
                 ErrorResponse {
                     error: x.error,
@@ -273,9 +267,12 @@ impl std::fmt::Display for DecodeKind {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> Result<(), std::fmt::Error> {
         use self::DecodeKind::*;
         match *self {
-            InstanceStartTime { ref got, ref cause } =>
-                write!(f, "Could not convert `instance_start_time` field to numeric type: {}: \
-                       got {}", cause, got),
+            InstanceStartTime { ref got, ref cause } => {
+                write!(f,
+                       "Could not convert `instance_start_time` field to numeric type: {}: got {}",
+                       cause,
+                       got)
+            }
             InvalidDocument { ref what } => write!(f, "Unexpected document content: {}", what),
             Serde { ref cause } => cause.fmt(f),
         }

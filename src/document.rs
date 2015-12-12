@@ -12,7 +12,6 @@ use transport;
 /// Document, including both meta-information and application-defined content.
 #[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct Document<T: serde::Deserialize> {
-
     /// Path for this document.
     ///
     /// The `path` field replaces the `id` field returned by the CouchDB server.
@@ -28,7 +27,8 @@ pub struct Document<T: serde::Deserialize> {
     pub content: T,
 }
 
-impl<T> Document<T> where T: serde::Deserialize {
+impl<T> Document<T> where T: serde::Deserialize
+{
     pub fn from_reader<R>(r: R, db_path: DatabasePath) -> Result<Self, Error>
         where R: std::io::Read
     {
@@ -49,32 +49,44 @@ impl<T> Document<T> where T: serde::Deserialize {
 
             let mut dot = match top.as_object_mut() {
                 Some(x) => x,
-                None => { return Err(make_error("Document is not a JSON object")); },
+                None => {
+                    return Err(make_error("Document is not a JSON object"));
+                }
             };
 
             let rev = match dot.remove("_rev") {
-                Some(x) => match x {
-                    serde_json::Value::String(x) => Revision::from(x),
-                    _ => { return Err(make_error("The `_rev` field is not a string")); },
-                },
-                None => { return Err(make_error("The `_rev` field is missing")); },
+                Some(x) => {
+                    match x {
+                        serde_json::Value::String(x) => Revision::from(x),
+                        _ => {
+                            return Err(make_error("The `_rev` field is not a string"));
+                        }
+                    }
+                }
+                None => {
+                    return Err(make_error("The `_rev` field is missing"));
+                }
             };
 
             let id = match dot.remove("_id") {
-                Some(x) => match x {
-                    serde_json::Value::String(x) => { DocumentId::from(x) },
-                    _ => { return Err(make_error("The `_id` field is not a string")); },
-                },
-                None => { return Err(make_error("The `_id` field is missing")); },
+                Some(x) => {
+                    match x {
+                        serde_json::Value::String(x) => DocumentId::from(x),
+                        _ => {
+                            return Err(make_error("The `_id` field is not a string"));
+                        }
+                    }
+                }
+                None => {
+                    return Err(make_error("The `_id` field is missing"));
+                }
             };
 
             (id, rev)
         };
 
-        let content = try!(
-            serde_json::from_value(top)
-                .map_err(|e| { Error::Decode { kind: DecodeKind::Serde { cause: e } } })
-        );
+        let content = try!(serde_json::from_value(top)
+                               .map_err(|e| Error::Decode { kind: DecodeKind::Serde { cause: e } }));
 
         let doc = Document {
             path: DocumentPath::new(db_path, id),
@@ -102,9 +114,9 @@ mod tests {
         let db_path = DatabasePath::from("db");
 
         let exp_content = serde_json::builder::ObjectBuilder::new()
-            .insert("foo", 42)
-            .insert("bar", "yep")
-            .unwrap();
+                              .insert("foo", 42)
+                              .insert("bar", "yep")
+                              .unwrap();
 
         // Verify: All fields are present.
 
@@ -115,8 +127,7 @@ mod tests {
             "bar": "yep"
         }"#;
 
-        let got: Document<serde_json::Value> =
-            Document::from_reader(s.as_bytes(), db_path.clone()).unwrap();
+        let got: Document<serde_json::Value> = Document::from_reader(s.as_bytes(), db_path.clone()).unwrap();
         assert_eq!(got.path, DocumentPath::from("db/docid"));
         assert_eq!(got.revision, Revision::from("1-abcd"));
         assert_eq!(got.content, exp_content);

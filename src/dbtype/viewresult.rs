@@ -63,11 +63,11 @@ impl<K, V> serde::Deserialize for ViewResult<K, V>
         impl<K2, V2> serde::de::Visitor for Visitor<K2, V2>
             where K2: serde::Deserialize,
                   V2: serde::Deserialize
-        {
+{
             type Value = ViewResult<K2, V2>;
 
             fn visit_map<Vis>(&mut self, mut visitor: Vis) -> Result<Self::Value, Vis::Error>
-                    where Vis: serde::de::MapVisitor
+                where Vis: serde::de::MapVisitor
             {
                 let mut total_rows = None;
                 let mut offset = None;
@@ -76,14 +76,16 @@ impl<K, V> serde::Deserialize for ViewResult<K, V>
                     match try!(visitor.visit_key()) {
                         Some(Field::TotalRows) => {
                             total_rows = Some(try!(visitor.visit_value()));
-                        },
+                        }
                         Some(Field::Offset) => {
                             offset = Some(try!(visitor.visit_value()));
-                        },
+                        }
                         Some(Field::Rows) => {
                             rows = Some(try!(visitor.visit_value()));
-                        },
-                        None => { break; },
+                        }
+                        None => {
+                            break;
+                        }
                     }
                 }
 
@@ -103,10 +105,12 @@ impl<K, V> serde::Deserialize for ViewResult<K, V>
         }
 
         static FIELDS: &'static [&'static str] = &["total_rows", "offset", "rows"];
-        d.visit_struct("ViewResult", FIELDS, Visitor::<K, V> {
-            _phantom_key: std::marker::PhantomData,
-            _phantom_value: std::marker::PhantomData,
-        })
+        d.visit_struct("ViewResult",
+                       FIELDS,
+                       Visitor::<K, V> {
+                           _phantom_key: std::marker::PhantomData,
+                           _phantom_value: std::marker::PhantomData,
+                       })
     }
 }
 

@@ -30,15 +30,9 @@ impl<K, V> ViewRow<K, V>
           V: serde::Deserialize
 {
     #[doc(hidden)]
-    pub fn from_db_view_row(
-        db_path: &DatabasePath,
-        db_row: dbtype::ViewRow<K, V>)
-        -> Self
-    {
+    pub fn from_db_view_row(db_path: &DatabasePath, db_row: dbtype::ViewRow<K, V>) -> Self {
         ViewRow {
-            path: db_row.id.map(|doc_id| {
-                DocumentPath::new(db_path.clone(), doc_id)
-            }),
+            path: db_row.id.map(|doc_id| DocumentPath::new(db_path.clone(), doc_id)),
             key: db_row.key,
             value: db_row.value,
         }

@@ -13,7 +13,6 @@ use std;
 ///
 #[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub enum DocumentId {
-
     /// Normal document—i.e., neither a design document nor a local document.
     Normal(String),
 
@@ -29,9 +28,9 @@ impl<'a> From<&'a str> for DocumentId {
         let design = "_design/";
         let local = "_local/";
         if doc_id.starts_with(design) {
-            DocumentId::Design(doc_id[design.len() ..].to_string())
+            DocumentId::Design(doc_id[design.len()..].to_string())
         } else if doc_id.starts_with(local) {
-            DocumentId::Local(doc_id[local.len() ..].to_string())
+            DocumentId::Local(doc_id[local.len()..].to_string())
         } else {
             DocumentId::Normal(doc_id.to_string())
         }
@@ -58,35 +57,34 @@ impl IntoIterator for DocumentId {
 }
 
 impl serde::Serialize for DocumentId {
-    fn serialize<S>(&self, serializer: &mut S)
-        -> Result<(), S::Error> where S: serde::Serializer
+    fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
+        where S: serde::Serializer
     {
         match *self {
             DocumentId::Normal(ref s) => serializer.visit_str(s),
             DocumentId::Design(ref s) => {
                 let s = format!("_design/{}", s);
                 serializer.visit_str(&s)
-            },
+            }
             DocumentId::Local(ref s) => {
                 let s = format!("_local/{}", s);
                 serializer.visit_str(&s)
-            },
+            }
         }
     }
 }
 
 impl serde::Deserialize for DocumentId {
-    fn deserialize<D>(deserializer: &mut D)
-        -> Result<Self, D::Error> where D: serde::Deserializer
+    fn deserialize<D>(deserializer: &mut D) -> Result<Self, D::Error>
+        where D: serde::Deserializer
     {
         struct Visitor;
 
         impl serde::de::Visitor for Visitor {
-
             type Value = DocumentId;
 
-            fn visit_str<E>(&mut self, v: &str)
-                -> Result<Self::Value, E> where E: serde::de::Error
+            fn visit_str<E>(&mut self, v: &str) -> Result<Self::Value, E>
+                where E: serde::de::Error
             {
                 Ok(DocumentId::from(v))
             }
@@ -110,7 +108,6 @@ pub enum DocumentIdIterator {
 }
 
 impl Iterator for DocumentIdIterator {
-
     type Item = String;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -118,14 +115,12 @@ impl Iterator for DocumentIdIterator {
             DocumentIdIterator::Prefix(prefix, ref mut id_root) => {
                 let id_root = std::mem::replace(id_root, String::new());
                 (Some(prefix.to_string()), DocumentIdIterator::Root(id_root))
-            },
+            }
             DocumentIdIterator::Root(ref mut id_root) => {
                 let id_root = std::mem::replace(id_root, String::new());
                 (Some(id_root), DocumentIdIterator::Done)
-            },
-            DocumentIdIterator::Done => {
-                (None, DocumentIdIterator::Done)
             }
+            DocumentIdIterator::Done => (None, DocumentIdIterator::Done),
         };
         *self = next;
         item
@@ -253,8 +248,7 @@ mod tests {
         let doc_id = DocumentId::from("foobar");
         let iter = doc_id.into_iter();
         assert_eq!((1, Some(1)), iter.size_hint());
-        assert_eq!(iter.collect::<Vec<String>>(), vec!["foobar"]
-        );
+        assert_eq!(iter.collect::<Vec<String>>(), vec!["foobar"]);
 
         let doc_id = DocumentId::from("_design/foobar");
         let iter = doc_id.into_iter();

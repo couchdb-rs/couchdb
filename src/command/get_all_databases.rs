@@ -11,12 +11,9 @@ pub struct GetAllDatabases<'a> {
 }
 
 impl<'a> GetAllDatabases<'a> {
-
     #[doc(hidden)]
     pub fn new_get_all_databases(client_state: &'a ClientState) -> Self {
-        GetAllDatabases {
-            client_state: client_state,
-        }
+        GetAllDatabases { client_state: client_state }
     }
 
     /// Send the command request and wait for the response.
@@ -33,7 +30,6 @@ impl<'a> GetAllDatabases<'a> {
 }
 
 impl<'a> Command for GetAllDatabases<'a> {
-
     type Output = Vec<DatabasePath>;
     type State = ();
 
@@ -43,22 +39,17 @@ impl<'a> Command for GetAllDatabases<'a> {
             uri.path_mut().unwrap()[0] = "_all_dbs".to_string();
             uri
         };
-        let req = try!(Request::new(hyper::Get, uri))
-            .accept_application_json();
+        let req = try!(Request::new(hyper::Get, uri)).accept_application_json();
         Ok((req, ()))
     }
 
-    fn take_response(resp: hyper::client::Response, _state: Self::State)
-        -> Result<Self::Output, Error>
-    {
+    fn take_response(resp: hyper::client::Response, _state: Self::State) -> Result<Self::Output, Error> {
         match resp.status {
             hyper::status::StatusCode::Ok => {
                 try!(transport::content_type_must_be_application_json(&resp.headers));
                 transport::decode_json::<_, Vec<DatabasePath>>(resp)
-            },
-            _ => Err(Error::UnexpectedHttpStatus {
-                got: resp.status,
-            })
+            }
+            _ => Err(Error::UnexpectedHttpStatus { got: resp.status }),
         }
     }
 }

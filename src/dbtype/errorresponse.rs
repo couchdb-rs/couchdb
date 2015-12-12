@@ -7,22 +7,22 @@ pub struct ErrorResponse {
 }
 
 impl serde::Deserialize for ErrorResponse {
-    fn deserialize<D>(d: &mut D) -> Result<Self, D::Error> where D: serde::Deserializer {
+    fn deserialize<D>(d: &mut D) -> Result<Self, D::Error>
+        where D: serde::Deserializer
+    {
 
         enum Field {
             Error,
             Reason,
         }
 
-        impl serde::Deserialize for Field
-        {
+        impl serde::Deserialize for Field {
             fn deserialize<D>(d: &mut D) -> Result<Field, D::Error>
                 where D: serde::Deserializer
             {
                 struct Visitor;
 
-                impl serde::de::Visitor for Visitor
-                {
+                impl serde::de::Visitor for Visitor {
                     type Value = Field;
 
                     fn visit_str<E>(&mut self, value: &str) -> Result<Field, E>
@@ -45,8 +45,8 @@ impl serde::Deserialize for ErrorResponse {
         impl serde::de::Visitor for Visitor {
             type Value = ErrorResponse;
 
-            fn visit_map<V>(&mut self, mut visitor: V)
-                -> Result<Self::Value, V::Error> where V: serde::de::MapVisitor
+            fn visit_map<V>(&mut self, mut visitor: V) -> Result<Self::Value, V::Error>
+                where V: serde::de::MapVisitor
             {
                 let mut error = None;
                 let mut reason = None;
@@ -54,11 +54,13 @@ impl serde::Deserialize for ErrorResponse {
                     match try!(visitor.visit_key()) {
                         Some(Field::Error) => {
                             error = Some(try!(visitor.visit_value()));
-                        },
+                        }
                         Some(Field::Reason) => {
                             reason = Some(try!(visitor.visit_value()));
-                        },
-                        None => { break; },
+                        }
+                        None => {
+                            break;
+                        }
                     }
                 }
 
@@ -79,10 +81,7 @@ impl serde::Deserialize for ErrorResponse {
             }
         }
 
-        static FIELDS: &'static [&'static str] = &[
-            "error",
-            "reason"
-        ];
+        static FIELDS: &'static [&'static str] = &["error", "reason"];
         d.visit_struct("ErrorResponse", FIELDS, Visitor)
     }
 }
@@ -98,10 +97,7 @@ mod tests {
     #[test]
     fn test_deserialization() {
 
-        let fields = [
-            r#""error": "stuff happened""#,
-            r#""reason": "blah blah blah""#,
-        ];
+        let fields = [r#""error": "stuff happened""#, r#""reason": "blah blah blah""#];
 
         // Verify: All fields present.
         let s = jsontest::make_complete_json_object(&fields);

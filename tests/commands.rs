@@ -1,11 +1,7 @@
 extern crate couchdb;
 extern crate serde_json;
 
-use couchdb::{
-    DatabasePath,
-    DocumentPath,
-    ViewPath,
-};
+use couchdb::{DatabasePath, DocumentPath, ViewPath};
 
 enum Db {
     Baseball,
@@ -51,7 +47,9 @@ fn head_database() {
     // Verify: Heading a non-existing database fails.
     match client.head_database(Db::Basketball).run().unwrap_err() {
         couchdb::Error::NotFound { .. } => (),
-        e => { panic!("Got unexpected error: {}", e); },
+        e => {
+            panic!("Got unexpected error: {}", e);
+        }
     }
 }
 
@@ -68,7 +66,9 @@ fn get_database() {
     // Verify: Getting a non-existing database fails.
     match client.get_database(Db::Basketball).run().unwrap_err() {
         couchdb::Error::NotFound { .. } => (),
-        e => { panic!("Got unexpected error: {}", e); },
+        e => {
+            panic!("Got unexpected error: {}", e);
+        }
     }
 }
 
@@ -82,10 +82,10 @@ fn put_database() {
 
     let get_all_databases = || {
         client.get_all_databases()
-            .run()
-            .unwrap()
-            .into_iter()
-            .collect::<HashSet<_>>()
+              .run()
+              .unwrap()
+              .into_iter()
+              .collect::<HashSet<_>>()
     };
 
     // Verify: Putting a non-existing database succeeds.
@@ -102,44 +102,21 @@ fn put_database() {
     // Verify: Putting an existing database fails.
     match client.put_database(Db::Baseball).run().unwrap_err() {
         couchdb::Error::DatabaseExists { .. } => (),
-        e => { panic!("Got unexpected error: {}", e); },
+        e => {
+            panic!("Got unexpected error: {}", e);
+        }
     }
 
     // Verify: Putting a database with an invalid name fails.
     let db_path = DatabasePath::from("_database_names_cannot_start_with_an_underscore");
     match client.put_database(db_path)
-        .run().unwrap_err()
-    {
+                .run()
+                .unwrap_err() {
         couchdb::Error::InvalidDatabaseName { .. } => (),
-        e => { panic!("Got unexpected error: {}", e); },
+        e => {
+            panic!("Got unexpected error: {}", e);
+        }
     }
-
-    /*
-
-    The following two tests fail. The proximate problem is the CouchDB server
-    sends a 404 Not Found instead of a 400 Bad Request. However, the ultimate
-    problem is the Url type doesn't percent-encode paths, so our client sends a
-    PUT document request ("cats/moochie"), not a PUT database request
-    ("cats%2Fmoochie").
-    
-    See this bug report for more details:
-    https://github.com/hyperium/hyper/issues/638
-    
-    // Verify: Putting a database with a slash ('/') in the name fails as an
-    // invalid database name.
-    match client.put_database("cats/moochie").run().unwrap_err() {
-        couchdb::Error::InvalidDatabaseName { .. } => (),
-        e => { panic!("Got unexpected error: {}", e); },
-    }
-
-    // Verify: Putting a database with a slash ('/') in the name fails as an
-    // invalid database name.
-    match client.put_database("dogs/fido").run().unwrap_err() {
-        couchdb::Error::InvalidDatabaseName { .. } => (),
-        e => { panic!("Got unexpected error: {}", e); },
-    }
-
-    */
 }
 
 #[test]
@@ -151,10 +128,10 @@ fn delete_database() {
 
     let get_all_databases = || {
         client.get_all_databases()
-            .run()
-            .unwrap()
-            .into_iter()
-            .collect::<HashSet<_>>()
+              .run()
+              .unwrap()
+              .into_iter()
+              .collect::<HashSet<_>>()
     };
 
     // Verify: Deleting an existing database succeeds.
@@ -167,16 +144,20 @@ fn delete_database() {
     // Verify: Deleting an non-existing database fails.
     match client.delete_database(Db::Baseball).run().unwrap_err() {
         couchdb::Error::NotFound { .. } => (),
-        e => { panic!("Got unexpected error: {}", e); },
+        e => {
+            panic!("Got unexpected error: {}", e);
+        }
     }
 
     // Verify: Deleting a database with an invalid name fails.
     let path = DatabasePath::from("_database_names_cannot_start_with_an_underscore");
     match client.delete_database(path)
-        .run().unwrap_err()
-    {
+                .run()
+                .unwrap_err() {
         couchdb::Error::InvalidDatabaseName { .. } => (),
-        e => { panic!("Got unexpected error: {}", e); },
+        e => {
+            panic!("Got unexpected error: {}", e);
+        }
     }
 }
 
@@ -189,8 +170,8 @@ fn head_document() {
 
     client.put_database(Db::Baseball).run().unwrap();
     let pdoc = serde_json::builder::ObjectBuilder::new()
-        .insert("name", "Babe Ruth")
-        .unwrap();
+                   .insert("name", "Babe Ruth")
+                   .unwrap();
     let rev1 = client.put_document(Doc::BabeRuth, &pdoc).run().unwrap();
 
     // Verify: Heading an existing document succeeds.
@@ -198,28 +179,27 @@ fn head_document() {
 
     // Verify: Heading an existing document with a matching If-None-Match header
     // succeeds.
-    assert!(
-        client.head_document(Doc::BabeRuth)
-            .if_none_match(&rev1)
-            .run()
-            .unwrap()
-            .is_none());
+    assert!(client.head_document(Doc::BabeRuth)
+                  .if_none_match(&rev1)
+                  .run()
+                  .unwrap()
+                  .is_none());
 
     // Verify: Heading an existing document with a stale, non-matching
     // If-None-Match header succeeds.
     let pdoc = serde_json::builder::ObjectBuilder::new()
-        .insert("name", "Babe Ruth")
-        .insert("hr", 714)
-        .unwrap();
+                   .insert("name", "Babe Ruth")
+                   .insert("hr", 714)
+                   .unwrap();
     client.put_document(Doc::BabeRuth, &pdoc)
-        .if_match(&rev1)
-        .run()
-        .unwrap();
+          .if_match(&rev1)
+          .run()
+          .unwrap();
     client.head_document(Doc::BabeRuth)
-        .if_none_match(&rev1)
-        .run()
-        .unwrap()
-        .unwrap();
+          .if_none_match(&rev1)
+          .run()
+          .unwrap()
+          .unwrap();
 
     // Verify: Heading a non-existing document fails.
     match client.head_document(Doc::HankAaron).run().unwrap_err() {
@@ -237,51 +217,57 @@ fn get_document() {
 
     client.put_database(Db::Baseball).run().unwrap();
     let pdoc = serde_json::builder::ObjectBuilder::new()
-        .insert("name", "babe_ruth")
-        .unwrap();
+                   .insert("name", "babe_ruth")
+                   .unwrap();
     let rev1 = client.put_document(Doc::BabeRuth, &pdoc).run().unwrap();
 
     // Verify: Getting an existing document succeeds.
     let doc1 = client.get_document::<_, serde_json::Value>(Doc::BabeRuth)
-        .run().unwrap().unwrap();
+                     .run()
+                     .unwrap()
+                     .unwrap();
     assert_eq!(doc1.path, Doc::BabeRuth.into());
     assert_eq!(doc1.revision, rev1);
     assert_eq!(doc1.content, pdoc);
 
     // Verify: Getting a non-existing document fails.
     let e = client.get_document::<_, serde_json::Value>(Doc::HankAaron)
-        .run().unwrap_err();
+                  .run()
+                  .unwrap_err();
     match e {
         couchdb::Error::NotFound { .. } => (),
-        e => { panic!("Got unexpected error: {}", e); },
+        e => {
+            panic!("Got unexpected error: {}", e);
+        }
     }
 
     // Verify: Getting an existing document with a matching If-None-Match header
     // succeeds with no document returned.
     match client.get_document::<_, serde_json::Value>(Doc::BabeRuth)
-        .if_none_match(&rev1)
-        .run()
-        .unwrap()
-    {
-        Some(_) => { panic!("Got document, expected none"); },
+                .if_none_match(&rev1)
+                .run()
+                .unwrap() {
+        Some(_) => {
+            panic!("Got document, expected none");
+        }
         None => (),
     }
 
     // Verify: Getting an existing document with a stale, non-matching
     // If-None-Match header succeeds.
     let pdoc = serde_json::builder::ObjectBuilder::new()
-        .insert("name", "babe_ruth")
-        .insert("hr", 714)
-        .unwrap();
+                   .insert("name", "babe_ruth")
+                   .insert("hr", 714)
+                   .unwrap();
     let rev2 = client.put_document(Doc::BabeRuth, &pdoc)
-        .if_match(&rev1)
-        .run()
-        .unwrap();
+                     .if_match(&rev1)
+                     .run()
+                     .unwrap();
     let doc2 = client.get_document::<_, serde_json::Value>(Doc::BabeRuth)
-        .if_none_match(&rev1)
-        .run()
-        .unwrap()
-        .unwrap();
+                     .if_none_match(&rev1)
+                     .run()
+                     .unwrap()
+                     .unwrap();
     assert_eq!(doc2.revision, rev2);
 }
 
@@ -296,41 +282,46 @@ fn put_document() {
 
     // Verify: Putting a non-existing document succeeds.
     let pdoc = serde_json::builder::ObjectBuilder::new()
-        .insert("name", "Babe Ruth")
-        .unwrap();
+                   .insert("name", "Babe Ruth")
+                   .unwrap();
     let rev1 = client.put_document(Doc::BabeRuth, &pdoc).run().unwrap();
 
     // Verify: Putting an existing document without a revision fails.
     let pdoc = serde_json::builder::ObjectBuilder::new()
-        .insert("name", "Babe Ruth")
-        .insert("hr", 714)
-        .unwrap();
+                   .insert("name", "Babe Ruth")
+                   .insert("hr", 714)
+                   .unwrap();
     match client.put_document(Doc::BabeRuth, &pdoc).run().unwrap_err() {
         couchdb::Error::DocumentConflict { .. } => (),
-        e => { panic!("Got unexpected error: {}", e); },
+        e => {
+            panic!("Got unexpected error: {}", e);
+        }
     }
 
     // Verify: Putting an existing document with a matching revision succeeds.
     let pdoc = serde_json::builder::ObjectBuilder::new()
-        .insert("name", "Babe Ruth")
-        .insert("hr", 714)
-        .unwrap();
+                   .insert("name", "Babe Ruth")
+                   .insert("hr", 714)
+                   .unwrap();
     client.put_document(Doc::BabeRuth, &pdoc)
-        .if_match(&rev1)
-        .run().unwrap();
+          .if_match(&rev1)
+          .run()
+          .unwrap();
 
     // Verify: Putting an existing document with a non-matching revision fails.
     let pdoc = serde_json::builder::ObjectBuilder::new()
-        .insert("name", "Babe Ruth")
-        .insert("hr", 714)
-        .insert("hits", 2873)
-        .unwrap();
+                   .insert("name", "Babe Ruth")
+                   .insert("hr", 714)
+                   .insert("hits", 2873)
+                   .unwrap();
     match client.put_document(Doc::BabeRuth, &pdoc)
-        .if_match(&rev1)
-        .run().unwrap_err()
-    {
+                .if_match(&rev1)
+                .run()
+                .unwrap_err() {
         couchdb::Error::DocumentConflict { .. } => (),
-        e => { panic!("Got unexpected error: {}", e); },
+        e => {
+            panic!("Got unexpected error: {}", e);
+        }
     }
 }
 
@@ -343,38 +334,45 @@ fn delete_document() {
 
     client.put_database(Db::Baseball).run().unwrap();
     let pdoc = serde_json::builder::ObjectBuilder::new()
-        .insert("name", "Babe Ruth")
-        .unwrap();
+                   .insert("name", "Babe Ruth")
+                   .unwrap();
     let rev1 = client.put_document(Doc::BabeRuth, &pdoc).run().unwrap();
 
     // Verify: Deleting an existing document with matching revision succeeds.
     client.delete_document(Doc::BabeRuth, &rev1).run().unwrap();
     match client.head_document(Doc::BabeRuth).run().unwrap_err() {
         couchdb::Error::NotFound { .. } => (),
-        e => { panic!("Got unexpected error: {}", e); },
+        e => {
+            panic!("Got unexpected error: {}", e);
+        }
     }
 
     // Verify: Deleting a non-existing document fails.
     match client.delete_document(Doc::BabeRuth, &rev1).run().unwrap_err() {
         couchdb::Error::NotFound { .. } => (),
-        e => { panic!("Got unexpected error: {}", e); },
+        e => {
+            panic!("Got unexpected error: {}", e);
+        }
     }
 
     // Verify: Deleting a document with a (stale) non-matching revision fails.
     let pdoc = serde_json::builder::ObjectBuilder::new()
-        .insert("name", "Hank Aaron")
-        .unwrap();
+                   .insert("name", "Hank Aaron")
+                   .unwrap();
     let rev2 = client.put_document(Doc::HankAaron, &pdoc).run().unwrap();
     let pdoc = serde_json::builder::ObjectBuilder::new()
-        .insert("name", "Hank Aaron")
-        .insert("hr", 755)
-        .unwrap();
+                   .insert("name", "Hank Aaron")
+                   .insert("hr", 755)
+                   .unwrap();
     client.put_document(Doc::HankAaron, &pdoc)
-        .if_match(&rev2)
-        .run().unwrap();
+          .if_match(&rev2)
+          .run()
+          .unwrap();
     match client.delete_document(Doc::HankAaron, &rev2).run().unwrap_err() {
         couchdb::Error::DocumentConflict { .. } => (),
-        e => { panic!("Got unexpected error: {}", e); },
+        e => {
+            panic!("Got unexpected error: {}", e);
+        }
     }
 }
 
@@ -402,24 +400,22 @@ fn get_view() {
     client.put_database(Db::Baseball).run().unwrap();
 
     let mut pddoc = couchdb::Design::new();
-    pddoc.views.insert(
-        "by_name".to_string(),
-        couchdb::ViewFunction {
-            map: "function(doc) { emit(doc.name, doc.name); }".to_string(),
-            reduce: None,
-        });
-    pddoc.views.insert(
-        "by_hr".to_string(),
-        couchdb::ViewFunction {
-            map: "function(doc) { emit(doc.name, doc.hr); }".to_string(),
-            reduce: Some("function(keys, values) { return sum(values); }".to_string()),
-        });
+    pddoc.views.insert("by_name".to_string(),
+                       couchdb::ViewFunction {
+                           map: "function(doc) { emit(doc.name, doc.name); }".to_string(),
+                           reduce: None,
+                       });
+    pddoc.views.insert("by_hr".to_string(),
+                       couchdb::ViewFunction {
+                           map: "function(doc) { emit(doc.name, doc.hr); }".to_string(),
+                           reduce: Some("function(keys, values) { return sum(values); }".to_string()),
+                       });
     client.put_document(Doc::MyDesign, &pddoc).run().unwrap();
 
     // Verify: Getting an empty view succeeds.
     let result = client.get_view::<_, String, u32>(View::ByName)
-        .run()
-        .unwrap();
+                       .run()
+                       .unwrap();
     assert_eq!(Some(0), result.total_rows);
     assert_eq!(Some(0), result.offset);
     assert!(result.rows.is_empty());
@@ -427,26 +423,26 @@ fn get_view() {
     // Populate the database with some documents.
 
     let pdoc = serde_json::builder::ObjectBuilder::new()
-        .insert("name", "Babe Ruth")
-        .insert("hr", 714)
-        .unwrap();
+                   .insert("name", "Babe Ruth")
+                   .insert("hr", 714)
+                   .unwrap();
     client.put_document(Doc::BabeRuth, &pdoc).run().unwrap();
 
     let pdoc = serde_json::builder::ObjectBuilder::new()
-        .insert("name", "Hank Aaron")
-        .insert("hr", 755)
-        .unwrap();
+                   .insert("name", "Hank Aaron")
+                   .insert("hr", 755)
+                   .unwrap();
     client.put_document(Doc::HankAaron, &pdoc).run().unwrap();
 
     // Verify: Getting a nonempty view without 'reduce' succeeds.
 
     let result = client.get_view::<_, String, String>(View::ByName)
-        .run().unwrap();
+                       .run()
+                       .unwrap();
     assert_eq!(Some(2), result.total_rows);
     assert_eq!(Some(0), result.offset);
-    assert_eq!(
-        result.rows,
-        vec![
+    assert_eq!(result.rows,
+               vec![
             couchdb::ViewRow::<String, String> {
                 path: Some(Doc::BabeRuth.into()),
                 key: Some("Babe Ruth".to_string()),
@@ -462,13 +458,13 @@ fn get_view() {
     // Verify: Getting a nonempty view with 'reduce' disabled succeeds.
 
     let result = client.get_view::<_, String, u32>(View::ByHr)
-        .reduce(false)
-        .run().unwrap();
+                       .reduce(false)
+                       .run()
+                       .unwrap();
     assert_eq!(Some(2), result.total_rows);
     assert_eq!(Some(0), result.offset);
-    assert_eq!(
-        result.rows,
-        vec![
+    assert_eq!(result.rows,
+               vec![
             couchdb::ViewRow::<String, u32> {
                 path: Some(Doc::BabeRuth.into()),
                 key: Some("Babe Ruth".to_string()),
@@ -484,12 +480,12 @@ fn get_view() {
     // Verify: Getting a reduced view succeeds.
 
     let result = client.get_view::<_, String, u32>(View::ByHr)
-        .run().unwrap();
+                       .run()
+                       .unwrap();
     assert_eq!(None, result.total_rows);
     assert_eq!(None, result.offset);
-    assert_eq!(
-        result.rows,
-        vec![
+    assert_eq!(result.rows,
+               vec![
             couchdb::ViewRow::<String, u32> {
                 path: None,
                 key: None,
@@ -499,14 +495,14 @@ fn get_view() {
 
     // Verify: Getting a view with an explicit start-key succeeds.
     let result = client.get_view::<_, String, u32>(View::ByHr)
-        .reduce(false)
-        .startkey("h".to_string())
-        .run().unwrap();
+                       .reduce(false)
+                       .startkey("h".to_string())
+                       .run()
+                       .unwrap();
     assert_eq!(Some(2), result.total_rows);
     assert_eq!(Some(1), result.offset);
-    assert_eq!(
-        result.rows,
-        vec![
+    assert_eq!(result.rows,
+               vec![
             couchdb::ViewRow::<String, u32> {
                 path: Some(Doc::HankAaron.into()),
                 key: Some("Hank Aaron".to_string()),
@@ -516,14 +512,14 @@ fn get_view() {
 
     // Verify: Getting a view with an explicit end-key succeeds.
     let result = client.get_view::<_, String, u32>(View::ByHr)
-        .reduce(false)
-        .endkey("h".to_string())
-        .run().unwrap();
+                       .reduce(false)
+                       .endkey("h".to_string())
+                       .run()
+                       .unwrap();
     assert_eq!(Some(2), result.total_rows);
     assert_eq!(Some(0), result.offset);
-    assert_eq!(
-        result.rows,
-        vec![
+    assert_eq!(result.rows,
+               vec![
             couchdb::ViewRow::<String, u32> {
                 path: Some(Doc::BabeRuth.into()),
                 key: Some("Babe Ruth".to_string()),

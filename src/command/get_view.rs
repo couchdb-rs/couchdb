@@ -32,8 +32,7 @@ impl<'a, K, V> GetView<'a, K, V>
           V: serde::Deserialize
 {
     #[doc(hidden)]
-    pub fn new_get_view(client_state: &'a ClientState, path: ViewPath)
-        -> Self
+    pub fn new_get_view(client_state: &'a ClientState, path: ViewPath) -> Self
         where K: serde::Deserialize,
               V: serde::Deserialize
     {
@@ -55,15 +54,13 @@ impl<'a, K, V> GetView<'a, K, V>
     }
 
     /// Set the minimum key for rows contained within the result.
-    pub fn endkey(mut self, key: K) -> Self
-    {
+    pub fn endkey(mut self, key: K) -> Self {
         self.endkey = Some(key);
         self
     }
 
     /// Set the maximum key for rows contained within the result.
-    pub fn startkey(mut self, key: K) -> Self
-    {
+    pub fn startkey(mut self, key: K) -> Self {
         self.startkey = Some(key);
         self
     }
@@ -79,8 +76,7 @@ impl<'a, K, V> GetView<'a, K, V>
     /// * `Error::NotFound`: The view does not exist.
     /// * `Error::Unauthorized`: The client is unauthorized.
     ///
-    pub fn run(self) -> Result<ViewResult<K, V>, Error>
-    {
+    pub fn run(self) -> Result<ViewResult<K, V>, Error> {
         transport::run_command(self)
     }
 }
@@ -109,53 +105,50 @@ impl<'a, K, V> Command for GetView<'a, K, V>
                     };
                 }
                 if self.startkey.is_some() {
-                    let x = try!(
-                        serde_json::to_string(&self.startkey.unwrap())
-                        .or_else(|e| { Err(Error::Encode{ cause: e }) }));
+                    let x = try!(serde_json::to_string(&self.startkey.unwrap())
+                                     .or_else(|e| Err(Error::Encode { cause: e })));
                     query_pairs.push(("startkey", x));
                 }
                 if self.endkey.is_some() {
-                    let x = try!(
-                        serde_json::to_string(&self.endkey.unwrap())
-                        .or_else(|e| { Err(Error::Encode { cause: e } ) }));
+                    let x = try!(serde_json::to_string(&self.endkey.unwrap())
+                                     .or_else(|e| Err(Error::Encode { cause: e })));
                     query_pairs.push(("endkey", x));
                 }
-                uri.set_query_from_pairs(
-                    query_pairs.iter()
-                    .map(|&(k, ref v)| {
-                        let x: (&str, &str) = (k, v);
-                        x
-                    })
-                );
+                uri.set_query_from_pairs(query_pairs.iter()
+                                                    .map(|&(k, ref v)| {
+                                                        let x: (&str, &str) = (k, v);
+                                                        x
+                                                    }));
             }
 
             uri
         };
 
-        let req = try!(Request::new(hyper::Get, uri))
-            .accept_application_json();
+        let req = try!(Request::new(hyper::Get, uri)).accept_application_json();
         Ok((req, db_path))
     }
 
-    fn take_response(resp: hyper::client::Response, db_path: Self::State)
-        -> Result<Self::Output, Error>
-    {
+    fn take_response(resp: hyper::client::Response, db_path: Self::State) -> Result<Self::Output, Error> {
         match resp.status {
             hyper::status::StatusCode::Ok => {
                 try!(transport::content_type_must_be_application_json(&resp.headers));
                 let db_result = try!(transport::decode_json::<_, dbtype::ViewResult<K, V>>(resp));
                 let view_result = ViewResult::from_db_view_result(&db_path, db_result);
                 Ok(view_result)
-            },
-            hyper::status::StatusCode::BadRequest =>
-                Err(Error::InvalidRequest { response: try!(ErrorResponse::from_reader(resp)) }),
-            hyper::status::StatusCode::Unauthorized =>
-                Err(Error::Unauthorized { response: try!(ErrorResponse::from_reader(resp)) }),
-            hyper::status::StatusCode::NotFound =>
-                Err(Error::NotFound { response: Some(try!(ErrorResponse::from_reader(resp))) }),
-            hyper::status::StatusCode::InternalServerError =>
-                Err(Error::InternalServerError { response: try!(ErrorResponse::from_reader(resp)) }),
-            _ => Err(Error::UnexpectedHttpStatus { got: resp.status } ),
+            }
+            hyper::status::StatusCode::BadRequest => {
+                Err(Error::InvalidRequest { response: try!(ErrorResponse::from_reader(resp)) })
+            }
+            hyper::status::StatusCode::Unauthorized => {
+                Err(Error::Unauthorized { response: try!(ErrorResponse::from_reader(resp)) })
+            }
+            hyper::status::StatusCode::NotFound => {
+                Err(Error::NotFound { response: Some(try!(ErrorResponse::from_reader(resp))) })
+            }
+            hyper::status::StatusCode::InternalServerError => {
+                Err(Error::InternalServerError { response: try!(ErrorResponse::from_reader(resp)) })
+            }
+            _ => Err(Error::UnexpectedHttpStatus { got: resp.status }),
         }
     }
 }

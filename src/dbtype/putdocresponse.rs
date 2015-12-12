@@ -48,7 +48,7 @@ impl serde::Deserialize for PutDocumentResponse {
             type Value = PutDocumentResponse;
 
             fn visit_map<V>(&mut self, mut visitor: V) -> Result<Self::Value, V::Error>
-                    where V: serde::de::MapVisitor
+                where V: serde::de::MapVisitor
             {
                 let mut id = None;
                 let mut ok = None;
@@ -57,14 +57,16 @@ impl serde::Deserialize for PutDocumentResponse {
                     match try!(visitor.visit_key()) {
                         Some(Field::Id) => {
                             id = Some(try!(visitor.visit_value()));
-                        },
+                        }
                         Some(Field::Ok) => {
                             ok = Some(try!(visitor.visit_value()));
-                        },
+                        }
                         Some(Field::Rev) => {
                             rev = Some(try!(visitor.visit_value()));
-                        },
-                        None => { break; },
+                        }
+                        None => {
+                            break;
+                        }
                     }
                 }
 
@@ -105,11 +107,7 @@ mod tests {
     #[test]
     fn test_deserialization() {
 
-        let fields = [
-            r#""id": "stuff""#,
-            r#""ok": true"#,
-            r#""rev": "1-1234abcd""#,
-        ];
+        let fields = [r#""id": "stuff""#, r#""ok": true"#, r#""rev": "1-1234abcd""#];
 
         // Verify: All fields present.
         let s = jsontest::make_complete_json_object(&fields);

@@ -24,8 +24,7 @@ impl<K, V> serde::Deserialize for ViewRow<K, V>
             Value,
         }
 
-        impl serde::Deserialize for Field
-        {
+        impl serde::Deserialize for Field {
             fn deserialize<D>(d: &mut D) -> Result<Self, D::Error>
                 where D: serde::Deserializer
             {
@@ -61,12 +60,11 @@ impl<K, V> serde::Deserialize for ViewRow<K, V>
         impl<K2, V2> serde::de::Visitor for Visitor<K2, V2>
             where K2: serde::Deserialize,
                   V2: serde::Deserialize
-        {
+{
             type Value = ViewRow<K2, V2>;
 
-            fn visit_map<Vis>(&mut self, mut visitor: Vis)
-                -> Result<Self::Value, Vis::Error>
-                    where Vis: serde::de::MapVisitor
+            fn visit_map<Vis>(&mut self, mut visitor: Vis) -> Result<Self::Value, Vis::Error>
+                where Vis: serde::de::MapVisitor
             {
                 let mut id = None;
                 let mut key = None;
@@ -75,14 +73,16 @@ impl<K, V> serde::Deserialize for ViewRow<K, V>
                     match try!(visitor.visit_key()) {
                         Some(Field::Id) => {
                             id = Some(try!(visitor.visit_value()));
-                        },
+                        }
                         Some(Field::Key) => {
                             key = try!(visitor.visit_value()); // allow null
-                        },
+                        }
                         Some(Field::Value) => {
                             value = Some(try!(visitor.visit_value()));
-                        },
-                        None => { break; },
+                        }
+                        None => {
+                            break;
+                        }
                     }
                 }
 
@@ -102,10 +102,12 @@ impl<K, V> serde::Deserialize for ViewRow<K, V>
         }
 
         static FIELDS: &'static [&'static str] = &["id", "key", "value"];
-        d.visit_struct("ViewRow", FIELDS, Visitor::<K, V> {
-            _phantom_key: std::marker::PhantomData,
-            _phantom_value: std::marker::PhantomData,
-        })
+        d.visit_struct("ViewRow",
+                       FIELDS,
+                       Visitor::<K, V> {
+                           _phantom_key: std::marker::PhantomData,
+                           _phantom_value: std::marker::PhantomData,
+                       })
     }
 }
 

@@ -6,7 +6,7 @@ fn join_json_string<'a, I, J>(head: I, tail: J) -> String
           J: Iterator<Item = &'a &'a str>
 {
 
-    fn append(mut acc: String, item: & &str) -> String {
+    fn append(mut acc: String, item: &&str) -> String {
         if !acc.ends_with("{") {
             acc.push_str(", ");
         }
@@ -27,12 +27,11 @@ pub fn make_complete_json_object(fields: &[&str]) -> String {
 
 pub fn make_json_object_with_missing_field(fields: &[&str], exclude: &str) -> String {
     let exclude = format!(r#""{}""#, exclude);
-    let pos = fields.into_iter().position(|&item| {
-        item.starts_with(&exclude)
-    }).unwrap();
-    join_json_string(
-        fields.into_iter().take(pos),
-        fields.into_iter().skip(pos+1))
+    let pos = fields.into_iter()
+                    .position(|&item| item.starts_with(&exclude))
+                    .unwrap();
+    join_json_string(fields.into_iter().take(pos),
+                     fields.into_iter().skip(pos + 1))
 }
 
 // Asserts that an error is a 'missing field' error.
@@ -46,15 +45,16 @@ pub fn assert_missing_field(e: &serde_json::Error, _exp_field_name: &str) {
         // When this bug is resolved, the following block of code should work
         // when uncommented. Until then, we use the workaround below.
 
-        /*
-        if let serde_json::ErrorCode::MissingField(got_field_name) = *code {
-            assert_eq!(got_field_name, exp_field_name);
+        /* if let serde_json::ErrorCode::MissingField(got_field_name) = *code {
+         * assert_eq!(got_field_name, exp_field_name);
+         * return;
+         * }
+         * panic!("Got unexpected error code variant: {:?}", code);
+         * */
+
+        if let serde_json::ErrorCode::ExpectedSomeValue = *code {
             return;
         }
-        panic!("Got unexpected error code variant: {:?}", code);
-        */
-
-        if let serde_json::ErrorCode::ExpectedSomeValue = *code { return ; }
         panic!("Got unexpected error code variant: {:?}", code);
 
     }

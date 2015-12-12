@@ -10,7 +10,8 @@ use revision::Revision;
 use transport::{self, Command, Request};
 
 /// Command to create a document.
-pub struct PutDocument<'a, T> where T: 'a + serde::Serialize
+pub struct PutDocument<'a, T>
+    where T: 'a + serde::Serialize
 {
     client_state: &'a ClientState,
     path: DocumentPath,
@@ -21,11 +22,7 @@ pub struct PutDocument<'a, T> where T: 'a + serde::Serialize
 impl<'a, T> PutDocument<'a, T> where T: 'a + serde::Serialize
 {
     #[doc(hidden)]
-    pub fn new_put_document(
-        client_state: &'a ClientState,
-        path: DocumentPath,
-        doc_content: &'a T)
-        -> Self
+    pub fn new_put_document(client_state: &'a ClientState, path: DocumentPath, doc_content: &'a T) -> Self
         where T: serde::Serialize
     {
         PutDocument {
@@ -69,39 +66,36 @@ impl<'a, T> Command for PutDocument<'a, T> where T: 'a + serde::Serialize
 
     fn make_request(self) -> Result<(Request, Self::State), Error> {
         let uri = self.path.into_uri(self.client_state.uri.clone());
-        let body = try!(
-            serde_json::to_vec(self.doc_content)
-                .map_err(|e| {
-                    Error::Encode { cause: e }
-                })
-        );
+        let body = try!(serde_json::to_vec(self.doc_content).map_err(|e| Error::Encode { cause: e }));
         let req = try!(Request::new(hyper::method::Method::Put, uri))
-            .accept_application_json()
-            .content_type_application_json()
-            .if_match_revision(self.if_match)
-            .body(body);
+                      .accept_application_json()
+                      .content_type_application_json()
+                      .if_match_revision(self.if_match)
+                      .body(body);
         Ok((req, ()))
     }
 
-    fn take_response(resp: hyper::client::Response, _state: Self::State)
-        -> Result<Self::Output, Error>
-    {
+    fn take_response(resp: hyper::client::Response, _state: Self::State) -> Result<Self::Output, Error> {
         match resp.status {
             hyper::status::StatusCode::Created => {
                 try!(transport::content_type_must_be_application_json(&resp.headers));
                 let content = try!(transport::decode_json::<_, PutDocumentResponse>(resp));
                 let rev: Revision = content.rev.into();
                 Ok(rev)
-            },
-            hyper::status::StatusCode::BadRequest =>
-                Err(Error::InvalidRequest { response: try!(ErrorResponse::from_reader(resp)) }),
-            hyper::status::StatusCode::Unauthorized =>
-                Err(Error::Unauthorized { response: try!(ErrorResponse::from_reader(resp)) }),
-            hyper::status::StatusCode::NotFound =>
-                Err(Error::NotFound { response: Some(try!(ErrorResponse::from_reader(resp))) }),
-            hyper::status::StatusCode::Conflict =>
-                Err(Error::DocumentConflict { response: try!(ErrorResponse::from_reader(resp)) }),
-            _ => Err(Error::UnexpectedHttpStatus{ got: resp.status } ),
+            }
+            hyper::status::StatusCode::BadRequest => {
+                Err(Error::InvalidRequest { response: try!(ErrorResponse::from_reader(resp)) })
+            }
+            hyper::status::StatusCode::Unauthorized => {
+                Err(Error::Unauthorized { response: try!(ErrorResponse::from_reader(resp)) })
+            }
+            hyper::status::StatusCode::NotFound => {
+                Err(Error::NotFound { response: Some(try!(ErrorResponse::from_reader(resp))) })
+            }
+            hyper::status::StatusCode::Conflict => {
+                Err(Error::DocumentConflict { response: try!(ErrorResponse::from_reader(resp)) })
+            }
+            _ => Err(Error::UnexpectedHttpStatus { got: resp.status }),
         }
     }
 }

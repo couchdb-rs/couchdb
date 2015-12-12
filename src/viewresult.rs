@@ -36,15 +36,11 @@ impl<K, V> ViewResult<K, V>
           V: serde::Deserialize
 {
     #[doc(hidden)]
-    pub fn from_db_view_result(
-        db_path: &DatabasePath,
-        mut db_result: dbtype::ViewResult<K, V>)
-        -> Self
-    {
+    pub fn from_db_view_result(db_path: &DatabasePath, mut db_result: dbtype::ViewResult<K, V>) -> Self {
         let db_rows = std::mem::replace(&mut db_result.rows, Vec::new());
         let dst_rows = db_rows.into_iter()
-            .map(|db_row| { ViewRow::from_db_view_row(db_path, db_row) })
-            .collect();
+                              .map(|db_row| ViewRow::from_db_view_row(db_path, db_row))
+                              .collect();
         ViewResult {
             total_rows: db_result.total_rows,
             offset: db_result.offset,

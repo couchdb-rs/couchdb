@@ -14,11 +14,8 @@ pub struct GetDatabase<'a> {
 }
 
 impl<'a> GetDatabase<'a> {
-
     #[doc(hidden)]
-    pub fn new_get_database(client_state: &'a ClientState, path: DatabasePath)
-        -> Self
-    {
+    pub fn new_get_database(client_state: &'a ClientState, path: DatabasePath) -> Self {
         GetDatabase {
             client_state: client_state,
             path: path,
@@ -39,29 +36,26 @@ impl<'a> GetDatabase<'a> {
 }
 
 impl<'a> Command for GetDatabase<'a> {
-
     type Output = Database;
     type State = ();
 
     fn make_request(self) -> Result<(Request, Self::State), Error> {
         let uri = self.path.into_uri(self.client_state.uri.clone());
-        let req = try!(Request::new(hyper::Get, uri))
-            .accept_application_json();
+        let req = try!(Request::new(hyper::Get, uri)).accept_application_json();
         Ok((req, ()))
     }
 
-    fn take_response(resp: hyper::client::Response, _state: Self::State)
-        -> Result<Self::Output, Error>
-    {
+    fn take_response(resp: hyper::client::Response, _state: Self::State) -> Result<Self::Output, Error> {
         match resp.status {
             hyper::status::StatusCode::Ok => {
                 try!(transport::content_type_must_be_application_json(&resp.headers));
                 let db = try!(transport::decode_json::<_, dbtype::Database>(resp));
                 Database::from_db_database(db)
-            },
-            hyper::status::StatusCode::NotFound =>
-                Err(Error::NotFound { response: Some(try!(ErrorResponse::from_reader(resp))) }),
-            _ => Err(Error::UnexpectedHttpStatus { got: resp.status } ),
+            }
+            hyper::status::StatusCode::NotFound => {
+                Err(Error::NotFound { response: Some(try!(ErrorResponse::from_reader(resp))) })
+            }
+            _ => Err(Error::UnexpectedHttpStatus { got: resp.status }),
         }
     }
 }

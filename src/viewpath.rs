@@ -11,12 +11,13 @@ use docpath::DocumentPath;
 ///
 /// `ViewPath` provides additional type-safety over working with raw strings.
 ///
-#[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)] pub struct
-ViewPath(DocumentPath, String);
+#[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+pub struct ViewPath(DocumentPath, String);
 
 impl ViewPath {
-    pub fn new<T, U>(doc_path: T, view_name: U)
-        -> Self where T: Into<DocumentPath>, U: Into<String>
+    pub fn new<T, U>(doc_path: T, view_name: U) -> Self
+        where T: Into<DocumentPath>,
+              U: Into<String>
     {
         ViewPath(doc_path.into(), view_name.into())
     }
@@ -183,7 +184,8 @@ mod tests {
     #[test]
     fn test_view_path_accessors() {
         let view_path = ViewPath::from("foo/_design/bar/_view/baz");
-        assert_eq!(*view_path.document_path(), DocumentPath::from("foo/_design/bar"));
+        assert_eq!(*view_path.document_path(),
+                   DocumentPath::from("foo/_design/bar"));
         assert_eq!(*view_path.view_name(), "baz".to_string());
     }
 }

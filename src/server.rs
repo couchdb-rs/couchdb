@@ -30,32 +30,25 @@ pub struct Server {
 }
 
 impl Server {
-
     /// Spawn a CouchDB server process.
     pub fn new() -> Result<Server, Error> {
 
-        let tmp_root = try!(
-            tempdir::TempDir::new("couchdb_client_test")
-            .or_else(|e| {
-                Err(Error::Io {
-                    description: "Failed to create temporary directory for CouchDB server",
-                    cause: e,
-                })
+        let tmp_root = try!(tempdir::TempDir::new("couchdb_client_test").or_else(|e| {
+            Err(Error::Io {
+                description: "Failed to create temporary directory for CouchDB server",
+                cause: e,
             })
-        );
+        }));
 
         {
             use std::io::Write;
             let path = tmp_root.path().join("couchdb.conf");
-            let mut f = try!(
-                std::fs::File::create(&path)
-                .or_else(|e| {
-                    Err(Error::Io {
-                        description: "Failed to open CouchDB server configuration file",
-                        cause: e,
-                    })
+            let mut f = try!(std::fs::File::create(&path).or_else(|e| {
+                Err(Error::Io {
+                    description: "Failed to open CouchDB server configuration file",
+                    cause: e,
                 })
-            );
+            }));
             try!(f.write_all(b"[couchdb]\n\
                 database_dir = var\n\
                 uri_file = couchdb.uri\n\
@@ -67,27 +60,22 @@ impl Server {
                 [httpd]\n\
                 port = 0\n\
                 ")
-                .or_else(|e| {
-                    Err(Error::Io {
-                        description: "Failed to write CouchDB server configuration file",
-                        cause: e,
-                    })
-                })
-            );
+                  .or_else(|e| {
+                      Err(Error::Io {
+                          description: "Failed to write CouchDB server configuration file",
+                          cause: e,
+                      })
+                  }));
         }
 
-        let mut process = AutoKillProcess(
-            try!(
-                new_test_server_command(&tmp_root)
-                .spawn()
-                .or_else(|e| {
-                    Err(Error::Io {
-                        description: "Failed to spawn CouchDB server process",
-                        cause: e
-                    })
-                })
-            )
-        );
+        let mut process = AutoKillProcess(try!(new_test_server_command(&tmp_root)
+                                                   .spawn()
+                                                   .or_else(|e| {
+                                                       Err(Error::Io {
+                                                           description: "Failed to spawn CouchDB server process",
+                                                           cause: e,
+                                                       })
+                                                   })));
 
         let (tx, rx) = std::sync::mpsc::channel();
         let mut process_out;
@@ -128,16 +116,14 @@ impl Server {
         });
 
         // Wait for CouchDB server to start its HTTP service.
-        let uri = try!(
-            rx.recv()
-            .or_else(|e| {
-                t.join().unwrap_err();
-                Err(Error::ReceiveFromThread {
-                    description: "Failed to extract URI from CouchDB server",
-                    cause: e
-                })
-            })
-        );
+        let uri = try!(rx.recv()
+                         .or_else(|e| {
+                             t.join().unwrap_err();
+                             Err(Error::ReceiveFromThread {
+                                 description: "Failed to extract URI from CouchDB server",
+                                 cause: e,
+                             })
+                         }));
 
         Ok(Server {
             _process: process,
@@ -153,9 +139,7 @@ impl Server {
 }
 
 #[cfg(any(windows))]
-fn new_test_server_command(tmp_root: &tempdir::TempDir)
-    -> std::process::Command
-{
+fn new_test_server_command(tmp_root: &tempdir::TempDir) -> std::process::Command {
     // Getting a one-shot CouchDB server running on Windows is tricky:
     // http://stackoverflow.com/questions/11812365/how-to-use-a-custom-couch-ini-on-windows
     //
@@ -174,9 +158,7 @@ fn new_test_server_command(tmp_root: &tempdir::TempDir)
 }
 
 #[cfg(any(not(windows)))]
-fn new_test_server_command(tmp_root: &tempdir::TempDir)
-    -> std::process::Command
-{
+fn new_test_server_command(tmp_root: &tempdir::TempDir) -> std::process::Command {
     let mut c = std::process::Command::new("couchdb");
     c.arg("-a");
     c.arg("couchdb.conf");

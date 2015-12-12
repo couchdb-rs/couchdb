@@ -14,7 +14,6 @@ use serde;
 pub struct DatabasePath(String);
 
 impl DatabasePath {
-
     /// Convert the `DatabasePath` into a URI.
     pub fn into_uri(self, base_uri: hyper::Url) -> hyper::Url {
         let mut uri = base_uri;
@@ -36,13 +35,12 @@ impl DatabasePath {
         let DatabasePath(ref db_name) = *self;
         db_name
     }
-
 }
 
 impl AsRef<String> for DatabasePath {
     fn as_ref(&self) -> &String {
         let DatabasePath(ref db_name) = *self;
-        db_name 
+        db_name
     }
 }
 
@@ -66,8 +64,8 @@ impl From<DatabasePath> for String {
 }
 
 impl serde::Serialize for DatabasePath {
-    fn serialize<S>(&self, serializer: &mut S)
-        -> Result<(), S::Error> where S: serde::Serializer
+    fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
+        where S: serde::Serializer
     {
         let DatabasePath(ref db_name) = *self;
         serializer.visit_str(db_name)
@@ -75,23 +73,22 @@ impl serde::Serialize for DatabasePath {
 }
 
 impl serde::Deserialize for DatabasePath {
-    fn deserialize<D>(deserializer: &mut D)
-        -> Result<Self, D::Error> where D: serde::Deserializer
+    fn deserialize<D>(deserializer: &mut D) -> Result<Self, D::Error>
+        where D: serde::Deserializer
     {
         struct Visitor;
 
         impl serde::de::Visitor for Visitor {
-
             type Value = DatabasePath;
 
-            fn visit_str<E>(&mut self, v: &str)
-                -> Result<Self::Value, E> where E: serde::de::Error
+            fn visit_str<E>(&mut self, v: &str) -> Result<Self::Value, E>
+                where E: serde::de::Error
             {
                 Ok(DatabasePath(v.to_string()))
             }
 
-            fn visit_string<E>(&mut self, v: String)
-                -> Result<Self::Value, E> where E: serde::de::Error
+            fn visit_string<E>(&mut self, v: String) -> Result<Self::Value, E>
+                where E: serde::de::Error
             {
                 Ok(DatabasePath(v))
             }
@@ -102,8 +99,7 @@ impl serde::Deserialize for DatabasePath {
 }
 
 #[cfg(test)]
-mod tests
-{
+mod tests {
     use hyper;
     use serde_json;
 

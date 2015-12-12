@@ -16,9 +16,9 @@ use docid::DocumentId;
 pub struct DocumentPath(DatabasePath, DocumentId);
 
 impl DocumentPath {
-
-    pub fn new<T, U>(db_path: T, doc_id: U)
-        -> Self where T: Into<DatabasePath>, U: Into<DocumentId>
+    pub fn new<T, U>(db_path: T, doc_id: U) -> Self
+        where T: Into<DatabasePath>,
+              U: Into<DocumentId>
     {
         DocumentPath(db_path.into(), doc_id.into())
     }
@@ -92,15 +92,13 @@ mod tests {
     fn test_document_path_from_str_ref_ok() {
 
         let got = DocumentPath::from("db/docid");
-        let exp = DocumentPath(
-            DatabasePath::from("db"),
-            DocumentId::Normal("docid".to_string()));
+        let exp = DocumentPath(DatabasePath::from("db"),
+                               DocumentId::Normal("docid".to_string()));
         assert_eq!(got, exp);
 
         let got = DocumentPath::from("db/_design/docid");
-        let exp = DocumentPath(
-            DatabasePath::from("db"),
-            DocumentId::Design("docid".to_string()));
+        let exp = DocumentPath(DatabasePath::from("db"),
+                               DocumentId::Design("docid".to_string()));
         assert_eq!(got, exp);
     }
 
@@ -114,15 +112,13 @@ mod tests {
     fn test_document_path_from_string_ok() {
 
         let got = DocumentPath::from("db/docid".to_string());
-        let exp = DocumentPath(
-            DatabasePath::from("db"),
-            DocumentId::Normal("docid".to_string()));
+        let exp = DocumentPath(DatabasePath::from("db"),
+                               DocumentId::Normal("docid".to_string()));
         assert_eq!(got, exp);
 
         let got = DocumentPath::from("db/_design/docid".to_string());
-        let exp = DocumentPath(
-            DatabasePath::from("db"),
-            DocumentId::Design("docid".to_string()));
+        let exp = DocumentPath(DatabasePath::from("db"),
+                               DocumentId::Design("docid".to_string()));
         assert_eq!(got, exp);
     }
 
@@ -191,16 +187,14 @@ mod tests {
 
         // Verify: A normal URI base yields a normal database URI path.
         let base = hyper::Url::parse("http://example.com:1234").unwrap();
-        let uri = DocumentPath::new("foo", DocumentId::from("_design/bar"))
-            .into_uri(base);
+        let uri = DocumentPath::new("foo", DocumentId::from("_design/bar")).into_uri(base);
         let exp = hyper::Url::parse("http://example.com:1234/foo/_design/bar").unwrap();
         assert_eq!(uri, exp);
 
         // Verify: A URI base with a nonempty path yields a URI with the full
         // path.
         let base = hyper::Url::parse("http://example.com:1234/bar").unwrap();
-        let uri = DocumentPath::new("foo", DocumentId::from("_design/bar"))
-            .into_uri(base);
+        let uri = DocumentPath::new("foo", DocumentId::from("_design/bar")).into_uri(base);
         let exp = hyper::Url::parse("http://example.com:1234/bar/foo/_design/bar").unwrap();
         assert_eq!(uri, exp);
     }
