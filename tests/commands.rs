@@ -164,7 +164,6 @@ fn delete_database() {
 #[test]
 fn head_document() {
 
-    type Object = std::collections::BTreeMap<String, serde_json::Value>;
     let server = couchdb::Server::new().unwrap();
     let client = couchdb::Client::new(server.uri()).unwrap();
 
@@ -211,7 +210,6 @@ fn head_document() {
 #[test]
 fn get_document() {
 
-    type Object = std::collections::BTreeMap<String, serde_json::Value>;
     let server = couchdb::Server::new().unwrap();
     let client = couchdb::Client::new(server.uri()).unwrap();
 
@@ -274,7 +272,6 @@ fn get_document() {
 #[test]
 fn put_document() {
 
-    type Object = std::collections::BTreeMap<String, serde_json::Value>;
     let server = couchdb::Server::new().unwrap();
     let client = couchdb::Client::new(server.uri()).unwrap();
 
@@ -328,7 +325,6 @@ fn put_document() {
 #[test]
 fn delete_document() {
 
-    type Object = std::collections::BTreeMap<String, serde_json::Value>;
     let server = couchdb::Server::new().unwrap();
     let client = couchdb::Client::new(server.uri()).unwrap();
 
@@ -393,7 +389,6 @@ fn get_view() {
         }
     }
 
-    type Object = std::collections::BTreeMap<String, serde_json::Value>;
     let server = couchdb::Server::new().unwrap();
     let client = couchdb::Client::new(server.uri()).unwrap();
 
