@@ -1,4 +1,7 @@
 //! Sub-module for individual command types.
+//!
+//! Applications should not need to access the `command` module directly but
+//! instead use a `Client` instead to construct individual commands.
 
 mod delete_database;
 mod delete_document;
