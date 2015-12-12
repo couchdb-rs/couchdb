@@ -1,0 +1,1 @@
+initSidebarItems({"struct":[["DocumentPath","Document path—i.e., a database path paired with a document id."]]});

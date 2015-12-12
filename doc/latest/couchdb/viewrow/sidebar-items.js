@@ -1,0 +1,1 @@
+initSidebarItems({"struct":[["ViewRow","Single row contained within the response resulting from executing a view."]]});

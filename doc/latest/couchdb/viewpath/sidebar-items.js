@@ -1,0 +1,1 @@
+initSidebarItems({"struct":[["ViewPath","View path—i.e., a document path paired with a view name."]]});
