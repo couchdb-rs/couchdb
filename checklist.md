@@ -17,13 +17,14 @@
 
         $ cargo package
 
-  If any errors occurs then fix them!
+  If any errors occur then fix them!
 
 1. Update project documents.
 
-  1. Edit `Cargo.toml` to declare the correct version.
+  1. Edit `Cargo.toml` to declare the correct version for this
+     crate—e.g., remove the `+master` suffix.
 
-  1. Edit `ChangeLog.md` and ensure it's up-to-date, clear, and well
+  1. Edit `CHANGELOG.md` and ensure it's up-to-date, clear, and well
      formatted.
 
   1. Commit changes.
@@ -75,5 +76,5 @@
   1. Edit `Cargo.toml` to increment the version, adding the `+master`
      suffix.
 
-  1. Edit `ChangeLog.md` to add the new section for the next version (in
+  1. Edit `CHANGELOG.md` to add the new section for the next version (in
      development).
