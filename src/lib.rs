@@ -43,8 +43,8 @@
 //!     home_runs: 714,
 //! };
 //!
-//! client.put_document("cats/babe_ruth", &doc).run()
-//!                                            .unwrap();
+//! client.put_document("baseball/babe_ruth", &doc).run()
+//!                                                .unwrap();
 //! ```
 //!
 //! ## Example #2: Get a document
