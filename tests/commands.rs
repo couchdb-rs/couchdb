@@ -162,6 +162,44 @@ fn delete_database() {
 }
 
 #[test]
+fn post_to_database() {
+
+    let server = couchdb::Server::new().unwrap();
+    let client = couchdb::Client::new(server.uri()).unwrap();
+
+    client.put_database(Db::Baseball).run().unwrap();
+
+    // VERIFY: Posting to a database to create a new document succeeds.
+
+    let src_content = serde_json::builder::ObjectBuilder::new()
+                          .insert("name", "Babe Ruth")
+                          .unwrap();
+    let (rev, path) = client.post_to_database(Db::Baseball, &src_content).run().unwrap();
+
+    let doc = client.get_document::<_, serde_json::Value>(path)
+                    .run()
+                    .unwrap()
+                    .unwrap();
+
+    assert_eq!(doc.revision, rev);
+    assert_eq!(doc.content, src_content);
+
+    // VERIFY: Posting to a database that doesn't exist fails with a "not found"
+    // error.
+
+    let src_content = serde_json::builder::ObjectBuilder::new()
+                          .insert("name", "Babe Ruth")
+                          .unwrap();
+    let e = client.post_to_database("non_existent_db", &src_content).run().unwrap_err();
+    match e {
+        couchdb::Error::NotFound { .. } => (),
+        _ => {
+            panic!("Got unexpected error: {}", e);
+        }
+    }
+}
+
+#[test]
 fn head_document() {
 
     let server = couchdb::Server::new().unwrap();

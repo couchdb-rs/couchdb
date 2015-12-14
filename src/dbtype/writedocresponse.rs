@@ -1,13 +1,16 @@
 use serde;
 
+pub type PostToDatabaseResponse = WriteDocumentResponse;
+pub type PutDocumentResponse = WriteDocumentResponse;
+
 #[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
-pub struct PutDocumentResponse {
+pub struct WriteDocumentResponse {
     pub id: String,
     pub ok: bool,
     pub rev: String,
 }
 
-impl serde::Deserialize for PutDocumentResponse {
+impl serde::Deserialize for WriteDocumentResponse {
     fn deserialize<D>(d: &mut D) -> Result<Self, D::Error>
         where D: serde::Deserializer
     {
@@ -45,7 +48,7 @@ impl serde::Deserialize for PutDocumentResponse {
         struct Visitor;
 
         impl serde::de::Visitor for Visitor {
-            type Value = PutDocumentResponse;
+            type Value = WriteDocumentResponse;
 
             fn visit_map<V>(&mut self, mut visitor: V) -> Result<Self::Value, V::Error>
                 where V: serde::de::MapVisitor
@@ -72,7 +75,7 @@ impl serde::Deserialize for PutDocumentResponse {
 
                 try!(visitor.end());
 
-                let resp = PutDocumentResponse {
+                let resp = WriteDocumentResponse {
                     id: match id {
                         Some(x) => x,
                         None => try!(visitor.missing_field("id")),
@@ -92,7 +95,7 @@ impl serde::Deserialize for PutDocumentResponse {
         }
 
         static FIELDS: &'static [&'static str] = &["id", "ok", "rev"];
-        d.visit_struct("PutDocumentResponse", FIELDS, Visitor)
+        d.visit_struct("WriteDocumentResponse", FIELDS, Visitor)
     }
 }
 
@@ -102,26 +105,26 @@ mod tests {
     use serde_json;
 
     use super::*;
-    use jsontest;
 
     #[test]
     fn test_deserialization() {
 
-        let fields = [r#""id": "stuff""#, r#""ok": true"#, r#""rev": "1-1234abcd""#];
+        // VERIFY: Deserialization succeeds when all fields are present.
 
-        // Verify: All fields present.
-        let s = jsontest::make_complete_json_object(&fields);
-        let v = serde_json::from_str::<PutDocumentResponse>(&s).unwrap();
-        assert_eq!(v.id, "stuff".to_string());
-        assert_eq!(v.ok, true);
-        assert_eq!(v.rev, "1-1234abcd".to_string());
+        let exp = WriteDocumentResponse {
+            id: "foobar".to_string(),
+            ok: true,
+            rev: "1-abcd".to_string(),
+        };
 
-        // Verify: Each field missing, one at a time.
-        let s = jsontest::make_json_object_with_missing_field(&fields, "id");
-        assert!(serde_json::from_str::<PutDocumentResponse>(&s).is_err());
-        let s = jsontest::make_json_object_with_missing_field(&fields, "ok");
-        assert!(serde_json::from_str::<PutDocumentResponse>(&s).is_err());
-        let s = jsontest::make_json_object_with_missing_field(&fields, "rev");
-        assert!(serde_json::from_str::<PutDocumentResponse>(&s).is_err());
+        let s = r#"{
+            "id": "foobar",
+            "ok": true,
+            "rev": "1-abcd"
+        }"#;
+
+        let got = serde_json::from_str::<WriteDocumentResponse>(&s).unwrap();
+
+        assert_eq!(got, exp);
     }
 }

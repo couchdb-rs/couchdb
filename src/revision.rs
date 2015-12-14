@@ -1,3 +1,4 @@
+use serde;
 use std;
 
 /// Document revision.
@@ -66,20 +67,51 @@ impl PartialOrd for Revision {
     }
 }
 
+impl serde::Serialize for Revision {
+    fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
+        where S: serde::Serializer
+    {
+        let Revision(ref s) = *self;
+        serializer.visit_str(s)
+    }
+}
+
+impl serde::Deserialize for Revision {
+    fn deserialize<D>(deserializer: &mut D) -> Result<Self, D::Error>
+        where D: serde::Deserializer
+    {
+        struct Visitor;
+
+        impl serde::de::Visitor for Visitor {
+            type Value = Revision;
+
+            fn visit_str<E>(&mut self, v: &str) -> Result<Self::Value, E>
+                where E: serde::de::Error
+            {
+                Ok(Revision::from(v))
+            }
+        }
+
+        deserializer.visit(Visitor)
+    }
+}
+
 #[cfg(test)]
 mod tests {
+
+    use serde_json;
 
     use super::*;
 
     #[test]
-    fn test_revision_clone() {
+    fn test_clone() {
         let r1 = Revision::from("1-1234");
         let r2 = r1.clone();
         assert_eq!(r1, r2);
     }
 
     #[test]
-    fn test_revision_eq() {
+    fn test_eq() {
 
         let r1 = Revision::from("1-1234");
         assert!(r1 == r1);
@@ -99,7 +131,7 @@ mod tests {
     }
 
     #[test]
-    fn test_revision_ord() {
+    fn test_ord() {
 
         let r1 = Revision::from("1-1234");
         let r2 = Revision::from("2-5678");
@@ -119,5 +151,33 @@ mod tests {
         let r1 = Revision::from("1-AAAA");
         let r2 = Revision::from("1-bbbb");
         assert!(r1 < r2);
+    }
+
+    #[test]
+    fn test_serialize() {
+
+        // VERIFY: Serialization outputs a string value.
+
+        let exp = serde_json::Value::String("1-1234abcd".to_string());
+
+        let rev = Revision::from("1-1234abcd");
+
+        let s = serde_json::to_string(&rev).unwrap();
+        let got = serde_json::from_str::<serde_json::Value>(&s).unwrap();
+
+        assert_eq!(got, exp);
+    }
+
+    #[test]
+    fn test_deserialize() {
+
+        // VERIFY: Deserialization succeeds when input is a string value.
+
+        let exp = Revision::from("1-1234abcd");
+        let s = r#""1-1234abcd""#;
+
+        let got = serde_json::from_str::<Revision>(&s).unwrap();
+
+        assert_eq!(got, exp);
     }
 }

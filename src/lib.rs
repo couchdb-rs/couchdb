@@ -1,8 +1,16 @@
 //! The couchdb crate is a thin wrapper around the CouchDB API, providing
 //! low-level access to individual CouchDB commands—e.g., PUT database, GET
-//! document, etc. The goal is for this crate to deal with the menial task of
+//! document, etc. The goal is for the crate to deal with the menial task of
 //! sending HTTP requests and receiving HTTP responses and allow application
 //! writers to focus on their business logic.
+//!
+//! This documentation has been written with the assumption that the reader is
+//! familiar with the CouchDB API. Descriptions of types, methods, etc. in the
+//! couchdb crate should provide just enough information for the reader to map
+//! the crate's concepts onto the CouchDB API and then use the CouchDB
+//! documentation to fill in the remaining details. Most names in the crate are
+//! identical to the names used in the CouchDB API so as to make this mapping
+//! straightforward.
 //!
 //! The couchdb crate provides applications with type-safety beyond working with
 //! raw strings. Applications get and put documents as structured types. Other
@@ -10,7 +18,7 @@
 //!
 //! To deal with JSON, the couchdb crate relies on Serde and its traits
 //! `serde::Serialize` and `serde::Deserialize`. These traits are fundamental to
-//! the couchdb crate's API—they are not mere implementation details. As such,
+//! the crate's API—they are not mere implementation details. As such,
 //! applications must use these traits when working with documents, views, or
 //! any type that is JSON-encoded in the CouchDB API.
 //!
@@ -72,6 +80,100 @@
 //! assert_eq!(doc.hits, 2873);
 //! assert_eq!(doc.home_runs, 714);
 //! ```
+//!
+//! # CouchDB API coverage
+//!
+//! In the couchdb crate, the `Client` type is the principal type for
+//! communicating with a CouchDB server. All HTTP requests to the CouchDB server
+//! go through a `Client` instance.
+//!
+//! This table maps each CouchDB API resource to the `Client` method that accesses
+//! that resource.
+//!
+//! <table>
+//!  <thead>
+//!   <tr>
+//!    <th>URI</td>
+//!    <th>HTTP method</td>
+//!    <th><span style="font-family:monospace;">Client</span> method</td>
+//!    <th>Description</th>
+//!   </tr>
+//!  </thead>
+//!  <tbody>
+//!   <tr>
+//!    <td style="font-family:monospace;">
+//!     <ul><li>/_all_dbs</li></ul>
+//!    </td>
+//!    <td>GET</td>
+//!    <td style="font-family:monospace;">get_all_databases</td>
+//!    <td>Get list of all databases</td>
+//!   </tr>
+//!   <tr>
+//!    <td style="font-family:monospace;" rowspan="5">
+//!     <ul><li>/db</li></ul>
+//!    </td>
+//!    <td>HEAD</td>
+//!    <td style="font-family:monospace;">head_database</td>
+//!    <td>Test whether a database exists</td>
+//!   </tr>
+//!   <tr>
+//!    <td>GET</td>
+//!    <td style="font-family:monospace;">get_database</td>
+//!    <td>Get meta-information about a database</td>
+//!   </tr>
+//!   <tr>
+//!    <td>PUT</td>
+//!    <td style="font-family:monospace;">put_database</td>
+//!    <td>Create a database</td>
+//!   </tr>
+//!   <tr>
+//!    <td>DELETE</td>
+//!    <td style="font-family:monospace;">delete_database</td>
+//!    <td>Delete a database</td>
+//!   </tr>
+//!   <tr>
+//!    <td>POST</td>
+//!    <td style="font-family:monospace;">post_to_database</td>
+//!    <td>Create a document</td>
+//!   </tr>
+//!   <tr>
+//!    <td style="font-family:monospace;" rowspan="4">
+//!     <ul>
+//!      <li>/db/doc<br></li>
+//!      <li>/db/_design/design-doc</li>
+//!      <li>/db/_local/id</li>
+//!     </ul>
+//!    </td>
+//!    <td>HEAD</td>
+//!    <td style="font-family:monospace;">head_document</td>
+//!    <td>Test whether a document exists</td>
+//!   </tr>
+//!   <tr>
+//!    <td>GET</td>
+//!    <td style="font-family:monospace;">get_document</td>
+//!    <td>Get meta-information and application-defined content for a
+//!    document</td>
+//!   </tr>
+//!   <tr>
+//!    <td>PUT</td>
+//!    <td style="font-family:monospace;">put_document</td>
+//!    <td>Create or update a document</td>
+//!   </tr>
+//!   <tr>
+//!    <td>DELETE</td>
+//!    <td style="font-family:monospace;">delete_document</td>
+//!    <td>Delete a document</td>
+//!   </tr>
+//!   <tr>
+//!    <td style="font-family:monospace;">
+//!     <ul><li>/db/_design/design-doc/_view/view</li></ul>
+//!    </td>
+//!    <td>GET</td>
+//!    <td style="font-family:monospace;">get_view</td>
+//!    <td>Execute a view</td>
+//!   </tr>
+//!  </tbody>
+//! </table>
 
 extern crate hyper;
 extern crate regex;

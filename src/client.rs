@@ -21,12 +21,12 @@ pub struct ClientState {
 
 /// CouchDB client.
 ///
-/// The Client is the principal type for communicating with a CouchDB server.
+/// The `Client` is the principal type for communicating with a CouchDB server.
 /// All CouchDB commands (e.g., PUT database, GET document, etc.) go through a
-/// Client instance.
+/// `Client`.
 ///
-/// A Client communicates with exactly one CouchDB server, as specified by its
-/// URI during Client construction.
+/// A `Client` communicates with exactly one CouchDB server, as specified by its
+/// URI during `Client` construction.
 ///
 pub struct Client {
     state: ClientState,
@@ -80,6 +80,14 @@ impl<'a> Client {
         where P: Into<DatabasePath>
     {
         command::DeleteDatabase::new(&self.state, path.into())
+    }
+
+    /// Build a command to POST to a database.
+    pub fn post_to_database<P, T>(&'a self, path: P, doc_content: &'a T) -> command::PostToDatabase<'a, T>
+        where P: Into<DatabasePath>,
+              T: serde::Serialize
+    {
+        command::PostToDatabase::new(&self.state, path.into(), doc_content)
     }
 
     /// Build a command to HEAD a document.

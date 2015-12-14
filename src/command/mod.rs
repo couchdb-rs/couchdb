@@ -11,6 +11,7 @@ mod get_document;
 mod get_view;
 mod head_database;
 mod head_document;
+mod post_to_database;
 mod put_database;
 mod put_document;
 
@@ -22,5 +23,6 @@ pub use self::get_document::GetDocument;
 pub use self::get_view::GetView;
 pub use self::head_database::HeadDatabase;
 pub use self::head_document::HeadDocument;
+pub use self::post_to_database::PostToDatabase;
 pub use self::put_database::PutDatabase;
 pub use self::put_document::PutDocument;

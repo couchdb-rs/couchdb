@@ -2,7 +2,10 @@
 
 ## [Unreleased (0.3.1)]
 
-No changes yet.
+### Added
+
+* New command to POST to a database (`PostToDatabase`).
+* Implement `serde::Serialize` and `serde::Deserialize` for `Revision`.
 
 ## [0.3.0] - 2015-12-12
 
