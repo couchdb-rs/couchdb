@@ -1,0 +1,1 @@
+initSidebarItems({"enum":[["Error","Principal error type."]],"struct":[["ErrorResponse","Response content from the CouchDB server in case of error."]]});
