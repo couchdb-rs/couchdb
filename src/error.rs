@@ -15,6 +15,7 @@ use dbtype;
 pub enum Error {
     /// The database already exists.
     DatabaseExists {
+        /// CouchDB server response.
         response: ErrorResponse,
     },
 
@@ -26,6 +27,7 @@ pub enum Error {
 
     /// The client request conflicts with an existing document.
     DocumentConflict {
+        /// CouchDB server response.
         response: ErrorResponse,
     },
 
@@ -37,27 +39,30 @@ pub enum Error {
 
     /// An internal server error occurred.
     InternalServerError {
+        /// CouchDB server response.
         response: ErrorResponse,
     },
 
     /// The database name is invalid.
     InvalidDatabaseName {
+        /// CouchDB server response.
         response: ErrorResponse,
     },
 
     /// The client request is invalid.
     InvalidRequest {
+        /// CouchDB server response.
         response: ErrorResponse,
     },
 
-    /// I/O error with a compile-time description.
+    // I/O error with a compile-time description.
     #[doc(hidden)]
     Io {
         description: &'static str,
         cause: std::io::Error,
     },
 
-    /// The CouchDB server responded without a Content-Type header.
+    // The CouchDB server responded without a Content-Type header.
     #[doc(hidden)]
     NoContentTypeHeader {
         expected: &'static str,
@@ -67,14 +72,14 @@ pub enum Error {
     NotFound {
         /// CouchDB server response.
         ///
-        /// In case of a HEAD request, the response value is None (because the
+        /// In case of a HEAD request, the response value is `None` (because the
         /// server doesn't send response content for HEAD requests). Otherwise,
-        /// the response value is Some.
+        /// the response value is `Some`.
         response: Option<ErrorResponse>,
     },
 
-    /// Channel-receiver error with a compile-time description and thread-join
-    /// error.
+    // Channel-receiver error with a compile-time description and thread-join
+    // error.
     #[doc(hidden)]
     ReceiveFromThread {
         description: &'static str,
@@ -89,19 +94,20 @@ pub enum Error {
 
     /// The client is unauthorized to carry out the operation.
     Unauthorized {
+        /// CouchDB server response.
         response: ErrorResponse,
     },
 
-    /// The CouchDB server responded with a Content-Type header that the client
-    /// didn't expect.
+    // The CouchDB server responded with a Content-Type header that the client
+    // didn't expect.
     #[doc(hidden)]
     UnexpectedContentTypeHeader {
         expected: &'static str,
         got: String,
     },
 
-    /// The CouchDB server responded with an HTTP status code that the client
-    /// didn't expect.
+    // The CouchDB server responded with an HTTP status code that the client
+    // didn't expect.
     #[doc(hidden)]
     UnexpectedHttpStatus {
         got: hyper::status::StatusCode,
