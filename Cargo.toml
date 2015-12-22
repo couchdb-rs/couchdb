@@ -1,6 +1,6 @@
 [package]
 name = "couchdb"
-version = "0.3.1"
+version = "0.3.2+master"
 authors = ["Craig M. Brandenburg <c.m.brandenburg@gmail.com>"]
 license = "MIT"
 description = "A simple CouchDB client"

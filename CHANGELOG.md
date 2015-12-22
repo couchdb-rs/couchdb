@@ -1,5 +1,9 @@
 # CouchDB-rs Change Log
 
+## (Unreleased [0.3.2])
+
+No changes yet!
+
 ## [0.3.1] - 2015-12-21
 
 ### Added
