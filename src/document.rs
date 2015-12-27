@@ -5,7 +5,7 @@ use std;
 use dbpath::DatabasePath;
 use docid::DocumentId;
 use docpath::DocumentPath;
-use error::{DecodeKind, Error};
+use error::{DecodeErrorKind, Error};
 use revision::Revision;
 use transport;
 
@@ -40,7 +40,7 @@ impl<T> Document<T> where T: serde::Deserialize
         // dividing the fields appropriately.
 
         fn make_error(what: &'static str) -> Error {
-            Error::Decode { kind: DecodeKind::InvalidDocument { what: what } }
+            Error::Decode(DecodeErrorKind::InvalidDocument { what: what })
         }
 
         let mut top = try!(transport::decode_json::<_, serde_json::Value>(r));
@@ -85,8 +85,7 @@ impl<T> Document<T> where T: serde::Deserialize
             (id, rev)
         };
 
-        let content = try!(serde_json::from_value(top)
-                               .map_err(|e| Error::Decode { kind: DecodeKind::Serde { cause: e } }));
+        let content = try!(serde_json::from_value(top).map_err(|e| Error::Decode(DecodeErrorKind::Serde { cause: e })));
 
         let doc = Document {
             path: DocumentPath::new(db_path, id),

@@ -3,7 +3,7 @@ use serde;
 use serde_json;
 use std;
 
-use error::{DecodeKind, Error, TransportKind};
+use error::{DecodeErrorKind, Error, TransportKind};
 use revision::Revision;
 
 pub struct Request {
@@ -13,8 +13,7 @@ pub struct Request {
 
 impl Request {
     pub fn new(method: hyper::method::Method, uri: hyper::Url) -> Result<Self, Error> {
-        let r = try!(hyper::client::Request::new(method, uri)
-                         .map_err(|e| Error::Transport { kind: TransportKind::Hyper(e) }));
+        let r = try!(hyper::client::Request::new(method, uri).map_err(|e| Error::Transport(TransportKind::Hyper(e))));
 
         Ok(Request {
             request: r,
@@ -91,11 +90,11 @@ pub fn run_command<C>(cmd: C) -> Result<C::Output, Error>
     let (resp, state) = {
         use std::io::Write;
         let (req, state) = try!(cmd.make_request());
-        let mut stream = try!(req.request.start().map_err(|e| Error::Transport { kind: TransportKind::Hyper(e) }));
+        let mut stream = try!(req.request.start().map_err(|e| Error::Transport(TransportKind::Hyper(e))));
         try!(stream.write_all(&req.body)
-                   .map_err(|e| Error::Transport { kind: TransportKind::Io(e) }));
+                   .map_err(|e| Error::Transport(TransportKind::Io(e))));
         let resp = try!(stream.send()
-                              .map_err(|e| Error::Transport { kind: TransportKind::Hyper(e) }));
+                              .map_err(|e| Error::Transport(TransportKind::Hyper(e))));
         (resp, state)
     };
     C::take_response(resp, state)
@@ -130,8 +129,8 @@ pub fn decode_json<R, T>(r: R) -> Result<T, Error>
 {
     serde_json::from_reader::<_, T>(r).map_err(|e| {
         match e {
-            serde_json::Error::IoError(e) => Error::Transport { kind: TransportKind::Io(e) },
-            _ => Error::Decode { kind: DecodeKind::Serde { cause: e } },
+            serde_json::Error::IoError(e) => Error::Transport(TransportKind::Io(e)),
+            _ => Error::Decode(DecodeErrorKind::Serde { cause: e }),
         }
     })
 }

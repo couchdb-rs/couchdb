@@ -33,21 +33,21 @@ impl Server {
     /// Spawn a CouchDB server process.
     pub fn new() -> Result<Server, Error> {
 
-        let tmp_root = try!(tempdir::TempDir::new("couchdb_client_test").or_else(|e| {
-            Err(Error::Io {
-                description: "Failed to create temporary directory for CouchDB server",
+        let tmp_root = try!(tempdir::TempDir::new("couchdb_client_test").map_err(|e| {
+            Error::Io {
                 cause: e,
-            })
+                description: "Failed to create temporary directory for CouchDB server",
+            }
         }));
 
         {
             use std::io::Write;
             let path = tmp_root.path().join("couchdb.conf");
-            let mut f = try!(std::fs::File::create(&path).or_else(|e| {
-                Err(Error::Io {
-                    description: "Failed to open CouchDB server configuration file",
+            let mut f = try!(std::fs::File::create(&path).map_err(|e| {
+                Error::Io {
                     cause: e,
-                })
+                    description: "Failed to open CouchDB server configuration file",
+                }
             }));
             try!(f.write_all(b"[couchdb]\n\
                 database_dir = var\n\
@@ -60,21 +60,21 @@ impl Server {
                 [httpd]\n\
                 port = 0\n\
                 ")
-                  .or_else(|e| {
-                      Err(Error::Io {
-                          description: "Failed to write CouchDB server configuration file",
+                  .map_err(|e| {
+                      Error::Io {
                           cause: e,
-                      })
+                          description: "Failed to write CouchDB server configuration file",
+                      }
                   }));
         }
 
         let mut process = AutoKillProcess(try!(new_test_server_command(&tmp_root)
                                                    .spawn()
-                                                   .or_else(|e| {
-                                                       Err(Error::Io {
-                                                           description: "Failed to spawn CouchDB server process",
+                                                   .map_err(|e| {
+                                                       Error::Io {
                                                            cause: e,
-                                                       })
+                                                           description: "Failed to spawn CouchDB server process",
+                                                       }
                                                    })));
 
         let (tx, rx) = std::sync::mpsc::channel();
@@ -117,12 +117,12 @@ impl Server {
 
         // Wait for CouchDB server to start its HTTP service.
         let uri = try!(rx.recv()
-                         .or_else(|e| {
+                         .map_err(|e| {
                              t.join().unwrap_err();
-                             Err(Error::ReceiveFromThread {
-                                 description: "Failed to extract URI from CouchDB server",
+                             Error::ReceiveFromThread {
                                  cause: e,
-                             })
+                                 description: "Failed to extract URI from CouchDB server",
+                             }
                          }));
 
         Ok(Server {

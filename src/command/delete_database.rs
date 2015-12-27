@@ -50,14 +50,10 @@ impl<'a> Command for DeleteDatabase<'a> {
             hyper::status::StatusCode::BadRequest => {
                 // The CouchDB spec says this status may also mean the document
                 // id has been "forgotten"--whatever that means!
-                Err(Error::InvalidDatabaseName { response: try!(ErrorResponse::from_reader(resp)) })
+                Err(Error::InvalidDatabaseName(try!(ErrorResponse::from_reader(resp))))
             }
-            hyper::status::StatusCode::Unauthorized => {
-                Err(Error::Unauthorized { response: try!(ErrorResponse::from_reader(resp)) })
-            }
-            hyper::status::StatusCode::NotFound => {
-                Err(Error::NotFound { response: Some(try!(ErrorResponse::from_reader(resp))) })
-            }
+            hyper::status::StatusCode::Unauthorized => Err(Error::Unauthorized(try!(ErrorResponse::from_reader(resp)))),
+            hyper::status::StatusCode::NotFound => Err(Error::NotFound(Some(try!(ErrorResponse::from_reader(resp))))),
             _ => Err(Error::UnexpectedHttpStatus { got: resp.status }),
         }
     }

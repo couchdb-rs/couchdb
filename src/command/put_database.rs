@@ -48,13 +48,11 @@ impl<'a> Command for PutDatabase<'a> {
         match resp.status {
             hyper::status::StatusCode::Created => transport::content_type_must_be_application_json(&resp.headers),
             hyper::status::StatusCode::BadRequest => {
-                Err(Error::InvalidDatabaseName { response: try!(ErrorResponse::from_reader(resp)) })
+                Err(Error::InvalidDatabaseName(try!(ErrorResponse::from_reader(resp))))
             }
-            hyper::status::StatusCode::Unauthorized => {
-                Err(Error::Unauthorized { response: try!(ErrorResponse::from_reader(resp)) })
-            }
+            hyper::status::StatusCode::Unauthorized => Err(Error::Unauthorized(try!(ErrorResponse::from_reader(resp)))),
             hyper::status::StatusCode::PreconditionFailed => {
-                Err(Error::DatabaseExists { response: try!(ErrorResponse::from_reader(resp)) })
+                Err(Error::DatabaseExists(try!(ErrorResponse::from_reader(resp))))
             }
             _ => Err(Error::UnexpectedHttpStatus { got: resp.status }),
         }

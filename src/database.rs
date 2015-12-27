@@ -2,7 +2,7 @@ use std;
 
 use dbpath::DatabasePath;
 use dbtype;
-use error::{Error, DecodeKind};
+use error::{Error, DecodeErrorKind};
 
 /// Database resource, as returned from a command to GET a database.
 #[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
@@ -56,7 +56,7 @@ impl Database {
         let instance_start_time = {
             let s = std::mem::replace(&mut db.instance_start_time, String::new());
             try!(u64::from_str_radix(&s, 10)
-                     .map_err(|e| Error::Decode { kind: DecodeKind::InstanceStartTime { got: s, cause: e } }))
+                     .map_err(|e| Error::Decode(DecodeErrorKind::InstanceStartTime { got: s, cause: e })))
         };
 
         let db = Database {
@@ -82,7 +82,7 @@ mod tests {
 
     use super::*;
     use dbtype;
-    use error::{DecodeKind, Error};
+    use error::{DecodeErrorKind, Error};
 
     #[test]
     fn test_database_from_db_type() {
@@ -134,9 +134,9 @@ mod tests {
 
         let e = Database::from_db_database(db).unwrap_err();
         match e {
-            Error::Decode { kind } => {
+            Error::Decode(kind) => {
                 match kind {
-                    DecodeKind::InstanceStartTime { .. } => (),
+                    DecodeErrorKind::InstanceStartTime { .. } => (),
                     _ => {
                         panic!("Got unexpected error kind: {}", kind);
                     }

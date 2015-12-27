@@ -80,15 +80,9 @@ impl<'a, T> Command for GetDocument<'a, T> where T: serde::Deserialize
                 Ok(Some(doc))
             }
             hyper::status::StatusCode::NotModified => Ok(None),
-            hyper::status::StatusCode::BadRequest => {
-                Err(Error::InvalidRequest { response: try!(ErrorResponse::from_reader(resp)) })
-            }
-            hyper::status::StatusCode::Unauthorized => {
-                Err(Error::Unauthorized { response: try!(ErrorResponse::from_reader(resp)) })
-            }
-            hyper::status::StatusCode::NotFound => {
-                Err(Error::NotFound { response: Some(try!(ErrorResponse::from_reader(resp))) })
-            }
+            hyper::status::StatusCode::BadRequest => Err(Error::InvalidRequest(try!(ErrorResponse::from_reader(resp)))),
+            hyper::status::StatusCode::Unauthorized => Err(Error::Unauthorized(try!(ErrorResponse::from_reader(resp)))),
+            hyper::status::StatusCode::NotFound => Err(Error::NotFound(Some(try!(ErrorResponse::from_reader(resp))))),
             _ => Err(Error::UnexpectedHttpStatus { got: resp.status }),
         }
     }

@@ -1,8 +1,11 @@
 # CouchDB-rs Change Log
 
-## (Unreleased [0.3.2])
+## (Unreleased [0.4.0])
 
-No changes yet!
+### Changed
+
+* Refactor the `Error` enum to hide many variants and to use tuples, not
+  structs, for all non-hidden variants.
 
 ## [0.3.1] - 2015-12-21
 

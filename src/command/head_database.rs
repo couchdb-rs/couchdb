@@ -46,7 +46,7 @@ impl<'a> Command for HeadDatabase<'a> {
     fn take_response(resp: hyper::client::Response, _state: Self::State) -> Result<Self::Output, Error> {
         match resp.status {
             hyper::status::StatusCode::Ok => Ok(()),
-            hyper::status::StatusCode::NotFound => Err(Error::NotFound { response: None }),
+            hyper::status::StatusCode::NotFound => Err(Error::NotFound(None)),
             _ => Err(Error::UnexpectedHttpStatus { got: resp.status }),
         }
     }

@@ -46,7 +46,7 @@ fn head_database() {
 
     // Verify: Heading a non-existing database fails.
     match client.head_database(Db::Basketball).run().unwrap_err() {
-        couchdb::Error::NotFound { .. } => (),
+        couchdb::Error::NotFound(..) => (),
         e => {
             panic!("Got unexpected error: {}", e);
         }
@@ -65,7 +65,7 @@ fn get_database() {
 
     // Verify: Getting a non-existing database fails.
     match client.get_database(Db::Basketball).run().unwrap_err() {
-        couchdb::Error::NotFound { .. } => (),
+        couchdb::Error::NotFound(..) => (),
         e => {
             panic!("Got unexpected error: {}", e);
         }
@@ -101,7 +101,7 @@ fn put_database() {
 
     // Verify: Putting an existing database fails.
     match client.put_database(Db::Baseball).run().unwrap_err() {
-        couchdb::Error::DatabaseExists { .. } => (),
+        couchdb::Error::DatabaseExists(..) => (),
         e => {
             panic!("Got unexpected error: {}", e);
         }
@@ -112,7 +112,7 @@ fn put_database() {
     match client.put_database(db_path)
                 .run()
                 .unwrap_err() {
-        couchdb::Error::InvalidDatabaseName { .. } => (),
+        couchdb::Error::InvalidDatabaseName(..) => (),
         e => {
             panic!("Got unexpected error: {}", e);
         }
@@ -143,7 +143,7 @@ fn delete_database() {
 
     // Verify: Deleting an non-existing database fails.
     match client.delete_database(Db::Baseball).run().unwrap_err() {
-        couchdb::Error::NotFound { .. } => (),
+        couchdb::Error::NotFound(..) => (),
         e => {
             panic!("Got unexpected error: {}", e);
         }
@@ -154,7 +154,7 @@ fn delete_database() {
     match client.delete_database(path)
                 .run()
                 .unwrap_err() {
-        couchdb::Error::InvalidDatabaseName { .. } => (),
+        couchdb::Error::InvalidDatabaseName(..) => (),
         e => {
             panic!("Got unexpected error: {}", e);
         }
@@ -192,7 +192,7 @@ fn post_to_database() {
                           .unwrap();
     let e = client.post_to_database("non_existent_db", &src_content).run().unwrap_err();
     match e {
-        couchdb::Error::NotFound { .. } => (),
+        couchdb::Error::NotFound(..) => (),
         _ => {
             panic!("Got unexpected error: {}", e);
         }
@@ -240,7 +240,7 @@ fn head_document() {
 
     // Verify: Heading a non-existing document fails.
     match client.head_document(Doc::HankAaron).run().unwrap_err() {
-        couchdb::Error::NotFound { .. } => (),
+        couchdb::Error::NotFound(..) => (),
         e => panic!("Got unexpected error: {}", e),
     }
 }
@@ -271,7 +271,7 @@ fn get_document() {
                   .run()
                   .unwrap_err();
     match e {
-        couchdb::Error::NotFound { .. } => (),
+        couchdb::Error::NotFound(..) => (),
         e => {
             panic!("Got unexpected error: {}", e);
         }
@@ -327,7 +327,7 @@ fn put_document() {
                    .insert("hr", 714)
                    .unwrap();
     match client.put_document(Doc::BabeRuth, &pdoc).run().unwrap_err() {
-        couchdb::Error::DocumentConflict { .. } => (),
+        couchdb::Error::DocumentConflict(..) => (),
         e => {
             panic!("Got unexpected error: {}", e);
         }
@@ -353,7 +353,7 @@ fn put_document() {
                 .if_match(&rev1)
                 .run()
                 .unwrap_err() {
-        couchdb::Error::DocumentConflict { .. } => (),
+        couchdb::Error::DocumentConflict(..) => (),
         e => {
             panic!("Got unexpected error: {}", e);
         }
@@ -375,7 +375,7 @@ fn delete_document() {
     // Verify: Deleting an existing document with matching revision succeeds.
     client.delete_document(Doc::BabeRuth, &rev1).run().unwrap();
     match client.head_document(Doc::BabeRuth).run().unwrap_err() {
-        couchdb::Error::NotFound { .. } => (),
+        couchdb::Error::NotFound(..) => (),
         e => {
             panic!("Got unexpected error: {}", e);
         }
@@ -383,7 +383,7 @@ fn delete_document() {
 
     // Verify: Deleting a non-existing document fails.
     match client.delete_document(Doc::BabeRuth, &rev1).run().unwrap_err() {
-        couchdb::Error::NotFound { .. } => (),
+        couchdb::Error::NotFound(..) => (),
         e => {
             panic!("Got unexpected error: {}", e);
         }
@@ -403,7 +403,7 @@ fn delete_document() {
           .run()
           .unwrap();
     match client.delete_document(Doc::HankAaron, &rev2).run().unwrap_err() {
-        couchdb::Error::DocumentConflict { .. } => (),
+        couchdb::Error::DocumentConflict(..) => (),
         e => {
             panic!("Got unexpected error: {}", e);
         }

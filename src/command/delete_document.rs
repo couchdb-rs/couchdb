@@ -54,18 +54,10 @@ impl<'a> Command for DeleteDocument<'a> {
     fn take_response(resp: hyper::client::Response, _state: Self::State) -> Result<Self::Output, Error> {
         match resp.status {
             hyper::status::StatusCode::Ok => transport::content_type_must_be_application_json(&resp.headers),
-            hyper::status::StatusCode::BadRequest => {
-                Err(Error::InvalidRequest { response: try!(ErrorResponse::from_reader(resp)) })
-            }
-            hyper::status::StatusCode::Unauthorized => {
-                Err(Error::Unauthorized { response: try!(ErrorResponse::from_reader(resp)) })
-            }
-            hyper::status::StatusCode::NotFound => {
-                Err(Error::NotFound { response: Some(try!(ErrorResponse::from_reader(resp))) })
-            }
-            hyper::status::StatusCode::Conflict => {
-                Err(Error::DocumentConflict { response: try!(ErrorResponse::from_reader(resp)) })
-            }
+            hyper::status::StatusCode::BadRequest => Err(Error::InvalidRequest(try!(ErrorResponse::from_reader(resp)))),
+            hyper::status::StatusCode::Unauthorized => Err(Error::Unauthorized(try!(ErrorResponse::from_reader(resp)))),
+            hyper::status::StatusCode::NotFound => Err(Error::NotFound(Some(try!(ErrorResponse::from_reader(resp))))),
+            hyper::status::StatusCode::Conflict => Err(Error::DocumentConflict(try!(ErrorResponse::from_reader(resp)))),
             _ => Err(Error::UnexpectedHttpStatus { got: resp.status }),
         }
     }

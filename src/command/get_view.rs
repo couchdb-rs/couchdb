@@ -6,7 +6,7 @@ use std;
 use client::ClientState;
 use dbpath::DatabasePath;
 use dbtype;
-use error::{Error, ErrorResponse};
+use error::{EncodeErrorKind, Error, ErrorResponse};
 use transport::{self, Command, Request};
 use viewpath::ViewPath;
 use viewresult::ViewResult;
@@ -106,12 +106,12 @@ impl<'a, K, V> Command for GetView<'a, K, V>
                 }
                 if self.startkey.is_some() {
                     let x = try!(serde_json::to_string(&self.startkey.unwrap())
-                                     .or_else(|e| Err(Error::Encode { cause: e })));
+                                     .or_else(|e| Err(Error::Encode(EncodeErrorKind::Serde { cause: e }))));
                     query_pairs.push(("startkey", x));
                 }
                 if self.endkey.is_some() {
                     let x = try!(serde_json::to_string(&self.endkey.unwrap())
-                                     .or_else(|e| Err(Error::Encode { cause: e })));
+                                     .or_else(|e| Err(Error::Encode(EncodeErrorKind::Serde { cause: e }))));
                     query_pairs.push(("endkey", x));
                 }
                 uri.set_query_from_pairs(query_pairs.iter()
@@ -136,17 +136,11 @@ impl<'a, K, V> Command for GetView<'a, K, V>
                 let view_result = ViewResult::from_db_view_result(&db_path, db_result);
                 Ok(view_result)
             }
-            hyper::status::StatusCode::BadRequest => {
-                Err(Error::InvalidRequest { response: try!(ErrorResponse::from_reader(resp)) })
-            }
-            hyper::status::StatusCode::Unauthorized => {
-                Err(Error::Unauthorized { response: try!(ErrorResponse::from_reader(resp)) })
-            }
-            hyper::status::StatusCode::NotFound => {
-                Err(Error::NotFound { response: Some(try!(ErrorResponse::from_reader(resp))) })
-            }
+            hyper::status::StatusCode::BadRequest => Err(Error::InvalidRequest(try!(ErrorResponse::from_reader(resp)))),
+            hyper::status::StatusCode::Unauthorized => Err(Error::Unauthorized(try!(ErrorResponse::from_reader(resp)))),
+            hyper::status::StatusCode::NotFound => Err(Error::NotFound(Some(try!(ErrorResponse::from_reader(resp))))),
             hyper::status::StatusCode::InternalServerError => {
-                Err(Error::InternalServerError { response: try!(ErrorResponse::from_reader(resp)) })
+                Err(Error::InternalServerError(try!(ErrorResponse::from_reader(resp))))
             }
             _ => Err(Error::UnexpectedHttpStatus { got: resp.status }),
         }

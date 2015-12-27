@@ -62,10 +62,8 @@ impl<'a> Command for HeadDocument<'a> {
         match resp.status {
             hyper::status::StatusCode::Ok => Ok(Some(())),
             hyper::status::StatusCode::NotModified => Ok(None),
-            hyper::status::StatusCode::Unauthorized => {
-                Err(Error::Unauthorized { response: try!(ErrorResponse::from_reader(resp)) })
-            }
-            hyper::status::StatusCode::NotFound => Err(Error::NotFound { response: None }),
+            hyper::status::StatusCode::Unauthorized => Err(Error::Unauthorized(try!(ErrorResponse::from_reader(resp)))),
+            hyper::status::StatusCode::NotFound => Err(Error::NotFound(None)),
             _ => Err(Error::UnexpectedHttpStatus { got: resp.status }),
         }
     }

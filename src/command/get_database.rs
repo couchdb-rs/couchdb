@@ -52,9 +52,7 @@ impl<'a> Command for GetDatabase<'a> {
                 let db = try!(transport::decode_json::<_, dbtype::Database>(resp));
                 Database::from_db_database(db)
             }
-            hyper::status::StatusCode::NotFound => {
-                Err(Error::NotFound { response: Some(try!(ErrorResponse::from_reader(resp))) })
-            }
+            hyper::status::StatusCode::NotFound => Err(Error::NotFound(Some(try!(ErrorResponse::from_reader(resp))))),
             _ => Err(Error::UnexpectedHttpStatus { got: resp.status }),
         }
     }

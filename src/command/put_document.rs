@@ -5,7 +5,7 @@ use serde_json;
 use client::ClientState;
 use dbtype::PutDocumentResponse;
 use docpath::DocumentPath;
-use error::{Error, ErrorResponse};
+use error::{EncodeErrorKind, Error, ErrorResponse};
 use revision::Revision;
 use transport::{self, Command, Request};
 
@@ -66,7 +66,8 @@ impl<'a, T> Command for PutDocument<'a, T> where T: 'a + serde::Serialize
 
     fn make_request(self) -> Result<(Request, Self::State), Error> {
         let uri = self.path.into_uri(self.client_state.uri.clone());
-        let body = try!(serde_json::to_vec(self.doc_content).map_err(|e| Error::Encode { cause: e }));
+        let body = try!(serde_json::to_vec(self.doc_content)
+                            .map_err(|e| Error::Encode(EncodeErrorKind::Serde { cause: e })));
         let req = try!(Request::new(hyper::method::Method::Put, uri))
                       .accept_application_json()
                       .content_type_application_json()
@@ -83,18 +84,10 @@ impl<'a, T> Command for PutDocument<'a, T> where T: 'a + serde::Serialize
                 let rev: Revision = content.rev.into();
                 Ok(rev)
             }
-            hyper::status::StatusCode::BadRequest => {
-                Err(Error::InvalidRequest { response: try!(ErrorResponse::from_reader(resp)) })
-            }
-            hyper::status::StatusCode::Unauthorized => {
-                Err(Error::Unauthorized { response: try!(ErrorResponse::from_reader(resp)) })
-            }
-            hyper::status::StatusCode::NotFound => {
-                Err(Error::NotFound { response: Some(try!(ErrorResponse::from_reader(resp))) })
-            }
-            hyper::status::StatusCode::Conflict => {
-                Err(Error::DocumentConflict { response: try!(ErrorResponse::from_reader(resp)) })
-            }
+            hyper::status::StatusCode::BadRequest => Err(Error::InvalidRequest(try!(ErrorResponse::from_reader(resp)))),
+            hyper::status::StatusCode::Unauthorized => Err(Error::Unauthorized(try!(ErrorResponse::from_reader(resp)))),
+            hyper::status::StatusCode::NotFound => Err(Error::NotFound(Some(try!(ErrorResponse::from_reader(resp))))),
+            hyper::status::StatusCode::Conflict => Err(Error::DocumentConflict(try!(ErrorResponse::from_reader(resp)))),
             _ => Err(Error::UnexpectedHttpStatus { got: resp.status }),
         }
     }
