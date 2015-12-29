@@ -136,7 +136,7 @@ impl<'a, K, V> Command for GetView<'a, K, V>
                 let view_result = ViewResult::from_db_view_result(&db_path, db_result);
                 Ok(view_result)
             }
-            hyper::status::StatusCode::BadRequest => Err(Error::InvalidRequest(try!(ErrorResponse::from_reader(resp)))),
+            hyper::status::StatusCode::BadRequest => Err(Error::BadRequest(try!(ErrorResponse::from_reader(resp)))),
             hyper::status::StatusCode::Unauthorized => Err(Error::Unauthorized(try!(ErrorResponse::from_reader(resp)))),
             hyper::status::StatusCode::NotFound => Err(Error::NotFound(Some(try!(ErrorResponse::from_reader(resp))))),
             hyper::status::StatusCode::InternalServerError => {

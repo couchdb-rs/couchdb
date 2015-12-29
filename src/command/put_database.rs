@@ -47,9 +47,7 @@ impl<'a> Command for PutDatabase<'a> {
     fn take_response(resp: hyper::client::Response, _state: Self::State) -> Result<Self::Output, Error> {
         match resp.status {
             hyper::status::StatusCode::Created => transport::content_type_must_be_application_json(&resp.headers),
-            hyper::status::StatusCode::BadRequest => {
-                Err(Error::InvalidDatabaseName(try!(ErrorResponse::from_reader(resp))))
-            }
+            hyper::status::StatusCode::BadRequest => Err(Error::BadRequest(try!(ErrorResponse::from_reader(resp)))),
             hyper::status::StatusCode::Unauthorized => Err(Error::Unauthorized(try!(ErrorResponse::from_reader(resp)))),
             hyper::status::StatusCode::PreconditionFailed => {
                 Err(Error::DatabaseExists(try!(ErrorResponse::from_reader(resp))))

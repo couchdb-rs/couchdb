@@ -12,6 +12,9 @@ use dbtype;
 ///
 #[derive(Debug)]
 pub enum Error {
+    /// The client request is invalid.
+    BadRequest(ErrorResponse),
+
     /// The database already exists.
     DatabaseExists(ErrorResponse),
 
@@ -28,12 +31,6 @@ pub enum Error {
 
     /// An internal server error occurred.
     InternalServerError(ErrorResponse),
-
-    /// The database name is invalid.
-    InvalidDatabaseName(ErrorResponse),
-
-    /// The client request is invalid.
-    InvalidRequest(ErrorResponse),
 
     // I/O error with a compile-time description.
     #[doc(hidden)]
@@ -97,13 +94,12 @@ impl std::error::Error for Error {
     fn description(&self) -> &str {
         use self::Error::*;
         match *self {
+            BadRequest(..) => "The client request is invalid",
             DatabaseExists(..) => "The database already exists",
             Decode(..) => "The client failed to decode a JSON response from the CouchDB server",
             DocumentConflict(..) => "The client request conflicts with an existing document",
             Encode(..) => "The client failed to encode a JSON request to the CouchDB server",
             InternalServerError(..) => "An internal server error occurred",
-            InvalidDatabaseName(..) => "The database name is invalid",
-            InvalidRequest(..) => "The client request is invalid",
             Io{ ref description, .. } => description,
             NoContentTypeHeader { .. } => "The CouchDB server responded without a Content-Type header",
             NotFound(..) => "The resource does not exist",
@@ -123,13 +119,12 @@ impl std::error::Error for Error {
     fn cause(&self) -> std::option::Option<&std::error::Error> {
         use self::Error::*;
         match *self {
+            BadRequest(..) => None,
             DatabaseExists(..) => None,
             Decode(ref kind) => kind.cause(),
             DocumentConflict(..) => None,
             Encode(ref kind) => kind.cause(),
             InternalServerError(..) => None,
-            InvalidDatabaseName(..) => None,
-            InvalidRequest(..) => None,
             Io{ref cause, ..} => Some(cause),
             NoContentTypeHeader { .. } => None,
             NotFound(..) => None,
@@ -151,13 +146,12 @@ impl std::fmt::Display for Error {
             self.description()
         };
         match *self {
+            BadRequest(ref response) => write!(f, "{}: {}", d, response),
             DatabaseExists(ref response) => write!(f, "{}: {}", d, response),
             Decode(ref kind) => write!(f, "{}: {}", d, kind),
             DocumentConflict(ref response) => write!(f, "{}: {}", d, response),
             Encode(ref kind) => write!(f, "{}: {}", d, kind),
             InternalServerError(ref response) => write!(f, "{}: {}", d, response),
-            InvalidDatabaseName(ref response) => write!(f, "{}: {}", d, response),
-            InvalidRequest(ref response) => write!(f, "{}: {}", d, response),
             Io{ref cause, ..} => write!(f, "{}: {}", d, cause),
             NoContentTypeHeader { ref expected } => write!(f, "{}: Expected '{}'", d, expected),
             NotFound(ref response) => {

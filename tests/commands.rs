@@ -112,7 +112,7 @@ fn put_database() {
     match client.put_database(db_path)
                 .run()
                 .unwrap_err() {
-        couchdb::Error::InvalidDatabaseName(..) => (),
+        couchdb::Error::BadRequest(..) => (),
         e => {
             panic!("Got unexpected error: {}", e);
         }
@@ -154,7 +154,7 @@ fn delete_database() {
     match client.delete_database(path)
                 .run()
                 .unwrap_err() {
-        couchdb::Error::InvalidDatabaseName(..) => (),
+        couchdb::Error::BadRequest(..) => (),
         e => {
             panic!("Got unexpected error: {}", e);
         }

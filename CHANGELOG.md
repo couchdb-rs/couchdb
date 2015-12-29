@@ -6,6 +6,9 @@
 
 * Refactor the `Error` enum to hide many variants and to use tuples, not
   structs, for all non-hidden variants.
+* Rename `Error::InvalidRequest` to `Error::BadRequest` to match HTTP
+  API.
+* Remove `Error::InvalidDatabaseName`.
 
 ## [0.3.1] - 2015-12-21
 
