@@ -1,7 +1,7 @@
 use serde;
 use std;
 
-use dbtype::viewrow::ViewRow;
+use ViewRow;
 
 #[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct ViewResult<K, V>
@@ -20,7 +20,6 @@ impl<K, V> serde::Deserialize for ViewResult<K, V>
     fn deserialize<D>(d: &mut D) -> Result<Self, D::Error>
         where D: serde::Deserializer
     {
-
         enum Field {
             TotalRows,
             Offset,
@@ -119,46 +118,76 @@ mod tests {
 
     use serde_json;
 
-    use dbtype::viewrow::ViewRow;
-    use super::*;
+    use ViewResult;
+    use ViewRow;
 
     #[test]
-    fn test_view_result_serialization() {
+    fn view_result_deserialization_non_reduced_view() {
+        let expected = ViewResult::<String, i32> {
+            total_rows: Some(42),
+            offset: Some(17),
+            rows: vec![ViewRow {
+                           id: Some("foo".into()),
+                           key: Some("bar".into()),
+                           value: 5,
+                       },
+                       ViewRow {
+                           id: Some("qux".into()),
+                           key: Some("kit".into()),
+                           value: 13,
+                       }],
+        };
+        let source = serde_json::builder::ObjectBuilder::new()
+                         .insert("total_rows", 42)
+                         .insert("offset", 17)
+                         .insert_array("rows", |x| {
+                             x.push_object(|x| {
+                                  x.insert("id", "foo")
+                                   .insert("key", "bar")
+                                   .insert("value", 5)
+                              })
+                              .push_object(|x| {
+                                  x.insert("id", "qux")
+                                   .insert("key", "kit")
+                                   .insert("value", 13)
+                              })
+                         })
+                         .unwrap();
+        let s = serde_json::to_string(&source).unwrap();
+        let got = serde_json::from_str(&s).unwrap();
+        assert_eq!(expected, got);
+    }
 
-        // Verify: All fields present--i.e., a non-reduced view.
-        let s = r#"{"total_rows": 42, "offset": 17, "rows": [
-                {"id": "alpha", "key": "bravo", "value": 5},
-                {"id": "charlie", "key": "delta", "value": 37}
-            ]}"#;
-        let v = serde_json::from_str::<ViewResult<String, i32>>(&s).unwrap();
-        assert_eq!(v.total_rows, Some(42));
-        assert_eq!(v.offset, Some(17));
-        let exp_rows = vec![
-            ViewRow {
-                id: Some("alpha".to_string()),
-                key: Some("bravo".to_string()),
-                value: 5,
-            },
-            ViewRow {
-                id: Some("charlie".to_string()),
-                key: Some("delta".to_string()),
-                value: 37,
-            },
-        ];
-        assert_eq!(v.rows, exp_rows);
+    #[test]
+    fn view_result_deserialization_reduce_view() {
+        let expected = ViewResult::<String, i32> {
+            total_rows: None,
+            offset: None,
+            rows: vec![ViewRow {
+                           id: Some("foo".into()),
+                           key: Some("bar".into()),
+                           value: 5,
+                       }],
+        };
+        let source = serde_json::builder::ObjectBuilder::new()
+                         .insert_array("rows", |x| {
+                             x.push_object(|x| {
+                                 x.insert("id", "foo")
+                                  .insert("key", "bar")
+                                  .insert("value", 5)
+                             })
+                         })
+                         .unwrap();
+        let s = serde_json::to_string(&source).unwrap();
+        let got = serde_json::from_str(&s).unwrap();
+        assert_eq!(expected, got);
+    }
 
-        // Verify: Only one row--i.e., a reduced view.
-        let s = r#"{"rows": [ {"key": null, "value": 42} ]}"#;
-        let v = serde_json::from_str::<ViewResult<String, i32>>(&s).unwrap();
-        assert_eq!(v.total_rows, None);
-        assert_eq!(v.offset, None);
-        let exp_rows = vec![
-            ViewRow {
-                id: None,
-                key: None,
-                value: 42,
-            },
-        ];
-        assert_eq!(v.rows, exp_rows);
+    #[test]
+    fn view_result_deserialization_with_no_rows_field() {
+        let source = serde_json::builder::ObjectBuilder::new().unwrap();
+        let s = serde_json::to_string(&source).unwrap();
+        let got = serde_json::from_str::<ViewRow<String, i32>>(&s);
+        expect_json_error_missing_field!(got, "rows");
     }
 }

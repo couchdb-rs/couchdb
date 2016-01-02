@@ -1,11 +1,17 @@
 use hyper;
 
+use DatabaseName;
+use Error;
 use client::ClientState;
-use dbpath::DatabasePath;
-use error::Error;
-use transport::{self, Command, Request};
+use command::{self, Command, Request};
+use json;
 
 /// Command to get all database names.
+///
+/// # Errors
+///
+/// All errors that occur as a result of executing this command are private.
+///
 pub struct GetAllDatabases<'a> {
     client_state: &'a ClientState,
 }
@@ -16,21 +22,11 @@ impl<'a> GetAllDatabases<'a> {
         GetAllDatabases { client_state: client_state }
     }
 
-    /// Send the command request and wait for the response.
-    ///
-    /// # Errors
-    ///
-    /// Note: Other errors may occur.
-    ///
-    /// This command has no specific errors.
-    ///
-    pub fn run(self) -> Result<Vec<DatabasePath>, Error> {
-        transport::run_command(self)
-    }
+    impl_command_public_methods!(Vec<DatabaseName>);
 }
 
 impl<'a> Command for GetAllDatabases<'a> {
-    type Output = Vec<DatabasePath>;
+    type Output = Vec<DatabaseName>;
     type State = ();
 
     fn make_request(self) -> Result<(Request, Self::State), Error> {
@@ -43,11 +39,13 @@ impl<'a> Command for GetAllDatabases<'a> {
         Ok((req, ()))
     }
 
-    fn take_response(resp: hyper::client::Response, _state: Self::State) -> Result<Self::Output, Error> {
+    fn take_response(resp: hyper::client::Response,
+                     _state: Self::State)
+                     -> Result<Self::Output, Error> {
         match resp.status {
             hyper::status::StatusCode::Ok => {
-                try!(transport::content_type_must_be_application_json(&resp.headers));
-                transport::decode_json::<_, Vec<DatabasePath>>(resp)
+                try!(command::content_type_must_be_application_json(&resp.headers));
+                json::decode_json::<_, Vec<DatabaseName>>(resp)
             }
             _ => Err(Error::UnexpectedHttpStatus { got: resp.status }),
         }

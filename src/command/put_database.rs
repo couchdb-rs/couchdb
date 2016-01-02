@@ -1,56 +1,67 @@
 use hyper;
 
+use Error;
+use ErrorResponse;
+use IntoDatabasePath;
 use client::ClientState;
-use dbpath::DatabasePath;
-use error::{Error, ErrorResponse};
-use transport::{self, Command, Request};
+use command::{self, Command, Request};
+use json;
 
 /// Command to create a database.
-pub struct PutDatabase<'a> {
+///
+/// # Errors
+///
+/// The following are some of the errors that may occur as a result of executing
+/// this command:
+///
+/// * `Error::DatabaseExists`: The database already exists.
+/// * `Error::Unauthorized`: The client is unauthorized.
+///
+pub struct PutDatabase<'a, P>
+    where P: IntoDatabasePath
+{
     client_state: &'a ClientState,
-    path: DatabasePath,
+    path: P,
 }
 
-impl<'a> PutDatabase<'a> {
+impl<'a, P: IntoDatabasePath> PutDatabase<'a, P> {
     #[doc(hidden)]
-    pub fn new(client_state: &'a ClientState, path: DatabasePath) -> Self {
+    pub fn new(client_state: &'a ClientState, path: P) -> Self {
         PutDatabase {
             client_state: client_state,
             path: path,
         }
     }
 
-    /// Send the command request and wait for the response.
-    ///
-    /// # Errors
-    ///
-    /// Note: Other errors may occur.
-    ///
-    /// * `Error::DatabaseExists`: The database already exists.
-    /// * `Error::Unauthorized`: The client is unauthorized.
-    ///
-    pub fn run(self) -> Result<(), Error> {
-        transport::run_command(self)
-    }
+    impl_command_public_methods!(());
 }
 
-impl<'a> Command for PutDatabase<'a> {
+impl<'a, P: IntoDatabasePath> Command for PutDatabase<'a, P> {
     type Output = ();
     type State = ();
 
     fn make_request(self) -> Result<(Request, Self::State), Error> {
-        let uri = self.path.into_uri(self.client_state.uri.clone());
+        let db_path = try!(self.path.into_database_path());
+        let uri = db_path.into_uri(self.client_state.uri.clone());
         let req = try!(Request::new(hyper::method::Method::Put, uri)).accept_application_json();
         Ok((req, ()))
     }
 
-    fn take_response(resp: hyper::client::Response, _state: Self::State) -> Result<Self::Output, Error> {
+    fn take_response(resp: hyper::client::Response,
+                     _state: Self::State)
+                     -> Result<Self::Output, Error> {
         match resp.status {
-            hyper::status::StatusCode::Created => transport::content_type_must_be_application_json(&resp.headers),
-            hyper::status::StatusCode::BadRequest => Err(Error::BadRequest(try!(ErrorResponse::from_reader(resp)))),
-            hyper::status::StatusCode::Unauthorized => Err(Error::Unauthorized(try!(ErrorResponse::from_reader(resp)))),
+            hyper::status::StatusCode::Created => {
+                command::content_type_must_be_application_json(&resp.headers)
+            }
+            hyper::status::StatusCode::BadRequest => {
+                Err(Error::BadRequest(try!(json::decode_json::<_, ErrorResponse>(resp))))
+            }
+            hyper::status::StatusCode::Unauthorized => {
+                Err(Error::Unauthorized(Some(try!(json::decode_json::<_, ErrorResponse>(resp)))))
+            }
             hyper::status::StatusCode::PreconditionFailed => {
-                Err(Error::DatabaseExists(try!(ErrorResponse::from_reader(resp))))
+                Err(Error::DatabaseExists(try!(json::decode_json::<_, ErrorResponse>(resp))))
             }
             _ => Err(Error::UnexpectedHttpStatus { got: resp.status }),
         }

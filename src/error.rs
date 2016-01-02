@@ -3,7 +3,7 @@ use serde_json;
 use std;
 use url;
 
-use dbtype;
+use ErrorResponse;
 
 /// Principal error type.
 ///
@@ -12,8 +12,27 @@ use dbtype;
 ///
 #[derive(Debug)]
 pub enum Error {
+    /// The database path is in an invalid format.
+    BadDatabasePath(BadPathKind),
+
+    /// The design document path is in an invalid format.
+    BadDesignDocumentPath(BadPathKind),
+
+    /// The document path is in an invalid format.
+    BadDocumentPath(BadPathKind),
+
+    // The MD5 hash is in an invalid format.
+    #[doc(hidden)]
+    BadMd5Hash,
+
     /// The client request is invalid.
     BadRequest(ErrorResponse),
+
+    /// The revision is in an invalid format.
+    BadRevision,
+
+    /// The view path is in an invalid format.
+    BadViewPath(BadPathKind),
 
     /// The database already exists.
     DatabaseExists(ErrorResponse),
@@ -31,6 +50,12 @@ pub enum Error {
 
     /// An internal server error occurred.
     InternalServerError(ErrorResponse),
+
+    // The string has an invalid percent-encoding.
+    #[doc(hidden)]
+    InvalidPercentEncoding {
+        encoding: String,
+    },
 
     // I/O error with a compile-time description.
     #[doc(hidden)]
@@ -66,7 +91,12 @@ pub enum Error {
     Transport(TransportKind),
 
     /// The client is unauthorized to carry out the operation.
-    Unauthorized(ErrorResponse),
+    ///
+    /// In case of a HEAD request, the response value is `None` (because the
+    /// server doesn't send response content for HEAD requests). For all other
+    /// request methods, the response value is `Some`.
+    ///
+    Unauthorized(Option<ErrorResponse>),
 
     // The CouchDB server responded with a Content-Type header that the client
     // didn't expect.
@@ -94,14 +124,23 @@ impl std::error::Error for Error {
     fn description(&self) -> &str {
         use self::Error::*;
         match *self {
+            BadDatabasePath(..) => "The database path is in an invalid format",
+            BadDesignDocumentPath(..) => "The design document path is in an invalid format",
+            BadDocumentPath(..) => "The document path is in an invalid format",
+            BadMd5Hash => "The MD5 hash is in an invalid format",
             BadRequest(..) => "The client request is invalid",
+            BadRevision => "The revision is in an invalid format",
+            BadViewPath(..) => "The view path is in an invalid format",
             DatabaseExists(..) => "The database already exists",
             Decode(..) => "The client failed to decode a JSON response from the CouchDB server",
             DocumentConflict(..) => "The client request conflicts with an existing document",
             Encode(..) => "The client failed to encode a JSON request to the CouchDB server",
             InternalServerError(..) => "An internal server error occurred",
+            InvalidPercentEncoding { .. } => "The string has an invalid percent-encoding",
             Io{ ref description, .. } => description,
-            NoContentTypeHeader { .. } => "The CouchDB server responded without a Content-Type header",
+            NoContentTypeHeader { .. } => {
+                "The CouchDB server responded without a Content-Type header"
+            }
             NotFound(..) => "The resource does not exist",
             ReceiveFromThread { ref description, .. } => description,
             Transport(..) => "An HTTP transport error occurred",
@@ -119,12 +158,19 @@ impl std::error::Error for Error {
     fn cause(&self) -> std::option::Option<&std::error::Error> {
         use self::Error::*;
         match *self {
+            BadDatabasePath(ref kind) => kind.cause(),
+            BadDesignDocumentPath(ref kind) => kind.cause(),
+            BadDocumentPath(ref kind) => kind.cause(),
+            BadMd5Hash => None,
             BadRequest(..) => None,
+            BadRevision => None,
+            BadViewPath(ref kind) => kind.cause(),
             DatabaseExists(..) => None,
             Decode(ref kind) => kind.cause(),
             DocumentConflict(..) => None,
             Encode(ref kind) => kind.cause(),
             InternalServerError(..) => None,
+            InvalidPercentEncoding { .. } => None,
             Io{ref cause, ..} => Some(cause),
             NoContentTypeHeader { .. } => None,
             NotFound(..) => None,
@@ -146,76 +192,85 @@ impl std::fmt::Display for Error {
             self.description()
         };
         match *self {
+            BadDatabasePath(ref kind) => write!(f, "{}: {}", d, kind),
+            BadDesignDocumentPath(ref kind) => write!(f, "{}: {}", d, kind),
+            BadDocumentPath(ref kind) => write!(f, "{}: {}", d, kind),
+            BadMd5Hash => write!(f, "{}", d),
             BadRequest(ref response) => write!(f, "{}: {}", d, response),
+            BadRevision => write!(f, "{}", d),
+            BadViewPath(ref kind) => write!(f, "{}: {}", d, kind),
             DatabaseExists(ref response) => write!(f, "{}: {}", d, response),
             Decode(ref kind) => write!(f, "{}: {}", d, kind),
             DocumentConflict(ref response) => write!(f, "{}: {}", d, response),
             Encode(ref kind) => write!(f, "{}: {}", d, kind),
             InternalServerError(ref response) => write!(f, "{}: {}", d, response),
+            InvalidPercentEncoding{ref encoding} => write!(f, "{}: Got '{}'", d, encoding),
             Io{ref cause, ..} => write!(f, "{}: {}", d, cause),
-            NoContentTypeHeader { ref expected } => write!(f, "{}: Expected '{}'", d, expected),
+            NoContentTypeHeader{ref expected} => write!(f, "{}: Expected '{}'", d, expected),
             NotFound(ref response) => {
                 match *response {
                     Some(ref response) => write!(f, "{}: {}", d, response),
                     None => write!(f, "{}", d),
                 }
             }
-            ReceiveFromThread { ref cause, .. } => write!(f, "{}: {}", d, cause),
+            ReceiveFromThread{ref cause, ..} => write!(f, "{}: {}", d, cause),
             Transport(ref kind) => write!(f, "{}: {}", d, kind),
-            Unauthorized(ref response) => write!(f, "{}: {}", d, response),
-            UnexpectedContentTypeHeader { ref expected, ref got } => {
+            Unauthorized(ref response) => {
+                match *response {
+                    Some(ref response) => write!(f, "{}: {}", d, response),
+                    None => write!(f, "{}", d),
+                }
+            }
+            UnexpectedContentTypeHeader{ref expected, ref got} => {
                 write!(f, "{}: Expected '{}', got '{}'", d, expected, got)
             }
-            UnexpectedHttpStatus { ref got } => write!(f, "{}: Got {}", d, got),
-            UriParse { ref cause } => write!(f, "{}: {}", d, cause),
+            UnexpectedHttpStatus{ref got} => write!(f, "{}: Got {}", d, got),
+            UriParse{ref cause} => write!(f, "{}: {}", d, cause),
         }
     }
 }
 
-/// Response content from the CouchDB server in case of error.
-#[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
-pub struct ErrorResponse {
-    /// Error string returned by CouchDB Server.
-    ///
-    /// This is the high-level name of the error—e.g., “file_exists”.
-    ///
-    pub error: String,
-
-    /// Reason string returned by CouchDB Server.
-    ///
-    /// This is a low-level description of the error—e.g., “The database could
-    /// not be created, the file already exists.”
-    ///
-    pub reason: String,
+#[derive(Debug)]
+pub enum BadPathKind {
+    // TODO: It would be helpful to say 'why' the percent-encoding is invalid.
+    BadPercentEncoding,
+    NoLeadingSlash,
+    NotDatabase,
+    NotDesignDocument,
+    NotDocument,
+    NotView,
 }
 
-impl ErrorResponse {
-    pub fn from_reader<R>(r: R) -> Result<Self, Error>
-        where R: std::io::Read
-    {
-        serde_json::from_reader::<_, dbtype::ErrorResponse>(r)
-            .map_err(|e| Error::Decode(DecodeErrorKind::Serde { cause: e }))
-            .map(|x| {
-                ErrorResponse {
-                    error: x.error,
-                    reason: x.reason,
-                }
-            })
+impl BadPathKind {
+    fn cause(&self) -> Option<&std::error::Error> {
+        use self::BadPathKind::*;
+        match *self {
+            BadPercentEncoding => None,
+            NoLeadingSlash => None,
+            NotDatabase => None,
+            NotDesignDocument => None,
+            NotDocument => None,
+            NotView => None,
+        }
     }
 }
 
-impl std::fmt::Display for ErrorResponse {
+impl std::fmt::Display for BadPathKind {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> Result<(), std::fmt::Error> {
-        write!(f, "{}: {}", self.error, self.reason)
+        use self::BadPathKind::*;
+        match *self {
+            BadPercentEncoding => write!(f, "Path contains an invalid percent-encoding"),
+            NoLeadingSlash => write!(f, "No leading slash"),
+            NotDatabase => write!(f, "Path does not specify a database"),
+            NotDesignDocument => write!(f, "Path does not specify a design document"),
+            NotDocument => write!(f, "Path does not specify a document"),
+            NotView => write!(f, "Path does not specify a view"),
+        }
     }
 }
 
 #[derive(Debug)]
 pub enum DecodeErrorKind {
-    InstanceStartTime {
-        got: String,
-        cause: std::num::ParseIntError,
-    },
     InvalidDocument {
         what: &'static str,
     },
@@ -228,7 +283,6 @@ impl DecodeErrorKind {
     fn cause(&self) -> Option<&std::error::Error> {
         use self::DecodeErrorKind::*;
         match *self {
-            InstanceStartTime { ref cause, .. } => Some(cause),
             InvalidDocument { .. } => None,
             Serde { ref cause } => Some(cause),
         }
@@ -239,12 +293,6 @@ impl std::fmt::Display for DecodeErrorKind {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> Result<(), std::fmt::Error> {
         use self::DecodeErrorKind::*;
         match *self {
-            InstanceStartTime { ref got, ref cause } => {
-                write!(f,
-                       "Could not convert `instance_start_time` field to numeric type: {}: got {}",
-                       cause,
-                       got)
-            }
             InvalidDocument { ref what } => write!(f, "Unexpected document content: {}", what),
             Serde { ref cause } => cause.fmt(f),
         }

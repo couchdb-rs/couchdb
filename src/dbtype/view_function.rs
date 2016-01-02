@@ -20,7 +20,6 @@ impl serde::Serialize for ViewFunction {
     fn serialize<S>(&self, s: &mut S) -> Result<(), S::Error>
         where S: serde::Serializer
     {
-
         struct Visitor<'a>(&'a ViewFunction);
 
         impl<'a> serde::ser::MapVisitor for Visitor<'a> {
@@ -46,7 +45,6 @@ impl serde::Deserialize for ViewFunction {
     fn deserialize<D>(d: &mut D) -> Result<Self, D::Error>
         where D: serde::Deserializer
     {
-
         enum Field {
             Map,
             Reduce,
@@ -56,7 +54,6 @@ impl serde::Deserialize for ViewFunction {
             fn deserialize<D>(d: &mut D) -> Result<Self, D::Error>
                 where D: serde::Deserializer
             {
-
                 struct Visitor;
 
                 impl serde::de::Visitor for Visitor {
@@ -127,98 +124,73 @@ mod tests {
 
     use serde_json;
 
-    use super::*;
-    use jsontest;
+    use ViewFunction;
 
     #[test]
-    fn test_serialization() {
-
-        // VERIFY: All fields are present.
-
-        let exp = serde_json::builder::ObjectBuilder::new()
-                      .insert("map", "function(doc) { emit(doc.name, doc.value); }")
-                      .insert("reduce", "function(keys, values) { return sum(values); }")
-                      .unwrap();
-
-        let vf = ViewFunction {
+    fn view_function_serialization_with_all_fields() {
+        let expected = serde_json::builder::ObjectBuilder::new()
+                           .insert("map", "function(doc) { emit(doc.name, doc.value); }")
+                           .insert("reduce", "function(keys, values) { return sum(values); }")
+                           .unwrap();
+        let source = ViewFunction {
             map: "function(doc) { emit(doc.name, doc.value); }".to_string(),
             reduce: Some("function(keys, values) { return sum(values); }".to_string()),
         };
-
-        let s = serde_json::to_string(&vf).unwrap();
-        let got = serde_json::from_str::<serde_json::Value>(&s).unwrap();
-
-        assert_eq!(got, exp);
-
-        // VERIFY: The `reduce` field is None.
-
-        let exp = serde_json::builder::ObjectBuilder::new()
-                      .insert("map", "function(doc) { emit(doc.name, doc.value); }")
-                      .unwrap();
-
-        let vf = ViewFunction {
-            map: "function(doc) { emit(doc.name, doc.value); }".to_string(),
-            reduce: None,
-        };
-
-        let s = serde_json::to_string(&vf).unwrap();
-        let got = serde_json::from_str::<serde_json::Value>(&s).unwrap();
-
-        assert_eq!(got, exp);
+        let s = serde_json::to_string(&source).unwrap();
+        let got = serde_json::from_str(&s).unwrap();
+        assert_eq!(expected, got);
     }
 
     #[test]
-    fn test_deserialization() {
-
-        // VERIFY: All fields are present.
-
-        let exp = ViewFunction {
-            map: "function(doc) { emit(doc.name, doc.value); }".to_string(),
-            reduce: Some("function(keys, values) { return sum(values); }".to_string()),
-        };
-
-        let s = r#"{
-            "map": "function(doc) { emit(doc.name, doc.value); }",
-            "reduce": "function(keys, values) { return sum(values); }"
-        }"#;
-
-        let got = serde_json::from_str::<ViewFunction>(&s).unwrap();
-
-        assert_eq!(got, exp);
-
-        // VERIFY: The `reduce` field is missing.
-
-        let exp = ViewFunction {
+    fn view_function_serialization_with_reduce_field_elided() {
+        let expected = serde_json::builder::ObjectBuilder::new()
+                           .insert("map", "function(doc) { emit(doc.name, doc.value); }")
+                           .unwrap();
+        let source = ViewFunction {
             map: "function(doc) { emit(doc.name, doc.value); }".to_string(),
             reduce: None,
         };
+        let s = serde_json::to_string(&source).unwrap();
+        let got = serde_json::from_str(&s).unwrap();
+        assert_eq!(expected, got);
+    }
 
-        let s = r#"{
-            "map": "function(doc) { emit(doc.name, doc.value); }"
-        }"#;
+    #[test]
+    fn view_function_deserialization_with_all_fields() {
+        let expected = ViewFunction {
+            map: "function(doc) { emit(doc.name, doc.value); }".to_string(),
+            reduce: Some("function(keys, values) { return sum(values); }".to_string()),
+        };
+        let source = serde_json::builder::ObjectBuilder::new()
+                         .insert("map", "function(doc) { emit(doc.name, doc.value); }")
+                         .insert("reduce", "function(keys, values) { return sum(values); }")
+                         .unwrap();
+        let s = serde_json::to_string(&source).unwrap();
+        let got = serde_json::from_str(&s).unwrap();
+        assert_eq!(expected, got);
+    }
 
-        let got = serde_json::from_str::<ViewFunction>(&s).unwrap();
+    #[test]
+    fn view_function_deserialization_with_reduce_field_elided() {
+        let expected = ViewFunction {
+            map: "function(doc) { emit(doc.name, doc.value); }".to_string(),
+            reduce: None,
+        };
+        let source = serde_json::builder::ObjectBuilder::new()
+                         .insert("map", "function(doc) { emit(doc.name, doc.value); }")
+                         .unwrap();
+        let s = serde_json::to_string(&source).unwrap();
+        let got = serde_json::from_str(&s).unwrap();
+        assert_eq!(expected, got);
+    }
 
-        assert_eq!(got, exp);
-
-        // VERIFY: The `map` field is missing.
-
-        let s = r#"{
-            "reduce": "function(keys, values) { return sum(values); }"
-        }"#;
-
-        let got = serde_json::from_str::<ViewFunction>(&s).unwrap_err();
-        jsontest::assert_missing_field(&got, "map");
-
-        // VERIFY: With invalid field.
-
-        let s = r#"{
-            "map": "function(doc) { emit(doc.name, doc.value); }",
-            "reduce": "function(keys, values) { return sum(values); }",
-            "foo": 42,
-        }"#;
-
-        let got = serde_json::from_str::<ViewFunction>(&s).unwrap_err();
-        jsontest::assert_unknown_field(&got, "foo");
+    #[test]
+    fn view_function_deserialization_with_map_field_elided() {
+        let source = serde_json::builder::ObjectBuilder::new()
+                         .insert("reduce", "function(keys, values) { return sum(values); }")
+                         .unwrap();
+        let s = serde_json::to_string(&source).unwrap();
+        let got = serde_json::from_str::<ViewFunction>(&s);
+        expect_json_error_missing_field!(got, "value");
     }
 }

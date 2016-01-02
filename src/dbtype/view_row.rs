@@ -1,12 +1,14 @@
 use serde;
 use std;
 
+use DocumentId;
+
 #[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct ViewRow<K, V>
     where K: serde::Deserialize,
           V: serde::Deserialize
 {
-    pub id: Option<String>,
+    pub id: Option<DocumentId>,
     pub key: Option<K>,
     pub value: V,
 }
@@ -116,30 +118,67 @@ mod tests {
 
     use serde_json;
 
-    use super::*;
+    use DocumentId;
+    use ViewRow;
 
     #[test]
-    fn test_view_row_serialization() {
+    fn view_row_deserialization_with_all_fields() {
+        let expected = ViewRow {
+            id: Some(DocumentId::Normal("foo".into())),
+            key: Some("bar".to_string()),
+            value: 42,
+        };
+        let source = serde_json::builder::ObjectBuilder::new()
+                         .insert("id", "foo")
+                         .insert("key", "bar")
+                         .insert("value", 42)
+                         .unwrap();
+        let s = serde_json::to_string(&source).unwrap();
+        let got = serde_json::from_str(&s).unwrap();
+        assert_eq!(expected, got);
+    }
 
-        // Verify: All fields present.
-        let s = r#"{"id": "alpha", "key": "bravo", "value": 42}"#;
-        let v = serde_json::from_str::<ViewRow<String, i32>>(&s).unwrap();
-        assert_eq!(v.id, Some("alpha".to_string()));
-        assert_eq!(v.key, Some("bravo".to_string()));
-        assert_eq!(v.value, 42);
+    #[test]
+    fn view_row_deserialization_with_no_id_field() {
+        let expected = ViewRow {
+            id: None,
+            key: Some("bar".to_string()),
+            value: 42,
+        };
+        let source = serde_json::builder::ObjectBuilder::new()
+                         .insert("key", "bar")
+                         .insert("value", 42)
+                         .unwrap();
+        let s = serde_json::to_string(&source).unwrap();
+        let got = serde_json::from_str(&s).unwrap();
+        assert_eq!(expected, got);
+    }
 
-        // Verify: Missing "id" field.
-        let s = r#"{"key": "alpha", "value": 42}"#;
-        let v = serde_json::from_str::<ViewRow<String, i32>>(&s).unwrap();
-        assert!(v.id.is_none());
-        assert_eq!(v.key, Some("alpha".to_string()));
-        assert_eq!(v.value, 42);
+    #[test]
+    fn view_row_deserialization_with_no_key_field() {
+        let expected = ViewRow::<String, _> {
+            id: Some(DocumentId::Normal("foo".into())),
+            key: None,
+            value: 42,
+        };
+        let source = serde_json::builder::ObjectBuilder::new()
+                         .insert("id", "foo")
+                         .insert("key", serde_json::Value::Null)
+                         .insert("value", 42)
+                         .unwrap();
+        let s = serde_json::to_string(&source).unwrap();
+        let got = serde_json::from_str(&s).unwrap();
+        assert_eq!(expected, got);
+    }
 
-        // Verify: Null "key" field.
-        let s = r#"{"id": "alpha", "key": null, "value": 42}"#;
-        let v = serde_json::from_str::<ViewRow<String, i32>>(&s).unwrap();
-        assert_eq!(v.id, Some("alpha".to_string()));
-        assert_eq!(v.key, None);
-        assert_eq!(v.value, 42);
+    #[test]
+    fn view_row_deserialization_with_no_value_field() {
+        let source = serde_json::builder::ObjectBuilder::new()
+                         .insert("id", "foo")
+                         .insert("key", "bar")
+                         .unwrap();
+        let s = serde_json::to_string(&source).unwrap();
+        let got = serde_json::from_str::<ViewRow<String, i32>>(&s);
+        expect_json_error_missing_field!(got, "value");
     }
 }

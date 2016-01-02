@@ -2,7 +2,7 @@ use regex;
 use std;
 use tempdir;
 
-use error::Error;
+use Error;
 
 /// RAII wrapper for a child process that kills the process when dropped.
 struct AutoKillProcess(std::process::Child);
@@ -73,7 +73,8 @@ impl Server {
                                                    .map_err(|e| {
                                                        Error::Io {
                                                            cause: e,
-                                                           description: "Failed to spawn CouchDB server process",
+                                                           description: "Failed to spawn CouchDB \
+                                                                         server process",
                                                        }
                                                    })));
 

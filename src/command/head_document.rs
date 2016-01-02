@@ -1,21 +1,38 @@
 use hyper;
 
+use Error;
+use IntoDocumentPath;
+use Revision;
 use client::ClientState;
-use docpath::DocumentPath;
-use error::{Error, ErrorResponse};
-use revision::Revision;
-use transport::{self, Command, Request};
+use command::{self, Command, Request};
 
 /// Command to get document meta-information.
-pub struct HeadDocument<'a> {
+///
+/// # Return
+///
+/// This command returns an `Option` type. The return value is `None` if the
+/// command specifies a revision and the document hasn't been modified since
+/// that revision. Otherwise, the return value is `Some`.
+///
+/// # Errors
+///
+/// The following are some of the errors that may occur as a result of executing
+/// this command:
+///
+/// * `Error::NotFound`: The document does not exist.
+/// * `Error::Unauthorized`: The client is unauthorized.
+///
+pub struct HeadDocument<'a, P>
+    where P: IntoDocumentPath
+{
     client_state: &'a ClientState,
-    path: DocumentPath,
+    path: P,
     if_none_match: Option<&'a Revision>,
 }
 
-impl<'a> HeadDocument<'a> {
+impl<'a, P: IntoDocumentPath> HeadDocument<'a, P> {
     #[doc(hidden)]
-    pub fn new(client_state: &'a ClientState, path: DocumentPath) -> Self {
+    pub fn new(client_state: &'a ClientState, path: P) -> Self {
         HeadDocument {
             client_state: client_state,
             path: path,
@@ -29,40 +46,27 @@ impl<'a> HeadDocument<'a> {
         self
     }
 
-    /// Send the command request and wait for the response.
-    ///
-    /// # Return
-    ///
-    /// Return `None` if an If-None-Match revision is given and the document
-    /// hasn't been modified since that revision. Otherwise, return `Some`.
-    ///
-    /// # Errors
-    ///
-    /// Note: Other errors may occur.
-    ///
-    /// * `Error::NotFound`: The document does not exist.
-    /// * `Error::Unauthorized`: The client is unauthorized.
-    ///
-    pub fn run(self) -> Result<Option<()>, Error> {
-        transport::run_command(self)
-    }
+    impl_command_public_methods!(Option<()>);
 }
 
-impl<'a> Command for HeadDocument<'a> {
+impl<'a, P: IntoDocumentPath> Command for HeadDocument<'a, P> {
     type Output = Option<()>;
     type State = ();
 
     fn make_request(self) -> Result<(Request, Self::State), Error> {
-        let uri = self.path.into_uri(self.client_state.uri.clone());
+        let doc_path = try!(self.path.into_document_path());
+        let uri = doc_path.into_uri(self.client_state.uri.clone());
         let req = try!(Request::new(hyper::Head, uri)).if_none_match_revision(self.if_none_match);
         Ok((req, ()))
     }
 
-    fn take_response(resp: hyper::client::Response, _state: Self::State) -> Result<Self::Output, Error> {
+    fn take_response(resp: hyper::client::Response,
+                     _state: Self::State)
+                     -> Result<Self::Output, Error> {
         match resp.status {
             hyper::status::StatusCode::Ok => Ok(Some(())),
             hyper::status::StatusCode::NotModified => Ok(None),
-            hyper::status::StatusCode::Unauthorized => Err(Error::Unauthorized(try!(ErrorResponse::from_reader(resp)))),
+            hyper::status::StatusCode::Unauthorized => Err(Error::Unauthorized(None)),
             hyper::status::StatusCode::NotFound => Err(Error::NotFound(None)),
             _ => Err(Error::UnexpectedHttpStatus { got: resp.status }),
         }

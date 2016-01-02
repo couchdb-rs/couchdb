@@ -1,562 +1,614 @@
 extern crate couchdb;
 extern crate serde_json;
 
-use couchdb::{DatabasePath, DocumentPath, ViewPath};
-
-enum Db {
-    Baseball,
-    Basketball,
-}
-
-impl Into<DatabasePath> for Db {
-    fn into(self) -> DatabasePath {
-        match self {
-            Db::Baseball => DatabasePath::from("baseball"),
-            Db::Basketball => DatabasePath::from("basketball"),
-        }
-    }
-}
-
-#[derive(Debug)]
-enum Doc {
-    BabeRuth,
-    HankAaron,
-    MyDesign,
-}
-
-impl Into<DocumentPath> for Doc {
-    fn into(self) -> DocumentPath {
-        match self {
-            Doc::BabeRuth => DocumentPath::new(Db::Baseball, "babe_ruth"),
-            Doc::HankAaron => DocumentPath::new(Db::Baseball, "hank_aaron"),
-            Doc::MyDesign => DocumentPath::new(Db::Baseball, "_design/my_design"),
-        }
-    }
-}
-
-#[test]
-fn head_database() {
-
-    let server = couchdb::Server::new().unwrap();
-    let client = couchdb::Client::new(server.uri()).unwrap();
-
-    // Verify: Heading an existing database succeeds.
-    client.put_database(Db::Baseball).run().unwrap();
-    client.head_database(Db::Baseball).run().unwrap();
-
-    // Verify: Heading a non-existing database fails.
-    match client.head_database(Db::Basketball).run().unwrap_err() {
-        couchdb::Error::NotFound(..) => (),
-        e => {
-            panic!("Got unexpected error: {}", e);
-        }
-    }
-}
-
-#[test]
-fn get_database() {
-
-    let server = couchdb::Server::new().unwrap();
-    let client = couchdb::Client::new(server.uri()).unwrap();
-
-    // Verify: Getting an existing database succeeds.
-    client.put_database(Db::Baseball).run().unwrap();
-    client.get_database(Db::Baseball).run().unwrap();
-
-    // Verify: Getting a non-existing database fails.
-    match client.get_database(Db::Basketball).run().unwrap_err() {
-        couchdb::Error::NotFound(..) => (),
-        e => {
-            panic!("Got unexpected error: {}", e);
-        }
-    }
-}
-
-#[test]
-fn put_database() {
-
-    use std::collections::HashSet;
-
-    let server = couchdb::Server::new().unwrap();
-    let client = couchdb::Client::new(server.uri()).unwrap();
-
-    let get_all_databases = || {
-        client.get_all_databases()
-              .run()
-              .unwrap()
-              .into_iter()
-              .collect::<HashSet<_>>()
-    };
-
-    // Verify: Putting a non-existing database succeeds.
-    let pre = get_all_databases();
-    client.put_database(Db::Baseball).run().unwrap();
-    let post = get_all_databases();
-    assert_eq!(0 as usize, pre.difference(&post).count());
-    let db_path: DatabasePath = Db::Baseball.into();
-    let db_name: String = db_path.into();
-    let exp = vec![db_name];
-    let got = post.difference(&pre).map(|x| x.as_ref().to_string()).collect::<Vec<String>>();
-    assert_eq!(exp, got);
-
-    // Verify: Putting an existing database fails.
-    match client.put_database(Db::Baseball).run().unwrap_err() {
-        couchdb::Error::DatabaseExists(..) => (),
-        e => {
-            panic!("Got unexpected error: {}", e);
-        }
-    }
-
-    // Verify: Putting a database with an invalid name fails.
-    let db_path = DatabasePath::from("_database_names_cannot_start_with_an_underscore");
-    match client.put_database(db_path)
-                .run()
-                .unwrap_err() {
-        couchdb::Error::BadRequest(..) => (),
-        e => {
-            panic!("Got unexpected error: {}", e);
-        }
-    }
-}
-
-#[test]
-fn delete_database() {
-
-    use std::collections::HashSet;
-    let server = couchdb::Server::new().unwrap();
-    let client = couchdb::Client::new(server.uri()).unwrap();
-
-    let get_all_databases = || {
-        client.get_all_databases()
-              .run()
-              .unwrap()
-              .into_iter()
-              .collect::<HashSet<_>>()
-    };
-
-    // Verify: Deleting an existing database succeeds.
-    let pre = get_all_databases();
-    client.put_database(Db::Baseball).run().unwrap();
-    client.delete_database(Db::Baseball).run().unwrap();
-    let post = get_all_databases();
-    assert_eq!(pre, post);
-
-    // Verify: Deleting an non-existing database fails.
-    match client.delete_database(Db::Baseball).run().unwrap_err() {
-        couchdb::Error::NotFound(..) => (),
-        e => {
-            panic!("Got unexpected error: {}", e);
-        }
-    }
-
-    // Verify: Deleting a database with an invalid name fails.
-    let path = DatabasePath::from("_database_names_cannot_start_with_an_underscore");
-    match client.delete_database(path)
-                .run()
-                .unwrap_err() {
-        couchdb::Error::BadRequest(..) => (),
-        e => {
-            panic!("Got unexpected error: {}", e);
-        }
-    }
-}
-
-#[test]
-fn post_to_database() {
-
-    let server = couchdb::Server::new().unwrap();
-    let client = couchdb::Client::new(server.uri()).unwrap();
-
-    client.put_database(Db::Baseball).run().unwrap();
-
-    // VERIFY: Posting to a database to create a new document succeeds.
-
-    let src_content = serde_json::builder::ObjectBuilder::new()
-                          .insert("name", "Babe Ruth")
-                          .unwrap();
-    let (rev, path) = client.post_to_database(Db::Baseball, &src_content).run().unwrap();
-
-    let doc = client.get_document::<_, serde_json::Value>(path)
-                    .run()
-                    .unwrap()
-                    .unwrap();
-
-    assert_eq!(doc.revision, rev);
-    assert_eq!(doc.content, src_content);
-
-    // VERIFY: Posting to a database that doesn't exist fails with a "not found"
-    // error.
-
-    let src_content = serde_json::builder::ObjectBuilder::new()
-                          .insert("name", "Babe Ruth")
-                          .unwrap();
-    let e = client.post_to_database("non_existent_db", &src_content).run().unwrap_err();
-    match e {
-        couchdb::Error::NotFound(..) => (),
-        _ => {
-            panic!("Got unexpected error: {}", e);
-        }
-    }
-}
-
-#[test]
-fn head_document() {
-
-    let server = couchdb::Server::new().unwrap();
-    let client = couchdb::Client::new(server.uri()).unwrap();
-
-    client.put_database(Db::Baseball).run().unwrap();
-    let pdoc = serde_json::builder::ObjectBuilder::new()
-                   .insert("name", "Babe Ruth")
-                   .unwrap();
-    let rev1 = client.put_document(Doc::BabeRuth, &pdoc).run().unwrap();
-
-    // Verify: Heading an existing document succeeds.
-    client.head_document(Doc::BabeRuth).run().unwrap().unwrap();
-
-    // Verify: Heading an existing document with a matching If-None-Match header
-    // succeeds.
-    assert!(client.head_document(Doc::BabeRuth)
-                  .if_none_match(&rev1)
-                  .run()
-                  .unwrap()
-                  .is_none());
-
-    // Verify: Heading an existing document with a stale, non-matching
-    // If-None-Match header succeeds.
-    let pdoc = serde_json::builder::ObjectBuilder::new()
-                   .insert("name", "Babe Ruth")
-                   .insert("hr", 714)
-                   .unwrap();
-    client.put_document(Doc::BabeRuth, &pdoc)
-          .if_match(&rev1)
-          .run()
-          .unwrap();
-    client.head_document(Doc::BabeRuth)
-          .if_none_match(&rev1)
-          .run()
-          .unwrap()
-          .unwrap();
-
-    // Verify: Heading a non-existing document fails.
-    match client.head_document(Doc::HankAaron).run().unwrap_err() {
-        couchdb::Error::NotFound(..) => (),
-        e => panic!("Got unexpected error: {}", e),
-    }
-}
-
-#[test]
-fn get_document() {
-
-    let server = couchdb::Server::new().unwrap();
-    let client = couchdb::Client::new(server.uri()).unwrap();
-
-    client.put_database(Db::Baseball).run().unwrap();
-    let pdoc = serde_json::builder::ObjectBuilder::new()
-                   .insert("name", "babe_ruth")
-                   .unwrap();
-    let rev1 = client.put_document(Doc::BabeRuth, &pdoc).run().unwrap();
-
-    // Verify: Getting an existing document succeeds.
-    let doc1 = client.get_document::<_, serde_json::Value>(Doc::BabeRuth)
-                     .run()
-                     .unwrap()
-                     .unwrap();
-    assert_eq!(doc1.path, Doc::BabeRuth.into());
-    assert_eq!(doc1.revision, rev1);
-    assert_eq!(doc1.content, pdoc);
-
-    // Verify: Getting a non-existing document fails.
-    let e = client.get_document::<_, serde_json::Value>(Doc::HankAaron)
-                  .run()
-                  .unwrap_err();
-    match e {
-        couchdb::Error::NotFound(..) => (),
-        e => {
-            panic!("Got unexpected error: {}", e);
-        }
-    }
-
-    // Verify: Getting an existing document with a matching If-None-Match header
-    // succeeds with no document returned.
-    match client.get_document::<_, serde_json::Value>(Doc::BabeRuth)
-                .if_none_match(&rev1)
-                .run()
-                .unwrap() {
-        Some(_) => {
-            panic!("Got document, expected none");
-        }
-        None => (),
-    }
-
-    // Verify: Getting an existing document with a stale, non-matching
-    // If-None-Match header succeeds.
-    let pdoc = serde_json::builder::ObjectBuilder::new()
-                   .insert("name", "babe_ruth")
-                   .insert("hr", 714)
-                   .unwrap();
-    let rev2 = client.put_document(Doc::BabeRuth, &pdoc)
-                     .if_match(&rev1)
-                     .run()
-                     .unwrap();
-    let doc2 = client.get_document::<_, serde_json::Value>(Doc::BabeRuth)
-                     .if_none_match(&rev1)
-                     .run()
-                     .unwrap()
-                     .unwrap();
-    assert_eq!(doc2.revision, rev2);
-}
-
-#[test]
-fn put_document() {
-
-    let server = couchdb::Server::new().unwrap();
-    let client = couchdb::Client::new(server.uri()).unwrap();
-
-    client.put_database(Db::Baseball).run().unwrap();
-
-    // Verify: Putting a non-existing document succeeds.
-    let pdoc = serde_json::builder::ObjectBuilder::new()
-                   .insert("name", "Babe Ruth")
-                   .unwrap();
-    let rev1 = client.put_document(Doc::BabeRuth, &pdoc).run().unwrap();
-
-    // Verify: Putting an existing document without a revision fails.
-    let pdoc = serde_json::builder::ObjectBuilder::new()
-                   .insert("name", "Babe Ruth")
-                   .insert("hr", 714)
-                   .unwrap();
-    match client.put_document(Doc::BabeRuth, &pdoc).run().unwrap_err() {
-        couchdb::Error::DocumentConflict(..) => (),
-        e => {
-            panic!("Got unexpected error: {}", e);
-        }
-    }
-
-    // Verify: Putting an existing document with a matching revision succeeds.
-    let pdoc = serde_json::builder::ObjectBuilder::new()
-                   .insert("name", "Babe Ruth")
-                   .insert("hr", 714)
-                   .unwrap();
-    client.put_document(Doc::BabeRuth, &pdoc)
-          .if_match(&rev1)
-          .run()
-          .unwrap();
-
-    // Verify: Putting an existing document with a non-matching revision fails.
-    let pdoc = serde_json::builder::ObjectBuilder::new()
-                   .insert("name", "Babe Ruth")
-                   .insert("hr", 714)
-                   .insert("hits", 2873)
-                   .unwrap();
-    match client.put_document(Doc::BabeRuth, &pdoc)
-                .if_match(&rev1)
-                .run()
-                .unwrap_err() {
-        couchdb::Error::DocumentConflict(..) => (),
-        e => {
-            panic!("Got unexpected error: {}", e);
-        }
-    }
-}
-
-#[test]
-fn delete_document() {
-
-    let server = couchdb::Server::new().unwrap();
-    let client = couchdb::Client::new(server.uri()).unwrap();
-
-    client.put_database(Db::Baseball).run().unwrap();
-    let pdoc = serde_json::builder::ObjectBuilder::new()
-                   .insert("name", "Babe Ruth")
-                   .unwrap();
-    let rev1 = client.put_document(Doc::BabeRuth, &pdoc).run().unwrap();
-
-    // Verify: Deleting an existing document with matching revision succeeds.
-    client.delete_document(Doc::BabeRuth, &rev1).run().unwrap();
-    match client.head_document(Doc::BabeRuth).run().unwrap_err() {
-        couchdb::Error::NotFound(..) => (),
-        e => {
-            panic!("Got unexpected error: {}", e);
-        }
-    }
-
-    // Verify: Deleting a non-existing document fails.
-    match client.delete_document(Doc::BabeRuth, &rev1).run().unwrap_err() {
-        couchdb::Error::NotFound(..) => (),
-        e => {
-            panic!("Got unexpected error: {}", e);
-        }
-    }
-
-    // Verify: Deleting a document with a (stale) non-matching revision fails.
-    let pdoc = serde_json::builder::ObjectBuilder::new()
-                   .insert("name", "Hank Aaron")
-                   .unwrap();
-    let rev2 = client.put_document(Doc::HankAaron, &pdoc).run().unwrap();
-    let pdoc = serde_json::builder::ObjectBuilder::new()
-                   .insert("name", "Hank Aaron")
-                   .insert("hr", 755)
-                   .unwrap();
-    client.put_document(Doc::HankAaron, &pdoc)
-          .if_match(&rev2)
-          .run()
-          .unwrap();
-    match client.delete_document(Doc::HankAaron, &rev2).run().unwrap_err() {
-        couchdb::Error::DocumentConflict(..) => (),
-        e => {
-            panic!("Got unexpected error: {}", e);
-        }
-    }
-}
-
-#[test]
-fn get_view() {
-
-    enum View {
-        ByName,
-        ByHr,
-    };
-
-    impl Into<ViewPath> for View {
-        fn into(self) -> ViewPath {
-            match self {
-                View::ByName => ViewPath::new(Doc::MyDesign, "by_name"),
-                View::ByHr => ViewPath::new(Doc::MyDesign, "by_hr"),
+use std::collections::HashSet;
+
+macro_rules! expect_error_database_exists {
+    ($result:expr) => {
+        match $result {
+            Ok(..) => {
+                panic!("Got unexpected OK result");
+            }
+            Err(ref e) => {
+                match *e {
+                    couchdb::Error::DatabaseExists(..) => (),
+                    _ => {
+                        panic!("Got unexpected error: {}", e);
+                    }
+                }
             }
         }
     }
+}
 
+macro_rules! expect_error_document_conflict {
+    ($result:expr) => {
+        match $result {
+            Ok(..) => {
+                panic!("Got unexpected OK result");
+            }
+            Err(ref e) => {
+                match *e {
+                    couchdb::Error::DocumentConflict(..) => (),
+                    _ => {
+                        panic!("Got unexpected error: {}", e);
+                    }
+                }
+            }
+        }
+    }
+}
+
+macro_rules! expect_error_not_found_none {
+    ($result:expr) => {
+        match $result {
+            Ok(..) => {
+                panic!("Got unexpected OK result");
+            }
+            Err(ref e) => {
+                match *e {
+                    couchdb::Error::NotFound(ref response) => {
+                        match *response {
+                            None => (),
+                            Some(ref response) => {
+                                panic!("Expected None error response, got Some: {}", response);
+                            }
+                        }
+                    }
+                    _ => {
+                        panic!("Got unexpected error: {}", e);
+                    }
+                }
+            }
+        }
+    }
+}
+
+macro_rules! expect_error_not_found_some {
+    ($result:expr) => {
+        match $result {
+            Ok(..) => {
+                panic!("Got unexpected OK result");
+            }
+            Err(ref e) => {
+                match *e {
+                    couchdb::Error::NotFound(ref response) => {
+                        match *response {
+                            Some(..) => (),
+                            None => {
+                                panic!("Expected Some error response, got None");
+                            }
+                        }
+                    }
+                    _ => {
+                        panic!("Got unexpected error: {}", e);
+                    }
+                }
+            }
+        }
+    }
+}
+
+fn make_server_and_client() -> (couchdb::Server, couchdb::Client) {
     let server = couchdb::Server::new().unwrap();
     let client = couchdb::Client::new(server.uri()).unwrap();
+    (server, client)
+}
 
-    client.put_database(Db::Baseball).run().unwrap();
+#[test]
+fn get_all_databases_ok() {
+    let (_server, client) = make_server_and_client();
+    let expected = vec!["_replicator", "_users"]
+                       .into_iter()
+                       .map(|x| String::from(x))
+                       .collect::<HashSet<_>>();
+    let got = client.get_all_databases()
+                    .run()
+                    .unwrap()
+                    .into_iter()
+                    .map(|x| String::from(x))
+                    .collect::<HashSet<_>>();
+    assert_eq!(expected, got);
+}
 
-    let mut pddoc = couchdb::Design::new();
-    pddoc.views.insert("by_name".to_string(),
-                       couchdb::ViewFunction {
-                           map: "function(doc) { emit(doc.name, doc.name); }".to_string(),
-                           reduce: None,
-                       });
-    pddoc.views.insert("by_hr".to_string(),
-                       couchdb::ViewFunction {
-                           map: "function(doc) { emit(doc.name, doc.hr); }".to_string(),
-                           reduce: Some("function(keys, values) { return sum(values); }".to_string()),
-                       });
-    client.put_document(Doc::MyDesign, &pddoc).run().unwrap();
+#[test]
+fn head_database_ok() {
+    let (_server, client) = make_server_and_client();
+    client.put_database("/foo").run().unwrap();
+    client.head_database("/foo").run().unwrap();
+}
 
-    // Verify: Getting an empty view succeeds.
-    let result = client.get_view::<_, String, u32>(View::ByName)
-                       .run()
-                       .unwrap();
-    assert_eq!(Some(0), result.total_rows);
-    assert_eq!(Some(0), result.offset);
-    assert!(result.rows.is_empty());
+#[test]
+fn head_database_nok_database_does_not_exist() {
+    let (_server, client) = make_server_and_client();
+    let got = client.head_database("/foo").run();
+    expect_error_not_found_none!(got);
+}
 
-    // Populate the database with some documents.
+#[test]
+fn get_database_ok() {
+    let (_server, client) = make_server_and_client();
+    client.put_database("/foo").run().unwrap();
+    let got = client.get_database("/foo").run().unwrap();
+    assert_eq!(couchdb::DatabaseName::from("foo"), got.db_name);
+    assert_eq!(0, got.update_seq);
+    assert_eq!(0, got.committed_update_seq);
+    assert_eq!(0, got.doc_count);
+    assert_eq!(0, got.doc_del_count);
+    assert_eq!(0, got.data_size);
+    assert_eq!(0, got.purge_seq);
+    assert_eq!(false, got.compact_running);
+}
 
-    let pdoc = serde_json::builder::ObjectBuilder::new()
-                   .insert("name", "Babe Ruth")
-                   .insert("hr", 714)
-                   .unwrap();
-    client.put_document(Doc::BabeRuth, &pdoc).run().unwrap();
+#[test]
+fn get_database_nok_database_does_not_exist() {
+    let (_server, client) = make_server_and_client();
+    let got = client.get_database("/foo").run();
+    expect_error_not_found_some!(got);
+}
 
-    let pdoc = serde_json::builder::ObjectBuilder::new()
-                   .insert("name", "Hank Aaron")
-                   .insert("hr", 755)
-                   .unwrap();
-    client.put_document(Doc::HankAaron, &pdoc).run().unwrap();
+#[test]
+fn put_database_ok() {
+    let (_server, client) = make_server_and_client();
+    client.put_database("/foo").run().unwrap();
+    client.head_database("/foo").run().unwrap();
+}
 
-    // Verify: Getting a nonempty view without 'reduce' succeeds.
+#[test]
+fn put_database_nok_database_already_exists() {
+    let (_server, client) = make_server_and_client();
+    client.put_database("/foo").run().unwrap();
+    let got = client.put_database("/foo").run();
+    expect_error_database_exists!(got);
+}
 
-    let result = client.get_view::<_, String, String>(View::ByName)
-                       .run()
-                       .unwrap();
-    assert_eq!(Some(2), result.total_rows);
-    assert_eq!(Some(0), result.offset);
-    assert_eq!(result.rows,
-               vec![
-            couchdb::ViewRow::<String, String> {
-                path: Some(Doc::BabeRuth.into()),
-                key: Some("Babe Ruth".to_string()),
-                value: "Babe Ruth".to_string(),
-            },
-            couchdb::ViewRow::<String, String> {
-                path: Some(Doc::HankAaron.into()),
-                key: Some("Hank Aaron".to_string()),
-                value: "Hank Aaron".to_string(),
-            },
-        ]);
+#[test]
+fn delete_database_ok() {
+    let (_server, client) = make_server_and_client();
+    client.put_database("/foo").run().unwrap();
+    client.delete_database("/foo").run().unwrap();
+    let got = client.head_database("/foo").run();
+    expect_error_not_found_none!(got);
+}
 
-    // Verify: Getting a nonempty view with 'reduce' disabled succeeds.
+#[test]
+fn delete_database_nok_database_does_not_exist() {
+    let (_server, client) = make_server_and_client();
+    let got = client.delete_database("/foo").run();
+    expect_error_not_found_some!(got);
+}
 
-    let result = client.get_view::<_, String, u32>(View::ByHr)
-                       .reduce(false)
-                       .run()
-                       .unwrap();
-    assert_eq!(Some(2), result.total_rows);
-    assert_eq!(Some(0), result.offset);
-    assert_eq!(result.rows,
-               vec![
-            couchdb::ViewRow::<String, u32> {
-                path: Some(Doc::BabeRuth.into()),
-                key: Some("Babe Ruth".to_string()),
-                value: 714,
-            },
-            couchdb::ViewRow::<String, u32> {
-                path: Some(Doc::HankAaron.into()),
-                key: Some("Hank Aaron".to_string()),
-                value: 755,
-            },
-        ]);
+#[test]
+fn post_to_database_ok() {
+    let (_server, client) = make_server_and_client();
+    client.put_database("/baseball").run().unwrap();
+    let source_content = serde_json::builder::ObjectBuilder::new()
+                             .insert("name", "Babe Ruth")
+                             .insert("career_hr", 714)
+                             .unwrap();
+    let (rev, doc_id) = client.post_to_database("/baseball", &source_content).run().unwrap();
+    let doc = client.get_document::<_, serde_json::Value>(("/baseball", doc_id.clone()))
+                    .run()
+                    .unwrap()
+                    .unwrap();
+    assert_eq!(doc.id, doc_id);
+    assert_eq!(doc.revision, rev);
+    assert_eq!(doc.content, source_content);
+}
 
-    // Verify: Getting a reduced view succeeds.
+#[test]
+fn post_to_database_nok_database_does_not_exist() {
+    let (_server, client) = make_server_and_client();
+    let source_content = serde_json::builder::ObjectBuilder::new()
+                             .insert("name", "Babe Ruth")
+                             .insert("career_hr", 714)
+                             .unwrap();
+    let got = client.post_to_database("/baseball", &source_content).run();
+    expect_error_not_found_some!(got);
+}
 
-    let result = client.get_view::<_, String, u32>(View::ByHr)
-                       .run()
-                       .unwrap();
-    assert_eq!(None, result.total_rows);
-    assert_eq!(None, result.offset);
-    assert_eq!(result.rows,
-               vec![
-            couchdb::ViewRow::<String, u32> {
-                path: None,
-                key: None,
-                value: 714 + 755,
-            },
-        ]);
+#[test]
+fn head_document_ok_without_revision() {
+    let (_server, client) = make_server_and_client();
+    client.put_database("/baseball").run().unwrap();
+    let source_content = serde_json::builder::ObjectBuilder::new()
+                             .insert("name", "Babe Ruth")
+                             .insert("career_hr", 714)
+                             .unwrap();
+    let (_rev, doc_id) = client.post_to_database("/baseball", &source_content).run().unwrap();
+    let got = client.head_document(("/baseball", doc_id)).run().unwrap();
+    assert!(got.is_some());
+}
 
-    // Verify: Getting a view with an explicit start-key succeeds.
-    let result = client.get_view::<_, String, u32>(View::ByHr)
-                       .reduce(false)
-                       .startkey("h".to_string())
-                       .run()
-                       .unwrap();
-    assert_eq!(Some(2), result.total_rows);
-    assert_eq!(Some(1), result.offset);
-    assert_eq!(result.rows,
-               vec![
-            couchdb::ViewRow::<String, u32> {
-                path: Some(Doc::HankAaron.into()),
-                key: Some("Hank Aaron".to_string()),
-                value: 755,
-            },
-        ]);
+#[test]
+fn head_document_ok_fresh_revision() {
+    let (_server, client) = make_server_and_client();
+    client.put_database("/baseball").run().unwrap();
+    let source_content = serde_json::builder::ObjectBuilder::new()
+                             .insert("name", "Babe Ruth")
+                             .insert("career_hr", 714)
+                             .unwrap();
+    let (rev, doc_id) = client.post_to_database("/baseball", &source_content).run().unwrap();
+    let got = client.head_document(("/baseball", doc_id)).if_none_match(&rev).run().unwrap();
+    assert!(got.is_none());
+}
 
-    // Verify: Getting a view with an explicit end-key succeeds.
-    let result = client.get_view::<_, String, u32>(View::ByHr)
-                       .reduce(false)
-                       .endkey("h".to_string())
-                       .run()
-                       .unwrap();
-    assert_eq!(Some(2), result.total_rows);
-    assert_eq!(Some(0), result.offset);
-    assert_eq!(result.rows,
-               vec![
-            couchdb::ViewRow::<String, u32> {
-                path: Some(Doc::BabeRuth.into()),
-                key: Some("Babe Ruth".to_string()),
-                value: 714,
-            },
-        ]);
+#[test]
+fn head_document_ok_stale_revision() {
+    let (_server, client) = make_server_and_client();
+    client.put_database("/baseball").run().unwrap();
+    let source_content = serde_json::builder::ObjectBuilder::new()
+                             .insert("name", "Babe Ruth")
+                             .insert("career_hr", 714)
+                             .unwrap();
+    let (rev1, doc_id) = client.post_to_database("/baseball", &source_content).run().unwrap();
+    let _rev2 = client.put_document(("/baseball", doc_id.clone()), &source_content)
+                      .if_match(&rev1)
+                      .run()
+                      .unwrap();
+    let got = client.head_document(("/baseball", doc_id)).if_none_match(&rev1).run().unwrap();
+    assert!(got.is_some());
+}
+
+#[test]
+fn head_document_nok_document_does_not_exist() {
+    let (_server, client) = make_server_and_client();
+    client.put_database("/foo").run().unwrap();
+    let got = client.head_document("/foo/bar").run();
+    expect_error_not_found_none!(got);
+}
+
+#[test]
+fn get_document_ok_without_revision() {
+    let (_server, client) = make_server_and_client();
+    client.put_database("/baseball").run().unwrap();
+    let source_content = serde_json::builder::ObjectBuilder::new()
+                             .insert("name", "Babe Ruth")
+                             .insert("career_hr", 714)
+                             .unwrap();
+    let (rev, doc_id) = client.post_to_database("/baseball", &source_content).run().unwrap();
+    let got = client.get_document::<_, serde_json::Value>(("/baseball", doc_id.clone()))
+                    .run()
+                    .unwrap()
+                    .unwrap();
+    assert_eq!(doc_id, got.id);
+    assert_eq!(rev, got.revision);
+    assert_eq!(source_content, got.content);
+}
+
+#[test]
+fn get_document_ok_fresh_revision() {
+    let (_server, client) = make_server_and_client();
+    client.put_database("/baseball").run().unwrap();
+    let source_content = serde_json::builder::ObjectBuilder::new()
+                             .insert("name", "Babe Ruth")
+                             .insert("career_hr", 714)
+                             .unwrap();
+    let (rev, doc_id) = client.post_to_database("/baseball", &source_content).run().unwrap();
+    let got = client.get_document::<_, serde_json::Value>(("/baseball", doc_id.clone()))
+                    .if_none_match(&rev)
+                    .run()
+                    .unwrap();
+    assert!(got.is_none());
+}
+
+#[test]
+fn get_document_ok_stale_revision() {
+    let (_server, client) = make_server_and_client();
+    client.put_database("/baseball").run().unwrap();
+    let source_content = serde_json::builder::ObjectBuilder::new()
+                             .insert("name", "Babe Ruth")
+                             .insert("career_hr", 714)
+                             .unwrap();
+    let (rev1, doc_id) = client.post_to_database("/baseball", &source_content).run().unwrap();
+    let rev2 = client.put_document(("/baseball", doc_id.clone()), &source_content)
+                     .if_match(&rev1)
+                     .run()
+                     .unwrap();
+    let got = client.get_document::<_, serde_json::Value>(("/baseball", doc_id.clone()))
+                    .if_none_match(&rev1)
+                    .run()
+                    .unwrap()
+                    .unwrap();
+    assert_eq!(doc_id, got.id);
+    assert_eq!(rev2, got.revision);
+    assert_eq!(source_content, got.content);
+}
+
+#[test]
+fn get_document_nok_document_does_not_exist() {
+    let (_server, client) = make_server_and_client();
+    client.put_database("/foo").run().unwrap();
+    let got = client.get_document::<_, serde_json::Value>("/foo/bar").run();
+    expect_error_not_found_some!(got);
+}
+
+#[test]
+fn put_document_ok_new_document() {
+    let (_server, client) = make_server_and_client();
+    client.put_database("/baseball").run().unwrap();
+    let source_content = serde_json::builder::ObjectBuilder::new()
+                             .insert("name", "Babe Ruth")
+                             .insert("career_hr", 714)
+                             .unwrap();
+    let rev = client.put_document("/baseball/babe_ruth", &source_content).run().unwrap();
+    let got = client.get_document::<_, serde_json::Value>("/baseball/babe_ruth")
+                    .run()
+                    .unwrap()
+                    .unwrap();
+    assert_eq!(couchdb::DocumentId::from("babe_ruth"), got.id);
+    assert_eq!(rev, got.revision);
+    assert_eq!(source_content, got.content);
+}
+
+#[test]
+fn put_document_ok_update_document() {
+    let (_server, client) = make_server_and_client();
+    client.put_database("/baseball").run().unwrap();
+    let source_content = serde_json::builder::ObjectBuilder::new()
+                             .insert("name", "Babe Ruth")
+                             .insert("career_hr", 714)
+                             .unwrap();
+    let (rev1, doc_id) = client.post_to_database("/baseball", &source_content).run().unwrap();
+    let source_content = serde_json::builder::ObjectBuilder::new()
+                             .insert("name", "Babe Ruth")
+                             .insert("career_hr", 714)
+                             .insert("career_hits", 2873)
+                             .unwrap();
+    let rev2 = client.put_document(("/baseball", doc_id.clone()), &source_content)
+                     .if_match(&rev1)
+                     .run()
+                     .unwrap();
+    let got = client.get_document::<_, serde_json::Value>(("/baseball", doc_id.clone()))
+                    .run()
+                    .unwrap()
+                    .unwrap();
+    assert_eq!(doc_id, got.id);
+    assert_eq!(rev2, got.revision);
+    assert_eq!(source_content, got.content);
+}
+
+#[test]
+fn put_document_nok_stale_revision() {
+    let (_server, client) = make_server_and_client();
+    client.put_database("/baseball").run().unwrap();
+    let source_content = serde_json::builder::ObjectBuilder::new()
+                             .insert("name", "Babe Ruth")
+                             .insert("career_hr", 714)
+                             .unwrap();
+    let (rev1, doc_id) = client.post_to_database("/baseball", &source_content).run().unwrap();
+    let source_content = serde_json::builder::ObjectBuilder::new()
+                             .insert("name", "Babe Ruth")
+                             .insert("career_hr", 714)
+                             .insert("career_hits", 2873)
+                             .unwrap();
+    let _rev2 = client.put_document(("/baseball", doc_id.clone()), &source_content)
+                      .if_match(&rev1)
+                      .run()
+                      .unwrap();
+    let got = client.put_document(("/baseball", doc_id.clone()), &source_content)
+                    .if_match(&rev1)
+                    .run();
+    expect_error_document_conflict!(got);
+}
+
+#[test]
+fn put_document_nok_database_does_not_exist() {
+    let (_server, client) = make_server_and_client();
+    let source_content = serde_json::builder::ObjectBuilder::new()
+                             .insert("name", "Babe Ruth")
+                             .insert("career_hr", 714)
+                             .unwrap();
+    let got = client.put_document("/baseball/babe_ruth", &source_content).run();
+    expect_error_not_found_some!(got);
+}
+
+#[test]
+fn delete_document_ok() {
+    let (_server, client) = make_server_and_client();
+    client.put_database("/baseball").run().unwrap();
+    let source_content = serde_json::builder::ObjectBuilder::new()
+                             .insert("name", "Babe Ruth")
+                             .insert("career_hr", 714)
+                             .unwrap();
+    let (rev, doc_id) = client.post_to_database("/baseball", &source_content).run().unwrap();
+    client.delete_document(("/baseball", doc_id.clone()), &rev).run().unwrap();
+    let got = client.head_document(("/baseball", doc_id)).run();
+    expect_error_not_found_none!(got);
+}
+
+#[test]
+fn delete_document_nok_stale_revision() {
+    let (_server, client) = make_server_and_client();
+    client.put_database("/baseball").run().unwrap();
+    let source_content = serde_json::builder::ObjectBuilder::new()
+                             .insert("name", "Babe Ruth")
+                             .insert("career_hr", 714)
+                             .unwrap();
+    let (rev1, doc_id) = client.post_to_database("/baseball", &source_content).run().unwrap();
+    let _rev2 = client.put_document(("/baseball", doc_id.clone()), &source_content)
+                      .if_match(&rev1)
+                      .run()
+                      .unwrap();
+    let got = client.delete_document(("/baseball", doc_id.clone()), &rev1).run();
+    expect_error_document_conflict!(got);
+}
+
+#[test]
+fn delete_document_nok_document_does_not_exist() {
+    let (_server, client) = make_server_and_client();
+    client.put_database("/foo").run().unwrap();
+    let rev = couchdb::Revision::parse("1-12345678123456781234567812345678").unwrap();
+    let got = client.delete_document("/foo/bar", &rev).run();
+    expect_error_not_found_some!(got);
+}
+
+#[test]
+fn get_view_empty_result() {
+    let (_server, client) = make_server_and_client();
+    client.put_database("/foo").run().unwrap();
+    let design = couchdb::DesignBuilder::new()
+                     .insert_view("qux",
+                                  couchdb::ViewFunction {
+                                      map: "function(doc) {}".to_string(),
+                                      reduce: None,
+                                  })
+                     .unwrap();
+    client.put_document("/foo/_design/bar", &design).run().unwrap();
+    let got = client.get_view::<_, (), ()>("/foo/_design/bar/_view/qux").run().unwrap();
+    assert_eq!(Some(0), got.total_rows);
+    assert_eq!(Some(0), got.offset);
+    assert!(got.rows.is_empty());
+}
+
+#[test]
+fn get_view_nonempty_result() {
+    let (_server, client) = make_server_and_client();
+    client.put_database("/baseball").run().unwrap();
+    let source_content = serde_json::builder::ObjectBuilder::new()
+                             .insert("name", "Babe Ruth")
+                             .insert("career_hr", 714)
+                             .unwrap();
+    let (_, babe_ruth_id) = client.post_to_database("/baseball", &source_content).run().unwrap();
+    let source_content = serde_json::builder::ObjectBuilder::new()
+                             .insert("name", "Hank Aaron")
+                             .insert("career_hr", 755)
+                             .unwrap();
+    let (_, hank_aaron_id) = client.post_to_database("/baseball", &source_content).run().unwrap();
+    let design = couchdb::DesignBuilder::new()
+                     .insert_view("by_career_hr",
+                                  couchdb::ViewFunction {
+                                      map: "function(doc) { emit(doc.name, doc.career_hr); }"
+                                               .to_string(),
+                                      reduce: None,
+                                  })
+                     .unwrap();
+    client.put_document("/baseball/_design/stat", &design).run().unwrap();
+    let got = client.get_view::<_, String, i32>("/baseball/_design/stat/_view/by_career_hr")
+                    .run()
+                    .unwrap();
+    assert_eq!(Some(2), got.total_rows);
+    assert_eq!(Some(0), got.offset);
+    assert_eq!(vec![couchdb::ViewRow {
+                        id: Some(babe_ruth_id),
+                        key: Some("Babe Ruth".to_string()),
+                        value: 714,
+                    },
+                    couchdb::ViewRow {
+                        id: Some(hank_aaron_id),
+                        key: Some("Hank Aaron".to_string()),
+                        value: 755,
+                    }],
+               got.rows);
+}
+
+#[test]
+fn get_view_with_endkey() {
+    let (_server, client) = make_server_and_client();
+    client.put_database("/baseball").run().unwrap();
+    let source_content = serde_json::builder::ObjectBuilder::new()
+                             .insert("name", "Babe Ruth")
+                             .insert("career_hr", 714)
+                             .unwrap();
+    let (_, babe_ruth_id) = client.post_to_database("/baseball", &source_content).run().unwrap();
+    let source_content = serde_json::builder::ObjectBuilder::new()
+                             .insert("name", "Hank Aaron")
+                             .insert("career_hr", 755)
+                             .unwrap();
+    let (_, _) = client.post_to_database("/baseball", &source_content).run().unwrap();
+    let design = couchdb::DesignBuilder::new()
+                     .insert_view("by_career_hr",
+                                  couchdb::ViewFunction {
+                                      map: "function(doc) { emit(doc.name, doc.career_hr); }"
+                                               .to_string(),
+                                      reduce: None,
+                                  })
+                     .unwrap();
+    client.put_document("/baseball/_design/stat", &design).run().unwrap();
+    let got = client.get_view::<_, String, i32>("/baseball/_design/stat/_view/by_career_hr")
+                    .endkey("Babe Ruth".to_string())
+                    .run()
+                    .unwrap();
+    assert_eq!(Some(2), got.total_rows);
+    assert_eq!(Some(0), got.offset);
+    assert_eq!(vec![couchdb::ViewRow {
+                        id: Some(babe_ruth_id),
+                        key: Some("Babe Ruth".to_string()),
+                        value: 714,
+                    }],
+               got.rows);
+}
+
+#[test]
+fn get_view_with_startkey() {
+    let (_server, client) = make_server_and_client();
+    client.put_database("/baseball").run().unwrap();
+    let source_content = serde_json::builder::ObjectBuilder::new()
+                             .insert("name", "Babe Ruth")
+                             .insert("career_hr", 714)
+                             .unwrap();
+    let (_, _) = client.post_to_database("/baseball", &source_content).run().unwrap();
+    let source_content = serde_json::builder::ObjectBuilder::new()
+                             .insert("name", "Hank Aaron")
+                             .insert("career_hr", 755)
+                             .unwrap();
+    let (_, hank_aaron_id) = client.post_to_database("/baseball", &source_content).run().unwrap();
+    let design = couchdb::DesignBuilder::new()
+                     .insert_view("by_career_hr",
+                                  couchdb::ViewFunction {
+                                      map: "function(doc) { emit(doc.name, doc.career_hr); }"
+                                               .to_string(),
+                                      reduce: None,
+                                  })
+                     .unwrap();
+    client.put_document("/baseball/_design/stat", &design).run().unwrap();
+    let got = client.get_view::<_, String, i32>("/baseball/_design/stat/_view/by_career_hr")
+                    .startkey("Hank Aaron".to_string())
+                    .run()
+                    .unwrap();
+    assert_eq!(Some(2), got.total_rows);
+    assert_eq!(Some(1), got.offset);
+    assert_eq!(vec![couchdb::ViewRow {
+                        id: Some(hank_aaron_id),
+                        key: Some("Hank Aaron".to_string()),
+                        value: 755,
+                    }],
+               got.rows);
+}
+
+#[test]
+fn get_view_reduced() {
+    let (_server, client) = make_server_and_client();
+    client.put_database("/baseball").run().unwrap();
+    let source_content = serde_json::builder::ObjectBuilder::new()
+                             .insert("name", "Babe Ruth")
+                             .insert("career_hr", 714)
+                             .unwrap();
+    client.post_to_database("/baseball", &source_content).run().unwrap();
+    let source_content = serde_json::builder::ObjectBuilder::new()
+                             .insert("name", "Hank Aaron")
+                             .insert("career_hr", 755)
+                             .unwrap();
+    client.post_to_database("/baseball", &source_content).run().unwrap();
+    let design = couchdb::DesignBuilder::new()
+                     .insert_view("by_career_hr",
+                                  couchdb::ViewFunction {
+                                      map: "function(doc) { emit(doc.name, doc.career_hr); }"
+                                               .to_string(),
+                                      reduce: Some("_sum".to_string()),
+                                  })
+                     .unwrap();
+    client.put_document("/baseball/_design/stat", &design).run().unwrap();
+    let got = client.get_view::<_, String, i32>("/baseball/_design/stat/_view/by_career_hr")
+                    .reduce(true)
+                    .run()
+                    .unwrap();
+    assert_eq!(None, got.total_rows);
+    assert_eq!(None, got.offset);
+    assert_eq!(vec![couchdb::ViewRow {
+                        id: None,
+                        key: None,
+                        value: 714 + 755,
+                    }],
+               got.rows);
 }

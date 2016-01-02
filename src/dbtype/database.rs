@@ -1,25 +1,53 @@
 use serde;
 
+use DatabaseName;
+
+/// Database resource, as returned from a command to GET a database.
 #[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct Database {
-    pub committed_update_seq: u64,
-    pub compact_running: bool,
-    pub db_name: String,
-    pub disk_format_version: i32,
-    pub data_size: u64,
-    pub disk_size: u64,
-    pub doc_count: u64,
-    pub doc_del_count: u64,
-    pub instance_start_time: String,
-    pub purge_seq: u64,
+    /// The path of the database—the value for specifying the location of this
+    /// database in CouchDB commands.
+    pub db_name: DatabaseName,
+
+    /// The current number of updates to the database.
     pub update_seq: u64,
+
+    /// The number of committed updates.
+    pub committed_update_seq: u64,
+
+    /// Timestamp of when the database was opened, expressed in microseconds
+    /// since the epoch.
+    pub instance_start_time: u64,
+
+    /// The version of the physical format used for the data when it is stored
+    /// on disk.
+    pub disk_format_version: i32,
+
+    /// Number of documents in the database.
+    pub doc_count: u64,
+
+    /// Number of deleted documents.
+    pub doc_del_count: u64,
+
+    /// Actual data size in bytes of the database data.
+    pub data_size: u64,
+
+    /// Size in bytes of the data as stored on the disk. Views indexes are not
+    /// included in the calculation.
+    pub disk_size: u64,
+
+    /// The number of purge operations on the database.
+    pub purge_seq: u64,
+
+    /// Set to true if the database compaction routine is operating on this
+    /// database.
+    pub compact_running: bool,
 }
 
 impl serde::Deserialize for Database {
     fn deserialize<D>(d: &mut D) -> Result<Self, D::Error>
         where D: serde::Deserializer
     {
-
         enum Field {
             CommittedUpdateSeq,
             CompactRunning,
@@ -113,7 +141,7 @@ impl serde::Deserialize for Database {
                             doc_del_count = Some(try!(visitor.visit_value()));
                         }
                         Some(Field::InstanceStartTime) => {
-                            instance_start_time = Some(try!(visitor.visit_value()));
+                            instance_start_time = Some(try!(visitor.visit_value::<String>()));
                         }
                         Some(Field::PurgeSeq) => {
                             purge_seq = Some(try!(visitor.visit_value()));
@@ -170,7 +198,13 @@ impl serde::Deserialize for Database {
                 };
 
                 let instance_start_time = match instance_start_time {
-                    Some(x) => x,
+                    Some(x) => {
+                        try!(u64::from_str_radix(&x, 10).map_err(|e| {
+                            use std::error::Error;
+                            use serde::de::Error as SerdeError;
+                            V::Error::invalid_value(e.description())
+                        }))
+                    }
                     None => try!(visitor.missing_field("instance_start_time")),
                 };
 
@@ -220,61 +254,268 @@ mod tests {
 
     use serde_json;
 
-    use super::*;
-    use jsontest;
+    use Database;
+    use DatabaseName;
 
     #[test]
-    fn test_deserialization() {
+    fn database_deserialization_with_all_fields() {
+        let expected = Database {
+            committed_update_seq: 1,
+            compact_running: true,
+            db_name: DatabaseName::from("foo"),
+            disk_format_version: 2,
+            data_size: 3,
+            disk_size: 4,
+            doc_count: 5,
+            doc_del_count: 6,
+            instance_start_time: 7,
+            purge_seq: 8,
+            update_seq: 9,
+        };
+        let source = serde_json::builder::ObjectBuilder::new()
+                         .insert("committed_update_seq", 1)
+                         .insert("compact_running", true)
+                         .insert("db_name", "foo")
+                         .insert("disk_format_version", 2)
+                         .insert("data_size", 3)
+                         .insert("disk_size", 4)
+                         .insert("doc_count", 5)
+                         .insert("doc_del_count", 6)
+                         .insert("instance_start_time", "7")
+                         .insert("purge_seq", 8)
+                         .insert("update_seq", 9)
+                         .unwrap();
+        let s = serde_json::to_string(&source).unwrap();
+        let got = serde_json::from_str(&s).unwrap();
+        assert_eq!(expected, got);
+    }
 
-        let fields = [r#""db_name": "stuff""#,
-                      r#""doc_count": 1"#,
-                      r#""doc_del_count": 2"#,
-                      r#""update_seq": 3"#,
-                      r#""purge_seq": 4"#,
-                      r#""compact_running": false"#,
-                      r#""disk_size": 5"#,
-                      r#""data_size": 6"#,
-                      r#""instance_start_time": "1234""#,
-                      r#""disk_format_version": 7"#,
-                      r#""committed_update_seq": 8"#];
+    #[test]
+    fn database_deserialization_with_no_committed_update_seq_field() {
+        let source = serde_json::builder::ObjectBuilder::new()
+                         .insert("compact_running", true)
+                         .insert("db_name", "foo")
+                         .insert("disk_format_version", 2)
+                         .insert("data_size", 3)
+                         .insert("disk_size", 4)
+                         .insert("doc_count", 5)
+                         .insert("doc_del_count", 6)
+                         .insert("instance_start_time", "7")
+                         .insert("purge_seq", 8)
+                         .insert("update_seq", 9)
+                         .unwrap();
+        let s = serde_json::to_string(&source).unwrap();
+        let got = serde_json::from_str::<Database>(&s);
+        expect_json_error_missing_field!(got, "committed_update_seq");
+    }
 
-        // Verify: All fields present.
-        let s = jsontest::make_complete_json_object(&fields);
-        let v = serde_json::from_str::<Database>(&s).unwrap();
-        assert_eq!(v.committed_update_seq, 8);
-        assert_eq!(v.compact_running, false);
-        assert_eq!(v.db_name, "stuff".to_string());
-        assert_eq!(v.disk_format_version, 7);
-        assert_eq!(v.data_size, 6);
-        assert_eq!(v.disk_size, 5);
-        assert_eq!(v.doc_count, 1);
-        assert_eq!(v.doc_del_count, 2);
-        assert_eq!(v.instance_start_time, "1234".to_string());
-        assert_eq!(v.purge_seq, 4);
-        assert_eq!(v.update_seq, 3);
+    #[test]
+    fn database_deserialization_with_no_compact_running_field() {
+        let source = serde_json::builder::ObjectBuilder::new()
+                         .insert("committed_update_seq", 1)
+                         .insert("db_name", "foo")
+                         .insert("disk_format_version", 2)
+                         .insert("data_size", 3)
+                         .insert("disk_size", 4)
+                         .insert("doc_count", 5)
+                         .insert("doc_del_count", 6)
+                         .insert("instance_start_time", "7")
+                         .insert("purge_seq", 8)
+                         .insert("update_seq", 9)
+                         .unwrap();
+        let s = serde_json::to_string(&source).unwrap();
+        let got = serde_json::from_str::<Database>(&s);
+        expect_json_error_missing_field!(got, "compact_running");
+    }
 
-        // Verify: Each field missing, one at a time.
-        let s = jsontest::make_json_object_with_missing_field(&fields, "db_name");
-        assert!(serde_json::from_str::<Database>(&s).is_err());
-        let s = jsontest::make_json_object_with_missing_field(&fields, "doc_count");
-        assert!(serde_json::from_str::<Database>(&s).is_err());
-        let s = jsontest::make_json_object_with_missing_field(&fields, "doc_del_count");
-        assert!(serde_json::from_str::<Database>(&s).is_err());
-        let s = jsontest::make_json_object_with_missing_field(&fields, "update_seq");
-        assert!(serde_json::from_str::<Database>(&s).is_err());
-        let s = jsontest::make_json_object_with_missing_field(&fields, "purge_seq");
-        assert!(serde_json::from_str::<Database>(&s).is_err());
-        let s = jsontest::make_json_object_with_missing_field(&fields, "compact_running");
-        assert!(serde_json::from_str::<Database>(&s).is_err());
-        let s = jsontest::make_json_object_with_missing_field(&fields, "disk_size");
-        assert!(serde_json::from_str::<Database>(&s).is_err());
-        let s = jsontest::make_json_object_with_missing_field(&fields, "data_size");
-        assert!(serde_json::from_str::<Database>(&s).is_err());
-        let s = jsontest::make_json_object_with_missing_field(&fields, "instance_start_time");
-        assert!(serde_json::from_str::<Database>(&s).is_err());
-        let s = jsontest::make_json_object_with_missing_field(&fields, "disk_format_version");
-        assert!(serde_json::from_str::<Database>(&s).is_err());
-        let s = jsontest::make_json_object_with_missing_field(&fields, "committed_update_seq");
-        assert!(serde_json::from_str::<Database>(&s).is_err());
+    #[test]
+    fn database_deserialization_with_no_db_name_field() {
+        let source = serde_json::builder::ObjectBuilder::new()
+                         .insert("committed_update_seq", 1)
+                         .insert("compact_running", true)
+                         .insert("disk_format_version", 2)
+                         .insert("data_size", 3)
+                         .insert("disk_size", 4)
+                         .insert("doc_count", 5)
+                         .insert("doc_del_count", 6)
+                         .insert("instance_start_time", "7")
+                         .insert("purge_seq", 8)
+                         .insert("update_seq", 9)
+                         .unwrap();
+        let s = serde_json::to_string(&source).unwrap();
+        let got = serde_json::from_str::<Database>(&s);
+        expect_json_error_missing_field!(got, "db_name");
+    }
+
+    #[test]
+    fn database_deserialization_with_no_disk_format_version_field() {
+        let source = serde_json::builder::ObjectBuilder::new()
+                         .insert("committed_update_seq", 1)
+                         .insert("compact_running", true)
+                         .insert("db_name", "foo")
+                         .insert("data_size", 3)
+                         .insert("disk_size", 4)
+                         .insert("doc_count", 5)
+                         .insert("doc_del_count", 6)
+                         .insert("instance_start_time", "7")
+                         .insert("purge_seq", 8)
+                         .insert("update_seq", 9)
+                         .unwrap();
+        let s = serde_json::to_string(&source).unwrap();
+        let got = serde_json::from_str::<Database>(&s);
+        expect_json_error_missing_field!(got, "disk_format_version");
+    }
+
+    #[test]
+    fn database_deserialization_with_no_data_size_field() {
+        let source = serde_json::builder::ObjectBuilder::new()
+                         .insert("committed_update_seq", 1)
+                         .insert("compact_running", true)
+                         .insert("db_name", "foo")
+                         .insert("disk_format_version", 2)
+                         .insert("disk_size", 4)
+                         .insert("doc_count", 5)
+                         .insert("doc_del_count", 6)
+                         .insert("instance_start_time", "7")
+                         .insert("purge_seq", 8)
+                         .insert("update_seq", 9)
+                         .unwrap();
+        let s = serde_json::to_string(&source).unwrap();
+        let got = serde_json::from_str::<Database>(&s);
+        expect_json_error_missing_field!(got, "data_size");
+    }
+
+    #[test]
+    fn database_deserialization_with_no_disk_size_field() {
+        let source = serde_json::builder::ObjectBuilder::new()
+                         .insert("committed_update_seq", 1)
+                         .insert("compact_running", true)
+                         .insert("db_name", "foo")
+                         .insert("disk_format_version", 2)
+                         .insert("data_size", 3)
+                         .insert("doc_count", 5)
+                         .insert("doc_del_count", 6)
+                         .insert("instance_start_time", "7")
+                         .insert("purge_seq", 8)
+                         .insert("update_seq", 9)
+                         .unwrap();
+        let s = serde_json::to_string(&source).unwrap();
+        let got = serde_json::from_str::<Database>(&s);
+        expect_json_error_missing_field!(got, "disk_size");
+    }
+
+    #[test]
+    fn database_deserialization_with_no_doc_count_field() {
+        let source = serde_json::builder::ObjectBuilder::new()
+                         .insert("committed_update_seq", 1)
+                         .insert("compact_running", true)
+                         .insert("db_name", "foo")
+                         .insert("disk_format_version", 2)
+                         .insert("data_size", 3)
+                         .insert("disk_size", 4)
+                         .insert("doc_del_count", 6)
+                         .insert("instance_start_time", "7")
+                         .insert("purge_seq", 8)
+                         .insert("update_seq", 9)
+                         .unwrap();
+        let s = serde_json::to_string(&source).unwrap();
+        let got = serde_json::from_str::<Database>(&s);
+        expect_json_error_missing_field!(got, "doc_count");
+    }
+
+    #[test]
+    fn database_deserialization_with_no_doc_del_count_field() {
+        let source = serde_json::builder::ObjectBuilder::new()
+                         .insert("committed_update_seq", 1)
+                         .insert("compact_running", true)
+                         .insert("db_name", "foo")
+                         .insert("disk_format_version", 2)
+                         .insert("data_size", 3)
+                         .insert("disk_size", 4)
+                         .insert("doc_count", 5)
+                         .insert("instance_start_time", "7")
+                         .insert("purge_seq", 8)
+                         .insert("update_seq", 9)
+                         .unwrap();
+        let s = serde_json::to_string(&source).unwrap();
+        let got = serde_json::from_str::<Database>(&s);
+        expect_json_error_missing_field!(got, "doc_del_count");
+    }
+
+    #[test]
+    fn database_deserialization_with_no_instance_start_time_field() {
+        let source = serde_json::builder::ObjectBuilder::new()
+                         .insert("committed_update_seq", 1)
+                         .insert("compact_running", true)
+                         .insert("db_name", "foo")
+                         .insert("disk_format_version", 2)
+                         .insert("data_size", 3)
+                         .insert("disk_size", 4)
+                         .insert("doc_count", 5)
+                         .insert("doc_del_count", 6)
+                         .insert("purge_seq", 8)
+                         .insert("update_seq", 9)
+                         .unwrap();
+        let s = serde_json::to_string(&source).unwrap();
+        let got = serde_json::from_str::<Database>(&s);
+        expect_json_error_missing_field!(got, "instance_start_time");
+    }
+
+    #[test]
+    fn database_deserialization_with_bad_instance_start_time_field() {
+        let source = serde_json::builder::ObjectBuilder::new()
+                         .insert("committed_update_seq", 1)
+                         .insert("compact_running", true)
+                         .insert("db_name", "foo")
+                         .insert("disk_format_version", 2)
+                         .insert("data_size", 3)
+                         .insert("disk_size", 4)
+                         .insert("doc_count", 5)
+                         .insert("doc_del_count", 6)
+                         .insert("instance_start_time", "not_a_number")
+                         .insert("purge_seq", 8)
+                         .insert("update_seq", 9)
+                         .unwrap();
+        let s = serde_json::to_string(&source).unwrap();
+        let got = serde_json::from_str::<Database>(&s);
+        expect_json_error_invalid_value!(got);
+    }
+
+    #[test]
+    fn database_deserialization_with_no_purge_seq_field() {
+        let source = serde_json::builder::ObjectBuilder::new()
+                         .insert("committed_update_seq", 1)
+                         .insert("compact_running", true)
+                         .insert("db_name", "foo")
+                         .insert("disk_format_version", 2)
+                         .insert("data_size", 3)
+                         .insert("disk_size", 4)
+                         .insert("doc_count", 5)
+                         .insert("doc_del_count", 6)
+                         .insert("instance_start_time", "7")
+                         .insert("update_seq", 9)
+                         .unwrap();
+        let s = serde_json::to_string(&source).unwrap();
+        let got = serde_json::from_str::<Database>(&s);
+        expect_json_error_missing_field!(got, "purge_seq");
+    }
+
+    #[test]
+    fn database_deserialization_with_no_update_seq_field() {
+        let source = serde_json::builder::ObjectBuilder::new()
+                         .insert("committed_update_seq", 1)
+                         .insert("compact_running", true)
+                         .insert("db_name", "foo")
+                         .insert("disk_format_version", 2)
+                         .insert("data_size", 3)
+                         .insert("disk_size", 4)
+                         .insert("doc_count", 5)
+                         .insert("doc_del_count", 6)
+                         .insert("instance_start_time", "7")
+                         .insert("purge_seq", 8)
+                         .unwrap();
+        let s = serde_json::to_string(&source).unwrap();
+        let got = serde_json::from_str::<Database>(&s);
+        expect_json_error_missing_field!(got, "update_seq");
     }
 }
