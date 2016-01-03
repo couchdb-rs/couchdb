@@ -1,1 +1,0 @@
-initSidebarItems({"struct":[["DatabasePath","Database pathi.e., database name."]]});

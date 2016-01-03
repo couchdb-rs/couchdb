@@ -1,0 +1,1 @@
+initSidebarItems({"struct":[["ViewName","Name of a view."]]});

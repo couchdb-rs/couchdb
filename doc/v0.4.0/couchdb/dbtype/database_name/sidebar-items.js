@@ -1,0 +1,1 @@
+initSidebarItems({"struct":[["DatabaseName","Name of a database."]]});

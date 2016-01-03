@@ -1,0 +1,1 @@
+initSidebarItems({"struct":[["DesignDocumentPath","Path part of a URI specifying a design document."]],"trait":[["IntoDesignDocumentPath","Trait for converting a type into a `DesignDocumentPath`."]]});

@@ -1,0 +1,1 @@
+initSidebarItems({"struct":[["ViewFunction","JavaScript `map` and `reduce` functions for a CouchDB view."]],"type":[["ViewFunctionMap","Associative collection for view functions."]]});
