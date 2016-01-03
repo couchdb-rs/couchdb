@@ -1,5 +1,9 @@
 # CouchDB-rs Change Log
 
+## v0.4.1 (unreleased)
+
+No changes yet!
+
 ## v0.4.0 (2016-01-03)
 
 This release introduces several breaking changes to improve type-safety
