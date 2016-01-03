@@ -24,19 +24,27 @@
 //! applications must use these traits when working with documents, views, or
 //! any type that is JSON-encoded in the CouchDB API.
 //!
-//! ## Example: create and read a document
+//! ## Example: Create a document, read a document
 //!
-//! This example (1) creates a database, (2) creates a document within that
-//! database, and (3) reads the new document.
+//! This example shows how the couchdb crates thinly wraps the CouchDB API.
+//!
+//! The following program (1) constructs a `Client` with which to connect to the
+//! CouchDB server, (2) creates a database (via the `put_database` method), (3)
+//! creates a document within that database (via the `post_to_database` method),
+//! and (4) reads the new document (via the `get_document` method).
 //!
 //! ```no_run
 //! extern crate couchdb;
 //! extern crate serde_json;
 //!
+//! // The `Client` type is the entry point for sending all HTTP requests to the
+//! // CouchDB server.
 //! let client = couchdb::Client::new("http://couchdb-server:5984/").unwrap();
 //!
+//! // PUT http://couchdb-server:5984/baseball
 //! client.put_database("/baseball").run().unwrap();
 //!
+//! // POST http://couchdb-server:5984/baseball
 //! let value = serde_json::builder::ObjectBuilder::new()
 //!                 .insert("name", "Babe Ruth")
 //!                 .insert("career_hr", 714)
@@ -45,6 +53,7 @@
 //!                           .run()
 //!                           .unwrap();
 //!
+//! // GET http://couchdb-server:5984/baseball/<doc_id>
 //! let doc = client.get_document::<_, serde_json::Value>(("/baseball", doc_id.clone()))
 //!                 .run()
 //!                 .unwrap()
