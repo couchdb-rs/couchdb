@@ -29,7 +29,10 @@ API and the CouchDB API.
     * Many error variants documented in v0.3.x are now hidden or
       removed. The remaining variants are either CouchDB response errors
       or are for path-parsing.
-    * Error variants are now tuples, not structs.
+    * All CouchDB response error values are now wrapped in an `Option`
+      to reflect how the CouchDB server returns no detailed error
+      information for HEAD requests.
+    * All non-hidden error variant values are now tuples, not structs.
     * The `InvalidRequest` error variant has been renamed to
       `BadRequest`. The new name matches HTTP status code 400 of the
       same name.

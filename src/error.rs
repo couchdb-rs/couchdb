@@ -7,8 +7,14 @@ use ErrorResponse;
 
 /// Principal error type.
 ///
-/// The public API provides no guarantees for hidden variants. Applications
-/// should not match against hidden variants.
+/// An `Error` specifies an error originating from or propagated by the couchdb
+/// crate.
+///
+/// Error variants with a value of the type `Option<ErrorResponse>` signify
+/// error responses from the CouchDB server. The value for these variants is
+/// `None` if the request causing the error was a HEAD request, and `Some`
+/// otherwise. This reflects how the server returns no detailed error
+/// information for HEAD requests.
 ///
 #[derive(Debug)]
 pub enum Error {
@@ -26,7 +32,7 @@ pub enum Error {
     BadMd5Hash,
 
     /// The client request is invalid.
-    BadRequest(ErrorResponse),
+    BadRequest(Option<ErrorResponse>),
 
     /// The revision is in an invalid format.
     BadRevision,
@@ -35,21 +41,21 @@ pub enum Error {
     BadViewPath(BadPathKind),
 
     /// The database already exists.
-    DatabaseExists(ErrorResponse),
+    DatabaseExists(Option<ErrorResponse>),
 
     // JSON-decoding error.
     #[doc(hidden)]
     Decode(DecodeErrorKind),
 
     /// The client request conflicts with an existing document.
-    DocumentConflict(ErrorResponse),
+    DocumentConflict(Option<ErrorResponse>),
 
     // JSON-encoding error.
     #[doc(hidden)]
     Encode(EncodeErrorKind),
 
     /// An internal server error occurred.
-    InternalServerError(ErrorResponse),
+    InternalServerError(Option<ErrorResponse>),
 
     // The string has an invalid percent-encoding.
     #[doc(hidden)]
@@ -196,31 +202,27 @@ impl std::fmt::Display for Error {
             BadDesignDocumentPath(ref kind) => write!(f, "{}: {}", d, kind),
             BadDocumentPath(ref kind) => write!(f, "{}: {}", d, kind),
             BadMd5Hash => write!(f, "{}", d),
-            BadRequest(ref response) => write!(f, "{}: {}", d, response),
+            BadRequest(None) => write!(f, "{}", d),
+            BadRequest(Some(ref response)) => write!(f, "{}: {}", d, response),
             BadRevision => write!(f, "{}", d),
             BadViewPath(ref kind) => write!(f, "{}: {}", d, kind),
-            DatabaseExists(ref response) => write!(f, "{}: {}", d, response),
+            DatabaseExists(None) => write!(f, "{}", d),
+            DatabaseExists(Some(ref response)) => write!(f, "{}: {}", d, response),
             Decode(ref kind) => write!(f, "{}: {}", d, kind),
-            DocumentConflict(ref response) => write!(f, "{}: {}", d, response),
+            DocumentConflict(None) => write!(f, "{}", d),
+            DocumentConflict(Some(ref response)) => write!(f, "{}: {}", d, response),
             Encode(ref kind) => write!(f, "{}: {}", d, kind),
-            InternalServerError(ref response) => write!(f, "{}: {}", d, response),
+            InternalServerError(None) => write!(f, "{}", d),
+            InternalServerError(Some(ref response)) => write!(f, "{}: {}", d, response),
             InvalidPercentEncoding{ref encoding} => write!(f, "{}: Got '{}'", d, encoding),
             Io{ref cause, ..} => write!(f, "{}: {}", d, cause),
             NoContentTypeHeader{ref expected} => write!(f, "{}: Expected '{}'", d, expected),
-            NotFound(ref response) => {
-                match *response {
-                    Some(ref response) => write!(f, "{}: {}", d, response),
-                    None => write!(f, "{}", d),
-                }
-            }
+            NotFound(None) => write!(f, "{}", d),
+            NotFound(Some(ref response)) => write!(f, "{}: {}", d, response),
             ReceiveFromThread{ref cause, ..} => write!(f, "{}: {}", d, cause),
             Transport(ref kind) => write!(f, "{}: {}", d, kind),
-            Unauthorized(ref response) => {
-                match *response {
-                    Some(ref response) => write!(f, "{}: {}", d, response),
-                    None => write!(f, "{}", d),
-                }
-            }
+            Unauthorized(None) => write!(f, "{}", d),
+            Unauthorized(Some(ref response)) => write!(f, "{}: {}", d, response),
             UnexpectedContentTypeHeader{ref expected, ref got} => {
                 write!(f, "{}: Expected '{}', got '{}'", d, expected, got)
             }

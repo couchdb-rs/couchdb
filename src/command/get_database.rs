@@ -55,9 +55,7 @@ impl<'a, P: IntoDatabasePath> Command for GetDatabase<'a, P> {
                 try!(command::content_type_must_be_application_json(&resp.headers));
                 json::decode_json::<_, Database>(resp)
             }
-            hyper::status::StatusCode::NotFound => {
-                Err(Error::NotFound(Some(try!(json::decode_json::<_, ErrorResponse>(resp)))))
-            }
+            hyper::status::StatusCode::NotFound => Err(make_couchdb_error!(NotFound, resp)),
             _ => Err(Error::UnexpectedHttpStatus { got: resp.status }),
         }
     }

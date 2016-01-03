@@ -3,83 +3,15 @@ extern crate serde_json;
 
 use std::collections::HashSet;
 
-macro_rules! expect_error_database_exists {
-    ($result:expr) => {
+macro_rules! expect_couchdb_error {
+    ($result:expr, $expected_error_pattern:pat) => {
         match $result {
             Ok(..) => {
                 panic!("Got unexpected OK result");
             }
             Err(ref e) => {
                 match *e {
-                    couchdb::Error::DatabaseExists(..) => (),
-                    _ => {
-                        panic!("Got unexpected error: {}", e);
-                    }
-                }
-            }
-        }
-    }
-}
-
-macro_rules! expect_error_document_conflict {
-    ($result:expr) => {
-        match $result {
-            Ok(..) => {
-                panic!("Got unexpected OK result");
-            }
-            Err(ref e) => {
-                match *e {
-                    couchdb::Error::DocumentConflict(..) => (),
-                    _ => {
-                        panic!("Got unexpected error: {}", e);
-                    }
-                }
-            }
-        }
-    }
-}
-
-macro_rules! expect_error_not_found_none {
-    ($result:expr) => {
-        match $result {
-            Ok(..) => {
-                panic!("Got unexpected OK result");
-            }
-            Err(ref e) => {
-                match *e {
-                    couchdb::Error::NotFound(ref response) => {
-                        match *response {
-                            None => (),
-                            Some(ref response) => {
-                                panic!("Expected None error response, got Some: {}", response);
-                            }
-                        }
-                    }
-                    _ => {
-                        panic!("Got unexpected error: {}", e);
-                    }
-                }
-            }
-        }
-    }
-}
-
-macro_rules! expect_error_not_found_some {
-    ($result:expr) => {
-        match $result {
-            Ok(..) => {
-                panic!("Got unexpected OK result");
-            }
-            Err(ref e) => {
-                match *e {
-                    couchdb::Error::NotFound(ref response) => {
-                        match *response {
-                            Some(..) => (),
-                            None => {
-                                panic!("Expected Some error response, got None");
-                            }
-                        }
-                    }
+                    $expected_error_pattern => (),
                     _ => {
                         panic!("Got unexpected error: {}", e);
                     }
@@ -122,7 +54,7 @@ fn head_database_ok() {
 fn head_database_nok_database_does_not_exist() {
     let (_server, client) = make_server_and_client();
     let got = client.head_database("/foo").run();
-    expect_error_not_found_none!(got);
+    expect_couchdb_error!(got, couchdb::Error::NotFound(None));
 }
 
 #[test]
@@ -144,7 +76,7 @@ fn get_database_ok() {
 fn get_database_nok_database_does_not_exist() {
     let (_server, client) = make_server_and_client();
     let got = client.get_database("/foo").run();
-    expect_error_not_found_some!(got);
+    expect_couchdb_error!(got, couchdb::Error::NotFound(Some(..)));
 }
 
 #[test]
@@ -159,7 +91,7 @@ fn put_database_nok_database_already_exists() {
     let (_server, client) = make_server_and_client();
     client.put_database("/foo").run().unwrap();
     let got = client.put_database("/foo").run();
-    expect_error_database_exists!(got);
+    expect_couchdb_error!(got, couchdb::Error::DatabaseExists(Some(..)));
 }
 
 #[test]
@@ -168,14 +100,14 @@ fn delete_database_ok() {
     client.put_database("/foo").run().unwrap();
     client.delete_database("/foo").run().unwrap();
     let got = client.head_database("/foo").run();
-    expect_error_not_found_none!(got);
+    expect_couchdb_error!(got, couchdb::Error::NotFound(None));
 }
 
 #[test]
 fn delete_database_nok_database_does_not_exist() {
     let (_server, client) = make_server_and_client();
     let got = client.delete_database("/foo").run();
-    expect_error_not_found_some!(got);
+    expect_couchdb_error!(got, couchdb::Error::NotFound(Some(..)));
 }
 
 #[test]
@@ -204,7 +136,7 @@ fn post_to_database_nok_database_does_not_exist() {
                              .insert("career_hr", 714)
                              .unwrap();
     let got = client.post_to_database("/baseball", &source_content).run();
-    expect_error_not_found_some!(got);
+    expect_couchdb_error!(got, couchdb::Error::NotFound(Some(..)));
 }
 
 #[test]
@@ -255,7 +187,7 @@ fn head_document_nok_document_does_not_exist() {
     let (_server, client) = make_server_and_client();
     client.put_database("/foo").run().unwrap();
     let got = client.head_document("/foo/bar").run();
-    expect_error_not_found_none!(got);
+    expect_couchdb_error!(got, couchdb::Error::NotFound(None));
 }
 
 #[test]
@@ -320,7 +252,7 @@ fn get_document_nok_document_does_not_exist() {
     let (_server, client) = make_server_and_client();
     client.put_database("/foo").run().unwrap();
     let got = client.get_document::<_, serde_json::Value>("/foo/bar").run();
-    expect_error_not_found_some!(got);
+    expect_couchdb_error!(got, couchdb::Error::NotFound(Some(..)));
 }
 
 #[test]
@@ -389,7 +321,7 @@ fn put_document_nok_stale_revision() {
     let got = client.put_document(("/baseball", doc_id.clone()), &source_content)
                     .if_match(&rev1)
                     .run();
-    expect_error_document_conflict!(got);
+    expect_couchdb_error!(got, couchdb::Error::DocumentConflict(Some(..)));
 }
 
 #[test]
@@ -400,7 +332,7 @@ fn put_document_nok_database_does_not_exist() {
                              .insert("career_hr", 714)
                              .unwrap();
     let got = client.put_document("/baseball/babe_ruth", &source_content).run();
-    expect_error_not_found_some!(got);
+    expect_couchdb_error!(got, couchdb::Error::NotFound(Some(..)));
 }
 
 #[test]
@@ -414,7 +346,7 @@ fn delete_document_ok() {
     let (rev, doc_id) = client.post_to_database("/baseball", &source_content).run().unwrap();
     client.delete_document(("/baseball", doc_id.clone()), &rev).run().unwrap();
     let got = client.head_document(("/baseball", doc_id)).run();
-    expect_error_not_found_none!(got);
+    expect_couchdb_error!(got, couchdb::Error::NotFound(None));
 }
 
 #[test]
@@ -431,7 +363,7 @@ fn delete_document_nok_stale_revision() {
                       .run()
                       .unwrap();
     let got = client.delete_document(("/baseball", doc_id.clone()), &rev1).run();
-    expect_error_document_conflict!(got);
+    expect_couchdb_error!(got, couchdb::Error::DocumentConflict(Some(..)));
 }
 
 #[test]
@@ -440,7 +372,7 @@ fn delete_document_nok_document_does_not_exist() {
     client.put_database("/foo").run().unwrap();
     let rev = couchdb::Revision::parse("1-12345678123456781234567812345678").unwrap();
     let got = client.delete_document("/foo/bar", &rev).run();
-    expect_error_not_found_some!(got);
+    expect_couchdb_error!(got, couchdb::Error::NotFound(Some(..)));
 }
 
 #[test]

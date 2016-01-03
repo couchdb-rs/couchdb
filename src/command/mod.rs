@@ -14,6 +14,12 @@ macro_rules! impl_command_public_methods {
     }
 }
 
+macro_rules! make_couchdb_error {
+    ($error_variant:ident, $response:expr) => {
+        Error::$error_variant(Some(try!(json::decode_json::<_, ErrorResponse>($response))))
+    }
+}
+
 mod delete_database;
 mod delete_document;
 mod get_all_databases;

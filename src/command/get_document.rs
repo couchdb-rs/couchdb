@@ -82,15 +82,9 @@ impl<'a, P: IntoDocumentPath, T: serde::Deserialize> Command for GetDocument<'a,
                 Ok(Some(doc))
             }
             hyper::status::StatusCode::NotModified => Ok(None),
-            hyper::status::StatusCode::BadRequest => {
-                Err(Error::BadRequest(try!(json::decode_json::<_, ErrorResponse>(resp))))
-            }
-            hyper::status::StatusCode::Unauthorized => {
-                Err(Error::Unauthorized(Some(try!(json::decode_json::<_, ErrorResponse>(resp)))))
-            }
-            hyper::status::StatusCode::NotFound => {
-                Err(Error::NotFound(Some(try!(json::decode_json::<_, ErrorResponse>(resp)))))
-            }
+            hyper::status::StatusCode::BadRequest => Err(make_couchdb_error!(BadRequest, resp)),
+            hyper::status::StatusCode::Unauthorized => Err(make_couchdb_error!(Unauthorized, resp)),
+            hyper::status::StatusCode::NotFound => Err(make_couchdb_error!(NotFound, resp)),
             _ => Err(Error::UnexpectedHttpStatus { got: resp.status }),
         }
     }

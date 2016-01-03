@@ -78,19 +78,13 @@ impl<'a, P: IntoDatabasePath, T: 'a + serde::Serialize> Command for PostToDataba
                 let rev: Revision = content.rev.into();
                 Ok((rev, id))
             }
-            hyper::status::StatusCode::BadRequest => {
-                Err(Error::BadRequest(try!(json::decode_json::<_, ErrorResponse>(resp))))
-            }
-            hyper::status::StatusCode::Unauthorized => {
-                Err(Error::Unauthorized(Some(try!(json::decode_json::<_, ErrorResponse>(resp)))))
-            }
-            hyper::status::StatusCode::NotFound => {
-                Err(Error::NotFound(Some(try!(json::decode_json::<_, ErrorResponse>(resp)))))
-            }
+            hyper::status::StatusCode::BadRequest => Err(make_couchdb_error!(BadRequest, resp)),
+            hyper::status::StatusCode::Unauthorized => Err(make_couchdb_error!(Unauthorized, resp)),
+            hyper::status::StatusCode::NotFound => Err(make_couchdb_error!(NotFound, resp)),
             hyper::status::StatusCode::Conflict => {
                 // Need to include this error variant in the command's
                 // documentation if we ever add support for an explicit id.
-                Err(Error::DocumentConflict(try!(json::decode_json::<_, ErrorResponse>(resp))))
+                Err(make_couchdb_error!(DocumentConflict, resp))
             }
             _ => Err(Error::UnexpectedHttpStatus { got: resp.status }),
         }

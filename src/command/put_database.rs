@@ -54,14 +54,10 @@ impl<'a, P: IntoDatabasePath> Command for PutDatabase<'a, P> {
             hyper::status::StatusCode::Created => {
                 command::content_type_must_be_application_json(&resp.headers)
             }
-            hyper::status::StatusCode::BadRequest => {
-                Err(Error::BadRequest(try!(json::decode_json::<_, ErrorResponse>(resp))))
-            }
-            hyper::status::StatusCode::Unauthorized => {
-                Err(Error::Unauthorized(Some(try!(json::decode_json::<_, ErrorResponse>(resp)))))
-            }
+            hyper::status::StatusCode::BadRequest => Err(make_couchdb_error!(BadRequest, resp)),
+            hyper::status::StatusCode::Unauthorized => Err(make_couchdb_error!(Unauthorized, resp)),
             hyper::status::StatusCode::PreconditionFailed => {
-                Err(Error::DatabaseExists(try!(json::decode_json::<_, ErrorResponse>(resp))))
+                Err(make_couchdb_error!(DatabaseExists, resp))
             }
             _ => Err(Error::UnexpectedHttpStatus { got: resp.status }),
         }
