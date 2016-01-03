@@ -11,7 +11,7 @@
 //! documentation as needed to fill in remaining details. Most names in the
 //! crate API are identical to the names used in the CouchDB API so as to make
 //! this mapping straightforward. There's also a table, below, that [shows the
-//! mapping a high level](#couchdb-api-coverage).
+//! mapping at a high level](#couchdb-api-coverage).
 //!
 //! One key difference between the couchdb crate's API and the CouchDB API is
 //! the crate provides stronger type-safety beyond working with raw strings. For

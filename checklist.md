@@ -49,7 +49,7 @@
   1. Review.
 
       * `doc/latest/couchdb/index.html`
-      * `doc/vX.Y.Z/couchdb/index.html`
+      * `doc/v$ver/couchdb/index.html`
 
   1. Publish.
 
