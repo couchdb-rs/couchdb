@@ -11,7 +11,7 @@ use client::ClientState;
 use command::{self, Command, Request};
 use json;
 
-/// Command to get a document.
+/// Command to get document meta-information and application-defined content.
 ///
 /// # Return
 ///
@@ -50,7 +50,7 @@ impl<'a, P: IntoDocumentPath, T: serde::Deserialize> GetDocument<'a, P, T> {
         }
     }
 
-    /// Set the If-None-Match header.
+    /// Sets the If-None-Match header.
     pub fn if_none_match(mut self, rev: &'a Revision) -> Self {
         self.if_none_match = Some(rev);
         self

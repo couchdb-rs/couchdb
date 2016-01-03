@@ -8,7 +8,7 @@ use client::ClientState;
 use command::{self, Command, Request};
 use json;
 
-/// Command to get a database.
+/// Command to get database meta-information.
 ///
 /// # Errors
 ///

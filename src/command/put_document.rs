@@ -46,7 +46,7 @@ impl<'a, P: IntoDocumentPath, T: 'a + serde::Serialize> PutDocument<'a, P, T> {
         }
     }
 
-    /// Set the If-Match header.
+    /// Sets the If-Match header.
     pub fn if_match(mut self, rev: &'a Revision) -> Self {
         self.if_match = Some(rev);
         self

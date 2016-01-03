@@ -1,13 +1,27 @@
 use serde;
 use std;
 
+/// Name of a database.
+/// 
+/// A database name wraps a string specifying a database—e.g., the `db` part of
+/// the HTTP request to GET `http://example.com:5984/db`.
+///
+/// Database names may be converted to and from strings. They are never
+/// percent-encoded.
+///
+/// Although the `DatabaseName` type implements the `Ord` and `PartialOrd`
+/// traits, it provides no guarantees how that ordering is defined and may
+/// change the definition between any two releases of the couchdb crate. That
+/// is, for two `DatabaseName` values `a` and `b`, the expression `a < b` may
+/// hold true now but not in a subsequent release. Consequently, applications
+/// must not rely upon any particular ordering definition.
+///
 #[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
-/// FIXME: Document this. Include note about Ord guarantees.
 pub struct DatabaseName(String);
 impl_name_type!(DatabaseName);
 
 impl DatabaseName {
-    /// Construct an empty database name.
+    /// Constructs an empty database name.
     pub fn new() -> Self {
         DatabaseName(String::new())
     }

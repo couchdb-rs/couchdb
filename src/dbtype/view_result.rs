@@ -3,13 +3,40 @@ use std;
 
 use ViewRow;
 
+/// Response resulting from executing a view.
+///
+/// A `ViewResult` contains all content in the response from the CouchDB server
+/// as a result of executing a view.
+///
+/// A `ViewResult` takes one of two forms. The first form is that the view has
+/// been reduced, in which case the `total_rows` and `offset` fields are `None`
+/// and the `rows` field contains a single row containing the reduced result.
+/// The second form is that the view has not been reduced, in which case the
+/// `total_rows` and `offset` fields are `Some` and the `rows` field contains
+/// zero or more rows containing the non-reduced result.
+///
+/// Although the `ViewResult` type implements the `Ord` and `PartialOrd` traits,
+/// it provides no guarantees how that ordering is defined and may change the
+/// definition between any two releases of the couchdb crate. That is, for two
+/// `ViewResult` values `a` and `b`, the expression `a < b` may hold true now
+/// but not in a subsequent release. Consequently, applications must not rely
+/// upon any particular ordering definition.
+///
 #[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct ViewResult<K, V>
     where K: serde::Deserialize,
           V: serde::Deserialize
 {
+    /// Number of rows in a non-reduced view, including rows excluded in the
+    /// `rows` field.
     pub total_rows: Option<u64>,
+
+    /// Number of rows in a non-reduced view that were excluded in the `rows`
+    /// field.
     pub offset: Option<u64>,
+
+    /// All rows included in the response content for a non-reduced view, or,
+    /// for a reduced view, the one row containing the reduced result.
     pub rows: Vec<ViewRow<K, V>>,
 }
 

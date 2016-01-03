@@ -119,6 +119,27 @@ impl serde::Deserialize for Design {
 }
 
 /// Builder for constructing a design document.
+///
+/// # Examples
+///
+/// ```
+/// use couchdb::{DesignBuilder, ViewFunction};
+/// let foo = ViewFunction {
+///               map: "function(doc) { emit(doc.name, doc.foo); }".to_string(),
+///               reduce: Some("_sum".to_string()),
+///           };
+/// let bar = ViewFunction {
+///               map: "function(doc) { emit(doc.name, doc.bar); }".to_string(),
+///               reduce: None,
+///           };
+/// let design = DesignBuilder::new()
+///                  .insert_view("foo", foo.clone())
+///                  .insert_view("bar", bar.clone())
+///                  .unwrap();
+/// assert_eq!(foo, *design.views.get("foo").unwrap());
+/// assert_eq!(bar, *design.views.get("bar").unwrap());
+/// ```
+///
 #[derive(Debug)]
 pub struct DesignBuilder {
     design: Design,

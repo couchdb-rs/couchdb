@@ -5,7 +5,7 @@ use IntoDatabasePath;
 use client::ClientState;
 use command::{self, Command, Request};
 
-/// Command to get database meta-information.
+/// Command to check whether a database exists.
 ///
 /// # Errors
 ///

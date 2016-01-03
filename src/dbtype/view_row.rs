@@ -3,13 +3,33 @@ use std;
 
 use DocumentId;
 
+/// Single row contained in the response resulting from executing a view.
+///
+/// A `ViewRow` takes one of two forms. The first form is that the view has been
+/// reduced, in which case the `id` and `key` fields are `None` and the `value`
+/// field contains the reduced result. The second form is that the view has not
+/// been reduced, in which case the `id` and `key` fields are `Some` and the
+/// `value` field contains one of the rows of the view result.
+///
+/// Although the `ViewRow` type implements the `Ord` and `PartialOrd` traits, it
+/// provides no guarantees how that ordering is defined and may change the
+/// definition between any two releases of the couchdb crate. That is, for two
+/// `ViewRow` values `a` and `b`, the expression `a < b` may hold true now but
+/// not in a subsequent release. Consequently, applications must not rely upon
+/// any particular ordering definition.
+///
 #[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct ViewRow<K, V>
     where K: serde::Deserialize,
           V: serde::Deserialize
 {
+    /// Id of the document, if and only if the view has not been reduced.
     pub id: Option<DocumentId>,
+
+    /// Emitted key, if and only if the view has not been reduced.
     pub key: Option<K>,
+
+    /// Emitted value, either reduced or not.
     pub value: V,
 }
 

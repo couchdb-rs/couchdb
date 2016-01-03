@@ -3,13 +3,29 @@ use std;
 
 use DesignDocumentName;
 
+/// Name of a document.
+/// 
+/// A document name wraps a string specifying a document—e.g., the `doc` part of
+/// the HTTP request to GET `http://example.com:5984/db/doc` or the `design-doc`
+/// part of the HTTP request to GET
+/// `http://example.com:5984/db/_design/design-doc`.
+///
+/// Document names may be converted to and from strings. They are never
+/// percent-encoded.
+///
+/// Although the `DocumentName` type implements the `Ord` and `PartialOrd`
+/// traits, it provides no guarantees how that ordering is defined and may
+/// change the definition between any two releases of the couchdb crate. That
+/// is, for two `DocumentName` values `a` and `b`, the expression `a < b` may
+/// hold true now but not in a subsequent release. Consequently, applications
+/// must not rely upon any particular ordering definition.
+///
 #[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
-/// FIXME: Document this. Include note about Ord guarantees.
 pub struct DocumentName(String);
 impl_name_type!(DocumentName);
 
 impl DocumentName {
-    /// Construct an empty document name.
+    /// Constructs an empty document name.
     pub fn new() -> Self {
         DocumentName(String::new())
     }

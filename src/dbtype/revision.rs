@@ -76,7 +76,11 @@ impl From<Md5Hash> for String {
     }
 }
 
-// FIXME: Write doc comments. Mention case-insensitivity.
+/// Revision of a document.
+///
+/// A document revision comprises a number and an MD5 hash sum. In serialized
+/// form, a revision looks something like `42-1234567890abcdef1234567890abcdef`.
+///
 #[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct Revision {
     number: u64,
@@ -84,7 +88,10 @@ pub struct Revision {
 }
 
 impl Revision {
-    // FIXME: Write doc comments.
+    /// Constructs a new `Revision` from the given string.
+    ///
+    /// The string must be of a form like `42-1234567890abcdef1234567890abcdef`.
+    ///
     pub fn parse(s: &str) -> Result<Self, Error> {
         use std::str::FromStr;
         Revision::from_str(s)

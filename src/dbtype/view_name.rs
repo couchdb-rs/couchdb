@@ -1,13 +1,28 @@
 use serde;
 use std;
 
+/// Name of a view.
+/// 
+/// A view name wraps a string specifying a view—e.g., the `view-name` part of
+/// the HTTP request to GET
+/// `http://example.com:5984/db/_design/design-doc/_view/view-name`.
+///
+/// View names may be converted to and from strings. They are never
+/// percent-encoded.
+///
+/// Although the `ViewName` type implements the `Ord` and `PartialOrd` traits,
+/// it provides no guarantees how that ordering is defined and may change the
+/// definition between any two releases of the couchdb crate. That is, for two
+/// `ViewName` values `a` and `b`, the expression `a < b` may hold true now but
+/// not in a subsequent release. Consequently, applications must not rely upon
+/// any particular ordering definition.
+///
 #[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
-/// FIXME: Document this. Include note about Ord guarantees.
 pub struct ViewName(String);
 impl_name_type!(ViewName);
 
 impl ViewName {
-    /// Construct an empty view name.
+    /// Constructs an empty view name.
     pub fn new() -> Self {
         ViewName(String::new())
     }

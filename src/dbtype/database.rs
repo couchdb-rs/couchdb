@@ -2,11 +2,18 @@ use serde;
 
 use DatabaseName;
 
-/// Database resource, as returned from a command to GET a database.
+/// Database meta-information, as returned from a command to GET a database.
+///
+/// Although the `Database` type implements the `Ord` and `PartialOrd` traits,
+/// it provides no guarantees how that ordering is defined and may change the
+/// definition between any two releases of the couchdb crate. That is, for two
+/// `Database` values `a` and `b`, the expression `a < b` may hold true now but
+/// not in a subsequent release. Consequently, applications must not rely upon
+/// any particular ordering definition.
+///
 #[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct Database {
-    /// The path of the database—the value for specifying the location of this
-    /// database in CouchDB commands.
+    /// The name of the database.
     pub db_name: DatabaseName,
 
     /// The current number of updates to the database.
@@ -29,10 +36,10 @@ pub struct Database {
     /// Number of deleted documents.
     pub doc_del_count: u64,
 
-    /// Actual data size in bytes of the database data.
+    /// Actual data size, in bytes, of the database data.
     pub data_size: u64,
 
-    /// Size in bytes of the data as stored on the disk. Views indexes are not
+    /// Size, in bytes, of the data as stored on the disk. Views indexes are not
     /// included in the calculation.
     pub disk_size: u64,
 

@@ -6,7 +6,7 @@ use Revision;
 use client::ClientState;
 use command::{self, Command, Request};
 
-/// Command to get document meta-information.
+/// Command to check whether a document exists.
 ///
 /// # Return
 ///
@@ -40,7 +40,7 @@ impl<'a, P: IntoDocumentPath> HeadDocument<'a, P> {
         }
     }
 
-    /// Set the If-None-Match header.
+    /// Sets the If-None-Match header.
     pub fn if_none_match(mut self, rev: &'a Revision) -> Self {
         self.if_none_match = Some(rev);
         self

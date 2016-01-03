@@ -1,3 +1,7 @@
+// This module contains “CouchDB types,” which are types used in the requests
+// and responses when communicating with the CouchDB server. Usually these types
+// are serialized into JSON.
+
 #[macro_use]
 mod impl_name_macro;
 

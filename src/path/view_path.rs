@@ -9,19 +9,13 @@ use Error;
 use ViewName;
 use error::BadPathKind;
 
-// FIXME: Write doc comments.
+/// Trait for converting a type into a `ViewPath`.
 pub trait IntoViewPath {
+    /// Converts self into a `ViewPath`.
     fn into_view_path(self) -> Result<ViewPath, Error>;
 }
 
 impl<'a> IntoViewPath for &'a str {
-    fn into_view_path(self) -> Result<ViewPath, Error> {
-        use std::str::FromStr;
-        ViewPath::from_str(self)
-    }
-}
-
-impl<'a> IntoViewPath for &'a String {
     fn into_view_path(self) -> Result<ViewPath, Error> {
         use std::str::FromStr;
         ViewPath::from_str(self)
@@ -47,7 +41,27 @@ impl<T: Into<DesignDocumentPath>> IntoViewPath for (T, ViewName) {
     }
 }
 
-// FIXME: Write doc comments.
+/// Path part of a URI specifying a view.
+///
+/// A view path comprises five URI path components specifying a database name,
+/// design document name, and view name—the
+/// `/db/_design/design-doc/_view/view-name` part of
+/// `http://example.com:5984/db/_design/design-doc/_view/view-name`.
+///
+/// View paths are percent-encoded. For example,
+/// `/foo/_design/bar/_view/qux%2Fbaz` identifies the
+/// database named `foo`, the design document named `bar`, and the view named
+/// `qux%2Fbaz`. When a `ViewPath` is constructed from name and path types, the
+/// percent-encoding is done automatically. When constructing a `ViewPath` from
+/// a string, the string must be percent-encoded.
+///
+/// Although the `ViewPath` type implements the `Ord` and `PartialOrd` traits,
+/// it provides no guarantees how that ordering is defined and may change the
+/// definition between any two releases of the couchdb crate. That is, for two
+/// `ViewPath` values `a` and `b`, the expression `a < b` may hold true now but
+/// not in a subsequent release. Consequently, applications must not rely upon
+/// any particular ordering definition.
+///
 #[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct ViewPath {
     db_name: DatabaseName,
@@ -56,13 +70,19 @@ pub struct ViewPath {
 }
 
 impl ViewPath {
-    // FIXME: Write doc comments.
+    /// Constructs a `ViewPath` from a given string.
+    ///
+    /// The `path` string must begin with a leading slash and be
+    /// percent-encoded—e.g., `/foo/_design/bar/_view/qux%2Fbaz` for the
+    /// database named `foo`, the design document named `bar`, and the view
+    /// named `qux/baz`.
+    ///
     pub fn parse<T: AsRef<str>>(path: T) -> Result<Self, Error> {
         use std::str::FromStr;
         ViewPath::from_str(path.as_ref())
     }
 
-    // FIXME: Write doc comments.
+    /// Converts self into a URI.
     pub fn into_uri(self, base_uri: hyper::Url) -> hyper::Url {
 
         let mut uri = base_uri;
@@ -197,18 +217,6 @@ mod tests {
     #[test]
     fn into_view_path_from_str_ref_nok() {
         "bad_path".into_view_path().unwrap_err();
-    }
-
-    #[test]
-    fn into_view_path_from_string_ok() {
-        let expected = make_view_path("foo", "bar", "qux");
-        let got = "/foo/_design/bar/_view/qux".to_string().into_view_path().unwrap();
-        assert_eq!(expected, got);
-    }
-
-    #[test]
-    fn into_view_path_from_string_nok() {
-        "bad_path".to_string().into_view_path().unwrap_err();
     }
 
     #[test]

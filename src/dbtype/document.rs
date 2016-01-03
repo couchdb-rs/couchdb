@@ -51,7 +51,7 @@ impl<T> Document<T> where T: serde::Deserialize
                 Some(x) => {
                     match x {
                         serde_json::Value::String(x) => {
-                            // FIXME: Should reuse the error's description?
+                            // TODO: Should reuse the error's description?
                             try!(Revision::parse(&x).map_err(|_| {
                                 make_error("The `_rev` field is not a valid revision")
                             }))

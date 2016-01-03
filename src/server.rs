@@ -30,7 +30,7 @@ pub struct Server {
 }
 
 impl Server {
-    /// Spawn a CouchDB server process.
+    /// Spawns a CouchDB server process.
     pub fn new() -> Result<Server, Error> {
 
         let tmp_root = try!(tempdir::TempDir::new("couchdb_client_test").map_err(|e| {
@@ -133,7 +133,7 @@ impl Server {
         })
     }
 
-    /// Get the CouchDB server URI.
+    /// Gets the CouchDB server URI.
     pub fn uri(&self) -> &str {
         &self.uri
     }

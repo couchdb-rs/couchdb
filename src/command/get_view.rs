@@ -12,7 +12,7 @@ use command::{self, Command, Request};
 use error::EncodeErrorKind;
 use json;
 
-/// Command to run a view.
+/// Command to execute a view.
 ///
 /// # Errors
 ///
@@ -57,19 +57,19 @@ impl<'a, P, K, V> GetView<'a, P, K, V>
         }
     }
 
-    /// Set whether to run the `reduce` view function.
+    /// Sets whether to run the `reduce` view function.
     pub fn reduce(mut self, v: bool) -> Self {
         self.reduce = Some(v);
         self
     }
 
-    /// Set the minimum key for rows contained within the result.
+    /// Sets the minimum key for rows contained within the result.
     pub fn endkey(mut self, key: K) -> Self {
         self.endkey = Some(key);
         self
     }
 
-    /// Set the maximum key for rows contained within the result.
+    /// Sets the maximum key for rows contained within the result.
     pub fn startkey(mut self, key: K) -> Self {
         self.startkey = Some(key);
         self

@@ -7,16 +7,17 @@ use DocumentName;
 /// Document identifier.
 ///
 /// A document id specifies a document's type and name. For example, given the
-/// HTTP request `GET http://example.com:5984/db/_design/foo`, the document id
-/// comprises `_design/foo` and specifies a design document with the name `foo`.
+/// HTTP request to `GET http://example.com:5984/db/_design/design-doc`, the
+/// document id comprises `_design/design-doc` and specifies a design document
+/// with the name `design-doc`.
 ///
-/// There are three types of documents: normal, design (i.e., `_design`), and
-/// local (i.e., `_local`). Each type is expressed as an enum variant that owns
-/// the underlying document name.
+/// There are three types of documents: *normal*, *design* (i.e., `_design`),
+/// and *local* (i.e., `_local`). Each type is expressed as an enum variant that
+/// owns the underlying document name.
 ///
-/// Although `DocumentId` implements the `Ord` and `PartialOrd` traits, it
-/// provides no guarantees how that ordering is defined and may change the
-/// definition across any two releases of the couchdb crate. That is, for two
+/// Although the `DocumentId` type implements the `Ord` and `PartialOrd` traits,
+/// it provides no guarantees how that ordering is defined and may change the
+/// definition between any two releases of the couchdb crate. That is, for two
 /// `DocumentId` values `a` and `b`, the expression `a < b` may hold true now
 /// but not in a subsequent release. Consequently, applications must not rely
 /// upon any particular ordering definition.

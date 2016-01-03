@@ -5,23 +5,13 @@ use DatabaseName;
 use Error;
 use error::BadPathKind;
 
-// FIXME: Write doc comments describing the peculiarities of path strings--all
-// path strings, not just database paths--containing slashes and
-// percent-encodable characters.
-
-// FIXME: Write doc comments.
+/// Trait for converting a type into a `DatabasePath`.
 pub trait IntoDatabasePath {
+    /// Converts self into a `DatabasePath`.
     fn into_database_path(self) -> Result<DatabasePath, Error>;
 }
 
 impl<'a> IntoDatabasePath for &'a str {
-    fn into_database_path(self) -> Result<DatabasePath, Error> {
-        use std::str::FromStr;
-        DatabasePath::from_str(self)
-    }
-}
-
-impl<'a> IntoDatabasePath for &'a String {
     fn into_database_path(self) -> Result<DatabasePath, Error> {
         use std::str::FromStr;
         DatabasePath::from_str(self)
@@ -34,20 +24,43 @@ impl<T: Into<DatabasePath>> IntoDatabasePath for T {
     }
 }
 
-// FIXME: Write doc comments.
+/// Path part of a URI specifying a database.
+///
+/// A database path comprises a single URI path component specifying a database
+/// name—the `/db` part of the HTTP request to GET `http://example.com:5984/db`.
+///
+/// Database paths are percent-encoded. For example, `/foo%2Fbar` identifies the
+/// database named `foo/bar`. When a `DatabasePath` is constructed from a
+/// `DatabaseName`, the percent-encoding is done automatically. When
+/// constructing a `DatabasePath` from a string, the string must be
+/// percent-encoded.
+///
+/// Although the `DatabasePath` type implements the `Ord` and `PartialOrd`
+/// traits, it provides no guarantees how that ordering is defined and may
+/// change the definition between any two releases of the couchdb crate. That
+/// is, for two `DatabasePath` values `a` and `b`, the expression `a < b` may
+/// hold true now but not in a subsequent release. Consequently, applications
+/// must not rely upon any particular ordering definition.
+///
 #[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct DatabasePath {
     db_name: DatabaseName,
 }
 
 impl DatabasePath {
-    // FIXME: Write doc comments.
+    /// Constructs a `DatabasePath` from a given string.
+    ///
+    /// The `path` string must begin with a leading slash and be
+    /// percent-encoded—e.g., `/foo%2Fbar` for the database named `foo/bar`.
+    /// For valid CouchDB database names, this matters only if the name contains
+    /// a slash character.
+    ///
     pub fn parse<T: AsRef<str>>(path: T) -> Result<Self, Error> {
         use std::str::FromStr;
         DatabasePath::from_str(path.as_ref())
     }
 
-    // FIXME: Write doc comments.
+    /// Converts self into a URI.
     pub fn into_uri(self, base_uri: hyper::Url) -> hyper::Url {
 
         let mut uri = base_uri;
@@ -135,18 +148,6 @@ mod tests {
     #[test]
     fn into_database_path_from_str_ref_nok() {
         "bad_path".into_database_path().unwrap_err();
-    }
-
-    #[test]
-    fn into_database_path_from_string_ok() {
-        let expected = DatabasePath { db_name: "foo".into() };
-        let got = "/foo".to_string().into_database_path().unwrap();
-        assert_eq!(expected, got);
-    }
-
-    #[test]
-    fn into_database_path_from_string_nok() {
-        "bad_path".to_string().into_database_path().unwrap_err();
     }
 
     #[test]

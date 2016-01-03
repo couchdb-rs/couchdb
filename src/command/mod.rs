@@ -1,11 +1,13 @@
-//! Sub-module for individual command types.
+//! Module for individual command types.
 //!
-//! Applications should not need to access the `command` module directly but
-//! instead use a `Client` instead to construct individual commands.
+//! Applications should not access the `command` module directly. Instead, they
+//! should use the appropriate `Client` method to construct a command. For
+//! example, the method `post_to_database` constructs a `PostToDatabase`
+//! command.
 
 macro_rules! impl_command_public_methods {
     ($command_output:ty) => {
-        /// Send the command request and wait for the response.
+        /// Sends the command request and waits for the response.
         pub fn run(self) -> Result<$command_output, Error> {
             command::run_command(self)
         }
@@ -46,7 +48,7 @@ use error::TransportKind;
 // Types implementing the Command trait define only how they construct requests
 // and process responses. This separates the command logic from the
 // responsibility of sending a request and receiving its response.
-pub trait Command: Sized {
+trait Command: Sized {
     type Output;
     type State;
     fn make_request(self) -> Result<(Request, Self::State), Error>;
@@ -55,7 +57,7 @@ pub trait Command: Sized {
                      -> Result<Self::Output, Error>;
 }
 
-pub fn run_command<C>(cmd: C) -> Result<C::Output, Error>
+fn run_command<C>(cmd: C) -> Result<C::Output, Error>
     where C: Command
 {
     let (resp, state) = {
@@ -73,7 +75,7 @@ pub fn run_command<C>(cmd: C) -> Result<C::Output, Error>
     C::take_response(resp, state)
 }
 
-pub struct Request {
+struct Request {
     request: hyper::client::Request<hyper::net::Fresh>,
     body: Vec<u8>,
 }
@@ -143,7 +145,7 @@ fn new_revision_etags(rev: &Revision) -> Vec<hyper::header::EntityTag> {
 
 // Returns an error if the HTTP response doesn't have a Content-Type of
 // `application/json`.
-pub fn content_type_must_be_application_json(headers: &hyper::header::Headers) -> Result<(), Error> {
+fn content_type_must_be_application_json(headers: &hyper::header::Headers) -> Result<(), Error> {
     match headers.get::<hyper::header::ContentType>() {
         None => Err(Error::NoContentTypeHeader { expected: "application/json" }),
         Some(content_type) => {
