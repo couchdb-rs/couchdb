@@ -4,9 +4,13 @@
 
 ### Deprecations
 
-* Direct construction of a `ViewFunction` instance. Applications should
-  instead use the new `ViewFunctionBuilder` type to construct a
-  `ViewFunction` instance.
+* Applications must not directly construct any of the following types:
+    * `Database`
+    * `Design`
+    * `ErrorResponse`
+    * `ViewFunction`
+    * `ViewResult`
+    * `ViewRow`
 
 ### Additions
 
