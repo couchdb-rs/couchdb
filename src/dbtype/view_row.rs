@@ -5,6 +5,8 @@ use DocumentId;
 
 /// Single row contained in the response resulting from executing a view.
 ///
+/// DEPRECATION NOTICE: Applications must not directly construct a `ViewRow`.
+///
 /// A `ViewRow` takes one of two forms. The first form is that the view has been
 /// reduced, in which case the `id` and `key` fields are `None` and the `value`
 /// field contains the reduced result. The second form is that the view has not

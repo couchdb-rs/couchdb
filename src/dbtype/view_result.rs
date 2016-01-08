@@ -5,6 +5,8 @@ use ViewRow;
 
 /// Response resulting from executing a view.
 ///
+/// DEPRECATION NOTICE: Applications must not directly construct a `ViewResult`.
+///
 /// A `ViewResult` contains all content in the response from the CouchDB server
 /// as a result of executing a view.
 ///

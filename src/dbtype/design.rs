@@ -6,6 +6,9 @@ use ViewFunctionMap;
 
 /// Content of a design document.
 ///
+/// DEPRECATION NOTICE: Applications must not directly construct a `Design`.
+/// Instead, they should use `DesignBuilder` to construct the design document.
+///
 /// CouchDB design documents contain many fields. However, the `Design` type
 /// currently supports only views.
 ///

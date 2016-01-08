@@ -5,6 +5,10 @@ use DocumentId;
 use Revision;
 
 /// Response content from the CouchDB server in case of error.
+///
+/// DEPRECATION NOTICE: Applications must not directly construct an
+/// `ErrorResponse`.
+///
 #[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct ErrorResponse {
     /// Error string returned by CouchDB Server.

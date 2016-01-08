@@ -4,6 +4,8 @@ use DatabaseName;
 
 /// Database meta-information, as returned from a command to GET a database.
 ///
+/// DEPRECATION NOTICE: Applications must not directly construct a `Database`.
+///
 /// Although the `Database` type implements the `Ord` and `PartialOrd` traits,
 /// it provides no guarantees how that ordering is defined and may change the
 /// definition between any two releases of the couchdb crate. That is, for two
