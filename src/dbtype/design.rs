@@ -1,7 +1,8 @@
 use serde;
 
-use ViewFunctionMap;
 use ViewFunction;
+use ViewFunctionBuilder;
+use ViewFunctionMap;
 
 /// Content of a design document.
 ///
@@ -124,20 +125,18 @@ impl serde::Deserialize for Design {
 ///
 /// ```
 /// use couchdb::{DesignBuilder, ViewFunction};
-/// let foo = ViewFunction {
-///               map: "function(doc) { emit(doc.name, doc.foo); }".to_string(),
-///               reduce: Some("_sum".to_string()),
-///           };
-/// let bar = ViewFunction {
-///               map: "function(doc) { emit(doc.name, doc.bar); }".to_string(),
-///               reduce: None,
-///           };
 /// let design = DesignBuilder::new()
-///                  .insert_view("foo", foo.clone())
-///                  .insert_view("bar", bar.clone())
+///                  .build_view("foo",
+///                              "function(doc) { if (doc.foo) { emit(doc.name, doc.foo); } }",
+///                              |x| x)
+///                  .build_view("bar",
+///                              "function(doc) { if (doc.foo) { emit(doc.name, doc.bar); } }",
+///                              |x| x.set_reduce("_sum"))
 ///                  .unwrap();
-/// assert_eq!(foo, *design.views.get("foo").unwrap());
-/// assert_eq!(bar, *design.views.get("bar").unwrap());
+/// assert_eq!(design.views.get("foo").unwrap().map,
+///            "function(doc) { if (doc.foo) { emit(doc.name, doc.foo); } }".to_string());
+/// assert_eq!(design.views.get("bar").unwrap().reduce,
+///            Some("_sum".to_string()));
 /// ```
 ///
 #[derive(Debug)]
@@ -146,26 +145,43 @@ pub struct DesignBuilder {
 }
 
 impl DesignBuilder {
-    /// Construct a builder containing an empty design document.
+    /// Constructs a builder containing an empty design document.
     pub fn new() -> Self {
         DesignBuilder { design: Design { views: ViewFunctionMap::new() } }
     }
 
-    /// Return the design document contained within the builder.
+    /// Returns the design document contained within the builder.
     pub fn unwrap(self) -> Design {
         self.design
     }
 
-    /// Add a view function to the design document contained within the builder.
+    /// Adds a view function to the design document contained within the
+    /// builder.
     ///
     /// If the design document already contains a view with the same name then
-    /// the new view function will replace the existing view function.
+    /// the new view function replaces the existing view function.
     ///
     pub fn insert_view<T, U>(mut self, view_name: T, view_function: U) -> Self
         where T: Into<String>,
               U: Into<ViewFunction>
     {
         self.design.views.insert(view_name.into(), view_function.into());
+        self
+    }
+
+    /// Builds a view function and adds it to the design document contained
+    /// within the builder.
+    ///
+    /// If the design document already contains a view with the same name then
+    /// the new view function replaces the existing view function.
+    ///
+    pub fn build_view<T, U, F>(mut self, view_name: T, map_function: U, f: F) -> Self
+        where T: Into<String>,
+              U: Into<String>,
+              F: FnOnce(ViewFunctionBuilder) -> ViewFunctionBuilder
+    {
+        let b = ViewFunctionBuilder::new(map_function.into());
+        self.design.views.insert(view_name.into(), f(b).unwrap());
         self
     }
 }

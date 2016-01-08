@@ -176,7 +176,7 @@ mod server;
 pub use client::{Client, IntoUrl};
 pub use dbtype::{Database, DatabaseName, Design, DesignBuilder, DesignDocumentName, Document,
                  DocumentId, DocumentName, ErrorResponse, ViewName, Revision, ViewFunction,
-                 ViewFunctionMap, ViewResult, ViewRow};
+                 ViewFunctionBuilder, ViewFunctionMap, ViewResult, ViewRow};
 pub use path::{IntoDatabasePath, IntoDesignDocumentPath, IntoDocumentPath, IntoViewPath,
                DatabasePath, DesignDocumentPath, DocumentPath, ViewPath};
 pub use error::Error;

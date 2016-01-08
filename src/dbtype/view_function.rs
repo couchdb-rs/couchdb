@@ -4,7 +4,59 @@ use std;
 /// Associative collection for view functions.
 pub type ViewFunctionMap = std::collections::HashMap<String, ViewFunction>;
 
+/// Builder for constructing a view function.
+///
+/// # Examples
+///
+/// ```
+/// use couchdb::{ViewFunction, ViewFunctionBuilder};
+/// let s = "function(doc) { if (doc.foo) { emit(doc.name, doc.foo); } }";
+/// let v = ViewFunctionBuilder::new(s)
+///             .set_reduce("_sum")
+///             .unwrap();
+/// assert_eq!(v.map, s);
+/// assert_eq!(v.reduce, Some("_sum".to_string()));
+/// ```
+///
+#[derive(Debug)]
+pub struct ViewFunctionBuilder {
+    view_function: ViewFunction,
+}
+
+impl ViewFunctionBuilder {
+    /// Constructs a new view function builder.
+    ///
+    /// The view function contained within the builder has the given map
+    /// function and an undefined reduce function.
+    ///
+    pub fn new<S: Into<String>>(map_function: S) -> Self {
+        ViewFunctionBuilder {
+            view_function: ViewFunction {
+                map: map_function.into(),
+                reduce: None,
+            },
+        }
+    }
+
+    /// Returns the view function contained within the builder.
+    pub fn unwrap(self) -> ViewFunction {
+        self.view_function
+    }
+
+    /// Replaces any reduce function in the view function contained within the
+    /// builder.
+    pub fn set_reduce<S: Into<String>>(mut self, reduce_function: S) -> Self {
+        self.view_function.reduce = Some(reduce_function.into());
+        self
+    }
+}
+
 /// JavaScript `map` and `reduce` functions for a CouchDB view.
+///
+/// DEPRECATION NOTICE: Applications must not directly construct a
+/// `ViewFunction`. Instead, they should use `ViewFunctionBuilder` to construct
+/// the view function.
+///
 #[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct ViewFunction {
     /// JavaScript function that takes a document and emits zero or more

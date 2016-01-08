@@ -2,7 +2,16 @@
 
 ## v0.4.1 (unreleased)
 
-No changes yet!
+### Deprecations
+
+* Direct construction of a `ViewFunction` instance. Applications should
+  instead use the new `ViewFunctionBuilder` type to construct a
+  `ViewFunction` instance.
+
+### Additions
+
+* New `ViewFunctionBuilder` type for constructing a `ViewFunction`
+  instance.
 
 ## v0.4.0 (2016-01-03)
 

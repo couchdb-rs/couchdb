@@ -32,7 +32,7 @@ pub use self::document_id::DocumentId;
 pub use self::document_name::DocumentName;
 pub use self::response::{ErrorResponse, PostToDatabaseResponse, PutDocumentResponse};
 pub use self::revision::Revision;
-pub use self::view_function::{ViewFunction, ViewFunctionMap};
+pub use self::view_function::{ViewFunction, ViewFunctionBuilder, ViewFunctionMap};
 pub use self::view_name::ViewName;
 pub use self::view_result::ViewResult;
 pub use self::view_row::ViewRow;
