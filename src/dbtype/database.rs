@@ -1,10 +1,9 @@
 use serde;
+use std;
 
 use DatabaseName;
 
 /// Database meta-information, as returned from a command to GET a database.
-///
-/// DEPRECATION NOTICE: Applications must not directly construct a `Database`.
 ///
 /// Although the `Database` type implements the `Ord` and `PartialOrd` traits,
 /// it provides no guarantees how that ordering is defined and may change the
@@ -51,6 +50,11 @@ pub struct Database {
     /// Set to true if the database compaction routine is operating on this
     /// database.
     pub compact_running: bool,
+
+    // Include a private field to prevent applications from directly
+    // constructing this struct. This allows us to add new fields without
+    // breaking applications.
+    _dummy: std::marker::PhantomData<()>,
 }
 
 impl serde::Deserialize for Database {
@@ -228,6 +232,7 @@ impl serde::Deserialize for Database {
                 };
 
                 Ok(Database {
+                    _dummy: std::marker::PhantomData,
                     committed_update_seq: committed_update_seq,
                     compact_running: compact_running,
                     db_name: db_name,
@@ -262,6 +267,7 @@ impl serde::Deserialize for Database {
 mod tests {
 
     use serde_json;
+    use std;
 
     use Database;
     use DatabaseName;
@@ -269,6 +275,7 @@ mod tests {
     #[test]
     fn database_deserialization_with_all_fields() {
         let expected = Database {
+            _dummy: std::marker::PhantomData,
             committed_update_seq: 1,
             compact_running: true,
             db_name: DatabaseName::from("foo"),
