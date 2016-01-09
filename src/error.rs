@@ -273,9 +273,6 @@ impl std::fmt::Display for BadPathKind {
 
 #[derive(Debug)]
 pub enum DecodeErrorKind {
-    InvalidDocument {
-        what: &'static str,
-    },
     Serde {
         cause: serde_json::Error,
     },
@@ -285,7 +282,6 @@ impl DecodeErrorKind {
     fn cause(&self) -> Option<&std::error::Error> {
         use self::DecodeErrorKind::*;
         match *self {
-            InvalidDocument { .. } => None,
             Serde { ref cause } => Some(cause),
         }
     }
@@ -295,7 +291,6 @@ impl std::fmt::Display for DecodeErrorKind {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> Result<(), std::fmt::Error> {
         use self::DecodeErrorKind::*;
         match *self {
-            InvalidDocument { ref what } => write!(f, "Unexpected document content: {}", what),
             Serde { ref cause } => cause.fmt(f),
         }
     }

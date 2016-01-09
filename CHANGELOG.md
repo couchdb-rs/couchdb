@@ -1,6 +1,19 @@
 # CouchDB-rs Change Log
 
-## v0.4.1 (unreleased)
+## v0.5.0 (unreleased)
+
+### Breaking changes
+
+* The `Document` type has been refactored to make it easier to use.
+    * The `Document` type is no longer generic, nor is the `content`
+      field publicly accessible. Applications access document content
+      via a new `into_content` method, which does JSON-decoding.
+    * The `revision` field has been renamed to `rev`, which more closely
+      matches the CouchDB name.
+    * The `Document` type implements `serde::Deserialize` instead of the
+      `from_reader` deserialization method.
+    * The `Document` type no longer implements these traits: `Eq`,
+      `Hash`, `Ord`, and `PartialOrd`.
 
 ### Deprecations
 
@@ -165,7 +178,7 @@ and to be more Rust-idiomatic.
 
 ### Other fixes
 
-* The `views` member of the `Design` struct is now public.
+* The `views` field of the `Design` struct is now public.
 
 ### Other additions
 

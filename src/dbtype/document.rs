@@ -1,253 +1,219 @@
 use serde;
 use serde_json;
-use std;
 
 use DocumentId;
 use Error;
 use Revision;
 use error::DecodeErrorKind;
-use json;
 
 /// Document, including both meta-information and application-defined content.
-#[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
-pub struct Document<T: serde::Deserialize> {
+///
+/// Applications construct documents indirectly, by retrieving them from the
+/// CouchDB server. See the `Client::get_document` method for more information.
+///
+#[derive(Clone, Debug, PartialEq)]
+pub struct Document {
     /// Id of this document.
     pub id: DocumentId,
 
     /// Revision of this document.
-    pub revision: Revision,
+    pub rev: Revision,
 
-    /// Application-defined content of this document.
-    pub content: T,
+    content: serde_json::Value,
 }
 
-impl<T> Document<T> where T: serde::Deserialize
-{
-    pub fn from_reader<R: std::io::Read>(r: R) -> Result<Self, Error> {
+impl Document {
+    /// Converts self into the document's content, decoding from JSON to do so.
+    pub fn into_content<T: serde::Deserialize>(self) -> Result<T, Error> {
+        serde_json::from_value(self.content)
+            .map_err(|e| Error::Decode(DecodeErrorKind::Serde { cause: e }))
+    }
+}
 
-        // The CouchDB API document resource mixes at the top level of the
-        // document JSON object both meta fields (e.g., `_id` and `_rev`) and
-        // application-defined fields. Serde does not provide a feature for
-        // directly deserializing such a doubly typed JSON object. We work
-        // around this by deserializing to a generic Value instance, then
-        // selectively dividing the fields appropriately.
-
-        fn make_error(what: &'static str) -> Error {
-            Error::Decode(DecodeErrorKind::InvalidDocument { what: what })
+impl serde::Deserialize for Document {
+    fn deserialize<D>(d: &mut D) -> Result<Self, D::Error>
+        where D: serde::Deserializer
+    {
+        enum Field {
+            Id,
+            Rev,
+            Ignored,
+            Content(String),
         }
 
-        let mut top = try!(json::decode_json::<_, serde_json::Value>(r));
+        impl serde::Deserialize for Field {
+            fn deserialize<D>(d: &mut D) -> Result<Field, D::Error>
+                where D: serde::Deserializer
+            {
+                struct Visitor;
 
-        let (doc_id, rev) = {
+                impl serde::de::Visitor for Visitor {
+                    type Value = Field;
 
-            let mut dot = match top.as_object_mut() {
-                Some(x) => x,
-                None => {
-                    return Err(make_error("Document is not a JSON object"));
-                }
-            };
-
-            let rev = match dot.remove("_rev") {
-                Some(x) => {
-                    match x {
-                        serde_json::Value::String(x) => {
-                            // TODO: Should reuse the error's description?
-                            try!(Revision::parse(&x).map_err(|_| {
-                                make_error("The `_rev` field is not a valid revision")
-                            }))
-                        }
-                        _ => {
-                            return Err(make_error("The `_rev` field is not a string"));
+                    fn visit_str<E>(&mut self, value: &str) -> Result<Field, E>
+                        where E: serde::de::Error
+                    {
+                        match value {
+                            "_id" => Ok(Field::Id),
+                            "_rev" => Ok(Field::Rev),
+                            "_attachments" => Ok(Field::Ignored),
+                            _ => Ok(Field::Content(value.to_string())),
                         }
                     }
                 }
-                None => {
-                    return Err(make_error("The `_rev` field is missing"));
-                }
-            };
 
-            let doc_id = match dot.remove("_id") {
-                Some(x) => {
-                    match x {
-                        serde_json::Value::String(x) => DocumentId::from(x),
-                        _ => {
-                            return Err(make_error("The `_id` field is not a string"));
+                d.visit(Visitor)
+            }
+        }
+
+        struct Visitor;
+
+        impl serde::de::Visitor for Visitor {
+            type Value = Document;
+
+            fn visit_map<V>(&mut self, mut visitor: V) -> Result<Self::Value, V::Error>
+                where V: serde::de::MapVisitor
+            {
+                let mut id = None;
+                let mut rev = None;
+                let mut content_builder = serde_json::builder::ObjectBuilder::new();
+
+                loop {
+                    match try!(visitor.visit_key()) {
+                        Some(Field::Id) => {
+                            id = Some(try!(visitor.visit_value()));
+                        }
+                        Some(Field::Rev) => {
+                            rev = Some(try!(visitor.visit_value()));
+                        }
+                        Some(Field::Ignored) => {
+                            try!(visitor.visit_value::<serde_json::Value>());
+                        }
+                        Some(Field::Content(name)) => {
+                            let value = Some(try!(visitor.visit_value::<serde_json::Value>()));
+                            content_builder = content_builder.insert(name, value);
+                        }
+                        None => {
+                            break;
                         }
                     }
                 }
-                None => {
-                    return Err(make_error("The `_id` field is missing"));
-                }
-            };
 
-            // Ignore any attachment info.
-            dot.remove("_attachments");
+                try!(visitor.end());
 
-            (doc_id, rev)
-        };
+                let id = match id {
+                    Some(x) => x,
+                    None => try!(visitor.missing_field("id")),
+                };
 
-        let content = try!(serde_json::from_value(top)
-                               .map_err(|e| Error::Decode(DecodeErrorKind::Serde { cause: e })));
+                let rev = match rev {
+                    Some(x) => x,
+                    None => try!(visitor.missing_field("rev")),
+                };
 
-        let doc = Document {
-            id: doc_id,
-            revision: rev,
-            content: content,
-        };
 
-        Ok(doc)
+                Ok(Document {
+                    id: id,
+                    rev: rev,
+                    content: content_builder.unwrap(),
+                })
+            }
+        }
+
+        static FIELDS: &'static [&'static str] = &["_id", "_rev"];
+        d.visit_struct("Document", FIELDS, Visitor)
     }
 }
 
 #[cfg(test)]
 mod tests {
 
-    macro_rules! expect_decode_error {
-        ($result:ident) => {
-            match $result {
-                Ok(..) => {
-                    panic!("Got unexpected OK result");
-                }
-                Err(ref e) => {
-                    match *e {
-                        Error::Decode(ref kind) => {
-                            match *kind {
-                                DecodeErrorKind::InvalidDocument{..} => (),
-                                _ => {
-                                    panic!("Got unexpected error kind: {}", e);
-                                }
-                            }
-                        }
-                        _ => {
-                            panic!("Got unexpected error: {}", e);
-                        }
-                    }
-                }
-            }
-        }
-    }
-
     use serde_json;
 
     use Document;
     use DocumentId;
-    use Error;
     use Revision;
-    use error::DecodeErrorKind;
 
     #[test]
-    fn document_from_reader_with_all_fields() {
-        let expected = Document::<serde_json::Value> {
+    fn document_deserialization_with_all_fields() {
+        let expected = Document {
             id: DocumentId::Normal("foo".into()),
-            revision: Revision::parse("42-1234567890abcdef1234567890abcdef").unwrap(),
-            content: serde_json::builder::ObjectBuilder::new()
-                         .insert("bar", 42)
-                         .insert("qux", "baz")
-                         .unwrap(),
+            rev: Revision::parse("42-1234567890abcdef1234567890abcdef").unwrap(),
+            content: serde_json::builder::ObjectBuilder::new().unwrap(),
         };
         let source = serde_json::builder::ObjectBuilder::new()
                          .insert("_id", "foo")
                          .insert("_rev", "42-1234567890abcdef1234567890abcdef")
-                         .insert("bar", 42)
-                         .insert("qux", "baz")
                          .unwrap();
         let s = serde_json::to_string(&source).unwrap();
-        let got = Document::from_reader(&s.into_bytes()[..]).unwrap();
+        let got = serde_json::from_str(&s).unwrap();
         assert_eq!(expected, got);
-
     }
 
     #[test]
-    fn document_from_reader_with_no_id_field() {
-        let source = serde_json::builder::ObjectBuilder::new()
-                         .insert("_rev", "42-1234567890abcdef1234567890abcdef")
-                         .insert("bar", 42)
-                         .insert("qux", "baz")
-                         .unwrap();
-        let s = serde_json::to_string(&source).unwrap();
-        let got = Document::<serde_json::Value>::from_reader(&s.into_bytes()[..]);
-        expect_decode_error!(got);
-    }
-
-    #[test]
-    fn document_from_reader_with_bad_id_field() {
-        let source = serde_json::builder::ObjectBuilder::new()
-                         .insert("_id", 17)
-                         .insert("_rev", "42-1234567890abcdef1234567890abcdef")
-                         .insert("bar", 42)
-                         .insert("qux", "baz")
-                         .unwrap();
-        let s = serde_json::to_string(&source).unwrap();
-        let got = Document::<serde_json::Value>::from_reader(&s.into_bytes()[..]);
-        expect_decode_error!(got);
-    }
-
-    #[test]
-    fn document_from_reader_with_no_rev_field() {
-        let source = serde_json::builder::ObjectBuilder::new()
-                         .insert("_id", "foo")
-                         .insert("bar", 42)
-                         .insert("qux", "baz")
-                         .unwrap();
-        let s = serde_json::to_string(&source).unwrap();
-        let got = Document::<serde_json::Value>::from_reader(&s.into_bytes()[..]);
-        expect_decode_error!(got);
-    }
-
-    #[test]
-    fn document_from_reader_with_bad_rev_field_wrong_type() {
-        let source = serde_json::builder::ObjectBuilder::new()
-                         .insert("_id", "foo")
-                         .insert("_rev", 17)
-                         .insert("bar", 42)
-                         .insert("qux", "baz")
-                         .unwrap();
-        let s = serde_json::to_string(&source).unwrap();
-        let got = Document::<serde_json::Value>::from_reader(&s.into_bytes()[..]);
-        expect_decode_error!(got);
-    }
-
-    #[test]
-    fn document_from_reader_with_bad_rev_field_parse_error() {
-        let source = serde_json::builder::ObjectBuilder::new()
-                         .insert("_id", "foo")
-                         .insert("_rev", "bad_revision")
-                         .insert("bar", 42)
-                         .insert("qux", "baz")
-                         .unwrap();
-        let s = serde_json::to_string(&source).unwrap();
-        let got = Document::<serde_json::Value>::from_reader(&s.into_bytes()[..]);
-        expect_decode_error!(got);
-    }
-
-    #[test]
-    fn document_from_reader_with_attachments_field() {
-        let expected = Document::<serde_json::Value> {
+    fn document_deserialization_with_attachments_field() {
+        let expected = Document {
             id: DocumentId::Normal("foo".into()),
-            revision: Revision::parse("42-1234567890abcdef1234567890abcdef").unwrap(),
-            content: serde_json::builder::ObjectBuilder::new()
-                         .insert("bar", 42)
-                         .insert("qux", "baz")
-                         .unwrap(),
+            rev: Revision::parse("42-1234567890abcdef1234567890abcdef").unwrap(),
+            content: serde_json::builder::ObjectBuilder::new().unwrap(),
         };
         let source = serde_json::builder::ObjectBuilder::new()
                          .insert("_id", "foo")
                          .insert("_rev", "42-1234567890abcdef1234567890abcdef")
                          .insert_object("_attachments", |x| {
-                             x.insert_object("attachment_1", |x| {
-                                 x.insert("content-type", "text/plain")
-                                  .insert("revpos", 2)
-                                  .insert("digest", "md5-abcdefghijklmnopqrstuv==")
+                             x.insert_object("bar", |x| {
+                                 x.insert("content_type", "text/plain")
+                                  .insert("revpos", 3)
+                                  .insert("digest", "md5-ABCDEFGHIJKLMNOPQRSTUV==")
                                   .insert("length", 17)
                                   .insert("stub", true)
                              })
                          })
-                         .insert("bar", 42)
-                         .insert("qux", "baz")
                          .unwrap();
         let s = serde_json::to_string(&source).unwrap();
-        let got = Document::from_reader(&s.into_bytes()[..]).unwrap();
+        println!("I: {}", s);
+        let got = serde_json::from_str(&s).unwrap();
         assert_eq!(expected, got);
+    }
 
+    #[test]
+    fn document_deserialization_with_content() {
+        let expected = Document {
+            id: DocumentId::Normal("foo".into()),
+            rev: Revision::parse("42-1234567890abcdef1234567890abcdef").unwrap(),
+            content: serde_json::builder::ObjectBuilder::new()
+                         .insert("bar", 17)
+                         .insert("qux", "ipsum lorem")
+                         .unwrap(),
+        };
+        let source = serde_json::builder::ObjectBuilder::new()
+                         .insert("_id", "foo")
+                         .insert("_rev", "42-1234567890abcdef1234567890abcdef")
+                         .insert("bar", 17)
+                         .insert("qux", "ipsum lorem")
+                         .unwrap();
+        let s = serde_json::to_string(&source).unwrap();
+        let got = serde_json::from_str(&s).unwrap();
+        assert_eq!(expected, got);
+    }
+
+    #[test]
+    fn document_deserialization_with_no_id_field() {
+        let source = serde_json::builder::ObjectBuilder::new()
+                         .insert("_rev", "42-1234567890abcdef1234567890abcdef")
+                         .unwrap();
+        let s = serde_json::to_string(&source).unwrap();
+        let got = serde_json::from_str::<Document>(&s);
+        expect_json_error_missing_field!(got, "_id");
+    }
+
+    #[test]
+    fn document_deserialization_with_no_rev_field() {
+        let source = serde_json::builder::ObjectBuilder::new()
+                         .insert("_id", "foo")
+                         .unwrap();
+        let s = serde_json::to_string(&source).unwrap();
+        let got = serde_json::from_str::<Document>(&s);
+        expect_json_error_missing_field!(got, "_rev");
     }
 }

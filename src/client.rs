@@ -92,10 +92,7 @@ impl<'a> Client {
     }
 
     /// Builds a command to GET a document.
-    pub fn get_document<P: IntoDocumentPath, T: serde::Deserialize>
-        (&'a self,
-         path: P)
-         -> command::GetDocument<'a, P, T> {
+    pub fn get_document<P: IntoDocumentPath>(&'a self, path: P) -> command::GetDocument<'a, P> {
         command::GetDocument::new(&self.state, path)
     }
 

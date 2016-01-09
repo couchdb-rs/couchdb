@@ -114,18 +114,18 @@ fn delete_database_nok_database_does_not_exist() {
 fn post_to_database_ok() {
     let (_server, client) = make_server_and_client();
     client.put_database("/baseball").run().unwrap();
-    let source_content = serde_json::builder::ObjectBuilder::new()
-                             .insert("name", "Babe Ruth")
-                             .insert("career_hr", 714)
-                             .unwrap();
-    let (rev, doc_id) = client.post_to_database("/baseball", &source_content).run().unwrap();
-    let doc = client.get_document::<_, serde_json::Value>(("/baseball", doc_id.clone()))
+    let expected_content = serde_json::builder::ObjectBuilder::new()
+                               .insert("name", "Babe Ruth")
+                               .insert("career_hr", 714)
+                               .unwrap();
+    let (rev, doc_id) = client.post_to_database("/baseball", &expected_content).run().unwrap();
+    let doc = client.get_document(("/baseball", doc_id.clone()))
                     .run()
                     .unwrap()
                     .unwrap();
     assert_eq!(doc.id, doc_id);
-    assert_eq!(doc.revision, rev);
-    assert_eq!(doc.content, source_content);
+    assert_eq!(doc.rev, rev);
+    assert_eq!(expected_content, doc.into_content().unwrap());
 }
 
 #[test]
@@ -194,18 +194,18 @@ fn head_document_nok_document_does_not_exist() {
 fn get_document_ok_without_revision() {
     let (_server, client) = make_server_and_client();
     client.put_database("/baseball").run().unwrap();
-    let source_content = serde_json::builder::ObjectBuilder::new()
-                             .insert("name", "Babe Ruth")
-                             .insert("career_hr", 714)
-                             .unwrap();
-    let (rev, doc_id) = client.post_to_database("/baseball", &source_content).run().unwrap();
-    let got = client.get_document::<_, serde_json::Value>(("/baseball", doc_id.clone()))
+    let expected_content = serde_json::builder::ObjectBuilder::new()
+                               .insert("name", "Babe Ruth")
+                               .insert("career_hr", 714)
+                               .unwrap();
+    let (rev, doc_id) = client.post_to_database("/baseball", &expected_content).run().unwrap();
+    let got = client.get_document(("/baseball", doc_id.clone()))
                     .run()
                     .unwrap()
                     .unwrap();
     assert_eq!(doc_id, got.id);
-    assert_eq!(rev, got.revision);
-    assert_eq!(source_content, got.content);
+    assert_eq!(rev, got.rev);
+    assert_eq!(expected_content, got.into_content().unwrap());
 }
 
 #[test]
@@ -217,7 +217,7 @@ fn get_document_ok_fresh_revision() {
                              .insert("career_hr", 714)
                              .unwrap();
     let (rev, doc_id) = client.post_to_database("/baseball", &source_content).run().unwrap();
-    let got = client.get_document::<_, serde_json::Value>(("/baseball", doc_id.clone()))
+    let got = client.get_document(("/baseball", doc_id.clone()))
                     .if_none_match(&rev)
                     .run()
                     .unwrap();
@@ -228,30 +228,30 @@ fn get_document_ok_fresh_revision() {
 fn get_document_ok_stale_revision() {
     let (_server, client) = make_server_and_client();
     client.put_database("/baseball").run().unwrap();
-    let source_content = serde_json::builder::ObjectBuilder::new()
-                             .insert("name", "Babe Ruth")
-                             .insert("career_hr", 714)
-                             .unwrap();
-    let (rev1, doc_id) = client.post_to_database("/baseball", &source_content).run().unwrap();
-    let rev2 = client.put_document(("/baseball", doc_id.clone()), &source_content)
+    let expected_content = serde_json::builder::ObjectBuilder::new()
+                               .insert("name", "Babe Ruth")
+                               .insert("career_hr", 714)
+                               .unwrap();
+    let (rev1, doc_id) = client.post_to_database("/baseball", &expected_content).run().unwrap();
+    let rev2 = client.put_document(("/baseball", doc_id.clone()), &expected_content)
                      .if_match(&rev1)
                      .run()
                      .unwrap();
-    let got = client.get_document::<_, serde_json::Value>(("/baseball", doc_id.clone()))
+    let got = client.get_document(("/baseball", doc_id.clone()))
                     .if_none_match(&rev1)
                     .run()
                     .unwrap()
                     .unwrap();
     assert_eq!(doc_id, got.id);
-    assert_eq!(rev2, got.revision);
-    assert_eq!(source_content, got.content);
+    assert_eq!(rev2, got.rev);
+    assert_eq!(expected_content, got.into_content().unwrap());
 }
 
 #[test]
 fn get_document_nok_document_does_not_exist() {
     let (_server, client) = make_server_and_client();
     client.put_database("/foo").run().unwrap();
-    let got = client.get_document::<_, serde_json::Value>("/foo/bar").run();
+    let got = client.get_document("/foo/bar").run();
     expect_couchdb_error!(got, couchdb::Error::NotFound(Some(..)));
 }
 
@@ -259,18 +259,18 @@ fn get_document_nok_document_does_not_exist() {
 fn put_document_ok_new_document() {
     let (_server, client) = make_server_and_client();
     client.put_database("/baseball").run().unwrap();
-    let source_content = serde_json::builder::ObjectBuilder::new()
-                             .insert("name", "Babe Ruth")
-                             .insert("career_hr", 714)
-                             .unwrap();
-    let rev = client.put_document("/baseball/babe_ruth", &source_content).run().unwrap();
-    let got = client.get_document::<_, serde_json::Value>("/baseball/babe_ruth")
+    let expected_content = serde_json::builder::ObjectBuilder::new()
+                               .insert("name", "Babe Ruth")
+                               .insert("career_hr", 714)
+                               .unwrap();
+    let rev = client.put_document("/baseball/babe_ruth", &expected_content).run().unwrap();
+    let got = client.get_document("/baseball/babe_ruth")
                     .run()
                     .unwrap()
                     .unwrap();
     assert_eq!(couchdb::DocumentId::from("babe_ruth"), got.id);
-    assert_eq!(rev, got.revision);
-    assert_eq!(source_content, got.content);
+    assert_eq!(rev, got.rev);
+    assert_eq!(expected_content, got.into_content().unwrap());
 }
 
 #[test]
@@ -282,22 +282,22 @@ fn put_document_ok_update_document() {
                              .insert("career_hr", 714)
                              .unwrap();
     let (rev1, doc_id) = client.post_to_database("/baseball", &source_content).run().unwrap();
-    let source_content = serde_json::builder::ObjectBuilder::new()
-                             .insert("name", "Babe Ruth")
-                             .insert("career_hr", 714)
-                             .insert("career_hits", 2873)
-                             .unwrap();
-    let rev2 = client.put_document(("/baseball", doc_id.clone()), &source_content)
+    let expected_content = serde_json::builder::ObjectBuilder::new()
+                               .insert("name", "Babe Ruth")
+                               .insert("career_hr", 714)
+                               .insert("career_hits", 2873)
+                               .unwrap();
+    let rev2 = client.put_document(("/baseball", doc_id.clone()), &expected_content)
                      .if_match(&rev1)
                      .run()
                      .unwrap();
-    let got = client.get_document::<_, serde_json::Value>(("/baseball", doc_id.clone()))
+    let got = client.get_document(("/baseball", doc_id.clone()))
                     .run()
                     .unwrap()
                     .unwrap();
     assert_eq!(doc_id, got.id);
-    assert_eq!(rev2, got.revision);
-    assert_eq!(source_content, got.content);
+    assert_eq!(rev2, got.rev);
+    assert_eq!(expected_content, got.into_content().unwrap());
 }
 
 #[test]

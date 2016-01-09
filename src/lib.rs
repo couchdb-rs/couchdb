@@ -45,22 +45,22 @@
 //! client.put_database("/baseball").run().unwrap();
 //!
 //! // POST http://couchdb-server:5984/baseball
-//! let value = serde_json::builder::ObjectBuilder::new()
-//!                 .insert("name", "Babe Ruth")
-//!                 .insert("career_hr", 714)
-//!                 .unwrap();
-//! let (rev, doc_id) = client.post_to_database("/baseball", &value)
-//!                           .run()
-//!                           .unwrap();
+//! let content = serde_json::builder::ObjectBuilder::new()
+//!                   .insert("name", "Babe Ruth")
+//!                   .insert("career_hr", 714)
+//!                   .unwrap();
+//! let (rev, id) = client.post_to_database("/baseball", &content)
+//!                       .run()
+//!                       .unwrap();
 //!
 //! // GET http://couchdb-server:5984/baseball/<doc_id>
-//! let doc = client.get_document::<_, serde_json::Value>(("/baseball", doc_id.clone()))
+//! let doc = client.get_document(("/baseball", id.clone()))
 //!                 .run()
 //!                 .unwrap()
 //!                 .unwrap();
-//! assert_eq!(doc.id, doc_id);
-//! assert_eq!(doc.revision, rev);
-//! assert_eq!(doc.content, value);
+//! assert_eq!(id, doc.id);
+//! assert_eq!(rev, doc.rev);
+//! assert_eq!(content, doc.into_content().unwrap());
 //! ```
 //!
 //! ## CouchDB API coverage

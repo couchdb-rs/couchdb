@@ -1,6 +1,4 @@
 use hyper;
-use serde;
-use std;
 
 use Document;
 use Error;
@@ -29,24 +27,21 @@ use json;
 /// * `Error::NotFound`: The document does not exist.
 /// * `Error::Unauthorized`: The client is unauthorized.
 ///
-pub struct GetDocument<'a, P, T>
-    where P: IntoDocumentPath,
-          T: serde::Deserialize
+pub struct GetDocument<'a, P>
+    where P: IntoDocumentPath
 {
     client_state: &'a ClientState,
     path: P,
     if_none_match: Option<&'a Revision>,
-    _content_type: std::marker::PhantomData<T>,
 }
 
-impl<'a, P: IntoDocumentPath, T: serde::Deserialize> GetDocument<'a, P, T> {
+impl<'a, P: IntoDocumentPath> GetDocument<'a, P> {
     #[doc(hidden)]
     pub fn new(client_state: &'a ClientState, path: P) -> Self {
         GetDocument {
             client_state: client_state,
             path: path,
             if_none_match: None,
-            _content_type: std::marker::PhantomData,
         }
     }
 
@@ -56,11 +51,11 @@ impl<'a, P: IntoDocumentPath, T: serde::Deserialize> GetDocument<'a, P, T> {
         self
     }
 
-    impl_command_public_methods!(Option<Document<T>>);
+    impl_command_public_methods!(Option<Document>);
 }
 
-impl<'a, P: IntoDocumentPath, T: serde::Deserialize> Command for GetDocument<'a, P, T> {
-    type Output = Option<Document<T>>;
+impl<'a, P: IntoDocumentPath> Command for GetDocument<'a, P> {
+    type Output = Option<Document>;
     type State = ();
 
     fn make_request(self) -> Result<(Request, Self::State), Error> {
@@ -78,7 +73,7 @@ impl<'a, P: IntoDocumentPath, T: serde::Deserialize> Command for GetDocument<'a,
         match resp.status {
             hyper::status::StatusCode::Ok => {
                 try!(command::content_type_must_be_application_json(&resp.headers));
-                let doc = try!(Document::from_reader(resp));
+                let doc = try!(json::decode_json::<_, Document>(resp));
                 Ok(Some(doc))
             }
             hyper::status::StatusCode::NotModified => Ok(None),
