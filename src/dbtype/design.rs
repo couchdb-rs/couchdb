@@ -17,6 +17,9 @@ pub struct Design {
     /// Map of view names to the view function for each name.
     pub views: ViewFunctionMap,
 
+    // Include a private field to prevent applications from directly
+    // constructing this struct. This allows us to add new fields without
+    // breaking applications.
     _dummy: std::marker::PhantomData<()>,
 }
 

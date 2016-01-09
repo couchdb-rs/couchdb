@@ -15,13 +15,13 @@
     * The `Document` type no longer implements these traits: `Eq`,
       `Hash`, `Ord`, and `PartialOrd`.
 * The following types now have at least one private field and can no
-  longer be directly constructed by applications: `Design`.
+  longer be directly constructed by applications: `Design` and
+  `ErrorResponse`.
 
 ### Deprecations
 
 * Applications must not directly construct any of the following types:
     * `Database`
-    * `ErrorResponse`
     * `ViewFunction`
     * `ViewResult`
     * `ViewRow`
