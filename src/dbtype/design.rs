@@ -1,4 +1,5 @@
 use serde;
+use std;
 
 use ViewFunction;
 use ViewFunctionBuilder;
@@ -6,16 +7,17 @@ use ViewFunctionMap;
 
 /// Content of a design document.
 ///
-/// DEPRECATION NOTICE: Applications must not directly construct a `Design`.
-/// Instead, they should use `DesignBuilder` to construct the design document.
-///
 /// CouchDB design documents contain many fields. However, the `Design` type
 /// currently supports only views.
+///
+/// Applications may construct a `Design` by using a `DesignBuilder`.
 ///
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Design {
     /// Map of view names to the view function for each name.
     pub views: ViewFunctionMap,
+
+    _dummy: std::marker::PhantomData<()>,
 }
 
 impl Design {
@@ -24,7 +26,10 @@ impl Design {
     /// An empty design document contains no views.
     ///
     pub fn new() -> Self {
-        Design { views: ViewFunctionMap::new() }
+        Design {
+            _dummy: std::marker::PhantomData,
+            views: ViewFunctionMap::new(),
+        }
     }
 }
 
@@ -111,7 +116,10 @@ impl serde::Deserialize for Design {
                     None => ViewFunctionMap::new(),
                 };
 
-                let v = Design { views: views };
+                let v = Design {
+                    _dummy: std::marker::PhantomData,
+                    views: views,
+                };
 
                 Ok(v)
             }
@@ -150,7 +158,12 @@ pub struct DesignBuilder {
 impl DesignBuilder {
     /// Constructs a builder containing an empty design document.
     pub fn new() -> Self {
-        DesignBuilder { design: Design { views: ViewFunctionMap::new() } }
+        DesignBuilder {
+            design: Design {
+                _dummy: std::marker::PhantomData,
+                views: ViewFunctionMap::new(),
+            },
+        }
     }
 
     /// Returns the design document contained within the builder.
@@ -193,6 +206,7 @@ impl DesignBuilder {
 mod tests {
 
     use serde_json;
+    use std;
 
     use Design;
     use DesignBuilder;
@@ -201,7 +215,10 @@ mod tests {
 
     #[test]
     fn design_builder_empty() {
-        let expected = Design { views: ViewFunctionMap::new() };
+        let expected = Design {
+            _dummy: std::marker::PhantomData,
+            views: ViewFunctionMap::new(),
+        };
         let got = DesignBuilder::new().unwrap();
         assert_eq!(expected, got);
     }
@@ -222,7 +239,10 @@ mod tests {
                      });
             x
         };
-        let expected = Design { views: views };
+        let expected = Design {
+            _dummy: std::marker::PhantomData,
+            views: views,
+        };
         let got = DesignBuilder::new()
                       .insert_view("foo",
                                    ViewFunction {
@@ -253,7 +273,10 @@ mod tests {
                      });
             x
         };
-        let expected = Design { views: views };
+        let expected = Design {
+            _dummy: std::marker::PhantomData,
+            views: views,
+        };
         let got = DesignBuilder::new()
                       .insert_view("foo",
                                    ViewFunction {

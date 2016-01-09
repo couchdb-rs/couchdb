@@ -14,12 +14,13 @@
       `from_reader` deserialization method.
     * The `Document` type no longer implements these traits: `Eq`,
       `Hash`, `Ord`, and `PartialOrd`.
+* The following types now have at least one private field and can no
+  longer be directly constructed by applications: `Design`.
 
 ### Deprecations
 
 * Applications must not directly construct any of the following types:
     * `Database`
-    * `Design`
     * `ErrorResponse`
     * `ViewFunction`
     * `ViewResult`
