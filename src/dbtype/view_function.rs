@@ -32,6 +32,7 @@ impl ViewFunctionBuilder {
     pub fn new<S: Into<String>>(map_function: S) -> Self {
         ViewFunctionBuilder {
             view_function: ViewFunction {
+                _dummy: std::marker::PhantomData,
                 map: map_function.into(),
                 reduce: None,
             },
@@ -53,9 +54,8 @@ impl ViewFunctionBuilder {
 
 /// JavaScript `map` and `reduce` functions for a CouchDB view.
 ///
-/// DEPRECATION NOTICE: Applications must not directly construct a
-/// `ViewFunction`. Instead, they should use `ViewFunctionBuilder` to construct
-/// the view function.
+/// Applications may construct a `ViewFunction` by using a
+/// `ViewFunctionBuilder`.
 ///
 #[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct ViewFunction {
@@ -66,6 +66,11 @@ pub struct ViewFunction {
     /// JavaScript function that reduces multiple values emitted from the map
     /// function into a single value.
     pub reduce: Option<String>,
+
+    // Include a private field to prevent applications from directly
+    // constructing this struct. This allows us to add new fields without
+    // breaking applications.
+    _dummy: std::marker::PhantomData<()>,
 }
 
 impl serde::Serialize for ViewFunction {
@@ -158,6 +163,7 @@ impl serde::Deserialize for ViewFunction {
                 };
 
                 let v = ViewFunction {
+                    _dummy: std::marker::PhantomData,
                     map: map,
                     reduce: reduce,
                 };
@@ -175,6 +181,7 @@ impl serde::Deserialize for ViewFunction {
 mod tests {
 
     use serde_json;
+    use std;
 
     use ViewFunction;
 
@@ -185,6 +192,7 @@ mod tests {
                            .insert("reduce", "function(keys, values) { return sum(values); }")
                            .unwrap();
         let source = ViewFunction {
+            _dummy: std::marker::PhantomData,
             map: "function(doc) { emit(doc.name, doc.value); }".to_string(),
             reduce: Some("function(keys, values) { return sum(values); }".to_string()),
         };
@@ -199,6 +207,7 @@ mod tests {
                            .insert("map", "function(doc) { emit(doc.name, doc.value); }")
                            .unwrap();
         let source = ViewFunction {
+            _dummy: std::marker::PhantomData,
             map: "function(doc) { emit(doc.name, doc.value); }".to_string(),
             reduce: None,
         };
@@ -210,6 +219,7 @@ mod tests {
     #[test]
     fn view_function_deserialization_with_all_fields() {
         let expected = ViewFunction {
+            _dummy: std::marker::PhantomData,
             map: "function(doc) { emit(doc.name, doc.value); }".to_string(),
             reduce: Some("function(keys, values) { return sum(values); }".to_string()),
         };
@@ -225,6 +235,7 @@ mod tests {
     #[test]
     fn view_function_deserialization_with_reduce_field_elided() {
         let expected = ViewFunction {
+            _dummy: std::marker::PhantomData,
             map: "function(doc) { emit(doc.name, doc.value); }".to_string(),
             reduce: None,
         };

@@ -380,11 +380,7 @@ fn get_view_empty_result() {
     let (_server, client) = make_server_and_client();
     client.put_database("/foo").run().unwrap();
     let design = couchdb::DesignBuilder::new()
-                     .insert_view("qux",
-                                  couchdb::ViewFunction {
-                                      map: "function(doc) {}".to_string(),
-                                      reduce: None,
-                                  })
+                     .build_view("qux", "function(doc) {}", |x| x)
                      .unwrap();
     client.put_document("/foo/_design/bar", &design).run().unwrap();
     let got = client.get_view::<_, (), ()>("/foo/_design/bar/_view/qux").run().unwrap();
@@ -408,12 +404,9 @@ fn get_view_nonempty_result() {
                              .unwrap();
     let (_, hank_aaron_id) = client.post_to_database("/baseball", &source_content).run().unwrap();
     let design = couchdb::DesignBuilder::new()
-                     .insert_view("by_career_hr",
-                                  couchdb::ViewFunction {
-                                      map: "function(doc) { emit(doc.name, doc.career_hr); }"
-                                               .to_string(),
-                                      reduce: None,
-                                  })
+                     .build_view("by_career_hr",
+                                 "function(doc) { emit(doc.name, doc.career_hr); }",
+                                 |x| x)
                      .unwrap();
     client.put_document("/baseball/_design/stat", &design).run().unwrap();
     let got = client.get_view::<_, String, i32>("/baseball/_design/stat/_view/by_career_hr")
@@ -449,12 +442,9 @@ fn get_view_with_endkey() {
                              .unwrap();
     let (_, _) = client.post_to_database("/baseball", &source_content).run().unwrap();
     let design = couchdb::DesignBuilder::new()
-                     .insert_view("by_career_hr",
-                                  couchdb::ViewFunction {
-                                      map: "function(doc) { emit(doc.name, doc.career_hr); }"
-                                               .to_string(),
-                                      reduce: None,
-                                  })
+                     .build_view("by_career_hr",
+                                 "function(doc) { emit(doc.name, doc.career_hr); }",
+                                 |x| x)
                      .unwrap();
     client.put_document("/baseball/_design/stat", &design).run().unwrap();
     let got = client.get_view::<_, String, i32>("/baseball/_design/stat/_view/by_career_hr")
@@ -486,12 +476,9 @@ fn get_view_with_startkey() {
                              .unwrap();
     let (_, hank_aaron_id) = client.post_to_database("/baseball", &source_content).run().unwrap();
     let design = couchdb::DesignBuilder::new()
-                     .insert_view("by_career_hr",
-                                  couchdb::ViewFunction {
-                                      map: "function(doc) { emit(doc.name, doc.career_hr); }"
-                                               .to_string(),
-                                      reduce: None,
-                                  })
+                     .build_view("by_career_hr",
+                                 "function(doc) { emit(doc.name, doc.career_hr); }",
+                                 |x| x)
                      .unwrap();
     client.put_document("/baseball/_design/stat", &design).run().unwrap();
     let got = client.get_view::<_, String, i32>("/baseball/_design/stat/_view/by_career_hr")
@@ -523,12 +510,9 @@ fn get_view_reduced() {
                              .unwrap();
     client.post_to_database("/baseball", &source_content).run().unwrap();
     let design = couchdb::DesignBuilder::new()
-                     .insert_view("by_career_hr",
-                                  couchdb::ViewFunction {
-                                      map: "function(doc) { emit(doc.name, doc.career_hr); }"
-                                               .to_string(),
-                                      reduce: Some("_sum".to_string()),
-                                  })
+                     .build_view("by_career_hr",
+                                 "function(doc) { emit(doc.name, doc.career_hr); }",
+                                 |x| x.set_reduce("_sum"))
                      .unwrap();
     client.put_document("/baseball/_design/stat", &design).run().unwrap();
     let got = client.get_view::<_, String, i32>("/baseball/_design/stat/_view/by_career_hr")

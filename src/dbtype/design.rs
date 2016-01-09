@@ -213,7 +213,7 @@ mod tests {
 
     use Design;
     use DesignBuilder;
-    use ViewFunction;
+    use ViewFunctionBuilder;
     use ViewFunctionMap;
 
     #[test]
@@ -227,19 +227,16 @@ mod tests {
     }
 
     #[test]
-    fn design_builder_with_all_fields() {
+    fn design_builder_insert_view() {
         let views = {
             let mut x = ViewFunctionMap::new();
             x.insert("foo".to_string(),
-                     ViewFunction {
-                         map: "function(doc) { emit(doc.name, doc.foo_thing); }".to_string(),
-                         reduce: Some("function(keys, values) { return sum(values); }".to_string()),
-                     });
+                     ViewFunctionBuilder::new("function(doc) { emit(doc.name, doc.foo); }")
+                         .set_reduce("function(keys, values) { return sum(values); }")
+                         .unwrap());
             x.insert("bar".to_string(),
-                     ViewFunction {
-                         map: "function(doc) { emit(doc.name, doc.bar_thing); }".to_string(),
-                         reduce: None,
-                     });
+                     ViewFunctionBuilder::new("function(doc) { emit(doc.name, doc.bar); }")
+                         .unwrap());
             x
         };
         let expected = Design {
@@ -248,32 +245,26 @@ mod tests {
         };
         let got = DesignBuilder::new()
                       .insert_view("foo",
-                                   ViewFunction {
-                                       map: "function(doc) { emit(doc.name, doc.foo_thing); }"
-                                                .to_string(),
-                                       reduce: Some("function(keys, values) { return sum(values); \
-                                                     }"
-                                                        .to_string()),
-                                   })
+                                   ViewFunctionBuilder::new("function(doc) { emit(doc.name, \
+                                                             doc.foo); }")
+                                       .set_reduce("function(keys, values) { return \
+                                                    sum(values); }")
+                                       .unwrap())
                       .insert_view("bar",
-                                   ViewFunction {
-                                       map: "function(doc) { emit(doc.name, doc.bar_thing); }"
-                                                .to_string(),
-                                       reduce: None,
-                                   })
+                                   ViewFunctionBuilder::new("function(doc) { emit(doc.name, \
+                                                             doc.bar); }")
+                                       .unwrap())
                       .unwrap();
         assert_eq!(expected, got);
     }
 
     #[test]
-    fn design_builder_view_replaces_same_name() {
+    fn design_builder_insert_view_replaces_same_name() {
         let views = {
             let mut x = ViewFunctionMap::new();
             x.insert("foo".to_string(),
-                     ViewFunction {
-                         map: "function(doc) { emit(doc.name, doc.foo_thing); }".to_string(),
-                         reduce: Some("function(keys, values) { return sum(values); }".to_string()),
-                     });
+                     ViewFunctionBuilder::new("function(doc) { emit(doc.name, doc.foo); }")
+                         .unwrap());
             x
         };
         let expected = Design {
@@ -281,19 +272,57 @@ mod tests {
             views: views,
         };
         let got = DesignBuilder::new()
+                      .insert_view("foo", ViewFunctionBuilder::new("function(doc) {}").unwrap())
                       .insert_view("foo",
-                                   ViewFunction {
-                                       map: "function(doc) {}".to_string(),
-                                       reduce: None,
-                                   })
-                      .insert_view("foo",
-                                   ViewFunction {
-                                       map: "function(doc) { emit(doc.name, doc.foo_thing); }"
-                                                .to_string(),
-                                       reduce: Some("function(keys, values) { return sum(values); \
-                                                     }"
-                                                        .to_string()),
-                                   })
+                                   ViewFunctionBuilder::new("function(doc) { emit(doc.name, \
+                                                             doc.foo); }")
+                                       .unwrap())
+                      .unwrap();
+        assert_eq!(expected, got);
+    }
+
+    #[test]
+    fn design_builder_build_view() {
+        let views = {
+            let mut x = ViewFunctionMap::new();
+            x.insert("foo".to_string(),
+                     ViewFunctionBuilder::new("function(doc) { emit(doc.name, doc.foo); }")
+                         .set_reduce("function(keys, values) { return sum(values); }")
+                         .unwrap());
+            x.insert("bar".to_string(),
+                     ViewFunctionBuilder::new("function(doc) { emit(doc.name, doc.bar); }")
+                         .unwrap());
+            x
+        };
+        let expected = Design {
+            _dummy: std::marker::PhantomData,
+            views: views,
+        };
+        let got = DesignBuilder::new()
+                      .build_view("foo", "function(doc) { emit(doc.name, doc.foo); }", |x| {
+                          x.set_reduce("function(keys, values) { return sum(values); }")
+                      })
+                      .build_view("bar", "function(doc) { emit(doc.name, doc.bar); }", |x| x)
+                      .unwrap();
+        assert_eq!(expected, got);
+    }
+
+    #[test]
+    fn design_builder_build_view_replaces_same_name() {
+        let views = {
+            let mut x = ViewFunctionMap::new();
+            x.insert("foo".to_string(),
+                     ViewFunctionBuilder::new("function(doc) { emit(doc.name, doc.foo); }")
+                         .unwrap());
+            x
+        };
+        let expected = Design {
+            _dummy: std::marker::PhantomData,
+            views: views,
+        };
+        let got = DesignBuilder::new()
+                      .build_view("foo", "function(doc) {}", |x| x)
+                      .build_view("foo", "function(doc) { emit(doc.name, doc.foo); }", |x| x)
                       .unwrap();
         assert_eq!(expected, got);
     }
@@ -303,32 +332,20 @@ mod tests {
         let expected = serde_json::builder::ObjectBuilder::new()
                            .insert_object("views", |x| {
                                x.insert_object("foo", |x| {
-                                    x.insert("map",
-                                             "function(doc) { emit(doc.name, doc.foo_thing); }")
+                                    x.insert("map", "function(doc) { emit(doc.name, doc.foo); }")
                                      .insert("reduce",
                                              "function(keys, values) { return sum(values); }")
                                 })
                                 .insert_object("bar", |x| {
-                                    x.insert("map",
-                                             "function(doc) { emit(doc.name, doc.bar_thing); }")
+                                    x.insert("map", "function(doc) { emit(doc.name, doc.bar); }")
                                 })
                            })
                            .unwrap();
         let source = DesignBuilder::new()
-                         .insert_view("foo",
-                                      ViewFunction {
-                                          map: "function(doc) { emit(doc.name, doc.foo_thing); }"
-                                                   .to_string(),
-                                          reduce: Some("function(keys, values) { return \
-                                                        sum(values); }"
-                                                           .to_string()),
-                                      })
-                         .insert_view("bar",
-                                      ViewFunction {
-                                          map: "function(doc) { emit(doc.name, doc.bar_thing); }"
-                                                   .to_string(),
-                                          reduce: None,
-                                      })
+                         .build_view("foo", "function(doc) { emit(doc.name, doc.foo); }", |x| {
+                             x.set_reduce("function(keys, values) { return sum(values); }")
+                         })
+                         .build_view("bar", "function(doc) { emit(doc.name, doc.bar); }", |x| x)
                          .unwrap();
         let s = serde_json::to_string(&source).unwrap();
         let got = serde_json::from_str(&s).unwrap();
@@ -347,32 +364,20 @@ mod tests {
     #[test]
     fn design_deserialization_with_all_fields() {
         let expected = DesignBuilder::new()
-                           .insert_view("foo",
-                                        ViewFunction {
-                                            map: "function(doc) { emit(doc.name, doc.foo_thing); }"
-                                                     .to_string(),
-                                            reduce: Some("function(keys, values) { return \
-                                                          sum(values); }"
-                                                             .to_string()),
-                                        })
-                           .insert_view("bar",
-                                        ViewFunction {
-                                            map: "function(doc) { emit(doc.name, doc.bar_thing); }"
-                                                     .to_string(),
-                                            reduce: None,
-                                        })
+                           .build_view("foo", "function(doc) { emit(doc.name, doc.foo); }", |x| {
+                               x.set_reduce("function(keys, values) { return sum(values); }")
+                           })
+                           .build_view("bar", "function(doc) { emit(doc.name, doc.bar); }", |x| x)
                            .unwrap();
         let source = serde_json::builder::ObjectBuilder::new()
                          .insert_object("views", |x| {
                              x.insert_object("foo", |x| {
-                                  x.insert("map",
-                                           "function(doc) { emit(doc.name, doc.foo_thing); }")
+                                  x.insert("map", "function(doc) { emit(doc.name, doc.foo); }")
                                    .insert("reduce",
                                            "function(keys, values) { return sum(values); }")
                               })
                               .insert_object("bar", |x| {
-                                  x.insert("map",
-                                           "function(doc) { emit(doc.name, doc.bar_thing); }")
+                                  x.insert("map", "function(doc) { emit(doc.name, doc.bar); }")
                               })
                          })
                          .unwrap();
