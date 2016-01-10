@@ -3,6 +3,7 @@ use serde;
 use DocumentId;
 use Revision;
 
+pub type DeleteDocumentResponse = WriteDocumentResponse;
 pub type PostToDatabaseResponse = WriteDocumentResponse;
 pub type PutDocumentResponse = WriteDocumentResponse;
 

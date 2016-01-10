@@ -343,8 +343,9 @@ fn delete_document_ok() {
                              .insert("name", "Babe Ruth")
                              .insert("career_hr", 714)
                              .unwrap();
-    let (rev, doc_id) = client.post_to_database("/baseball", &source_content).run().unwrap();
-    client.delete_document(("/baseball", doc_id.clone()), &rev).run().unwrap();
+    let (rev1, doc_id) = client.post_to_database("/baseball", &source_content).run().unwrap();
+    let rev2 = client.delete_document(("/baseball", doc_id.clone()), &rev1).run().unwrap();
+    assert_eq!(rev1.update_number() + 1, rev2.update_number());
     let got = client.head_document(("/baseball", doc_id)).run();
     expect_couchdb_error!(got, couchdb::Error::NotFound(None));
 }

@@ -96,6 +96,15 @@ impl Revision {
         use std::str::FromStr;
         Revision::from_str(s)
     }
+
+    /// Returns the update number part of the revision.
+    ///
+    /// The update number is the `999` part of the revision
+    /// `999-1234567890abcdef1234567890abcdef`.
+    ///
+    pub fn update_number(&self) -> u64 {
+        self.number
+    }
 }
 
 impl std::fmt::Display for Revision {
@@ -272,6 +281,12 @@ mod tests {
     #[test]
     fn revision_parse_nok() {
         Revision::parse("bad_revision").unwrap_err();
+    }
+
+    #[test]
+    fn revision_update_number() {
+        let rev = Revision::parse("999-1234567890abcdef1234567890abcdef").unwrap();
+        assert_eq!(999, rev.update_number());
     }
 
     #[test]

@@ -22,11 +22,15 @@
     * `ViewFunction`
     * `ViewResult`
     * `ViewRow`
+* The `DeleteDocument` command now returns the revision of the deleted
+  document. Previously the command returned `()`.
 
 ### Additions
 
 * New `ViewFunctionBuilder` type for constructing a `ViewFunction`
   instance.
+* New `Revision::update_number` method for getting the _update number_
+  part of a revision.
 
 ## v0.4.0 (2016-01-03)
 

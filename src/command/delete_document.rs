@@ -6,9 +6,14 @@ use IntoDocumentPath;
 use Revision;
 use client::{self, ClientState};
 use command::{self, Command, Request};
+use dbtype::DeleteDocumentResponse;
 use json;
 
 /// Command to delete a document.
+///
+/// # Return
+///
+/// This command returns the document's new revision.
 ///
 /// # Errors
 ///
@@ -36,11 +41,11 @@ impl<'a, P: IntoDocumentPath> DeleteDocument<'a, P> {
         }
     }
 
-    impl_command_public_methods!(());
+    impl_command_public_methods!(Revision);
 }
 
 impl<'a, P: IntoDocumentPath> Command for DeleteDocument<'a, P> {
-    type Output = ();
+    type Output = Revision;
     type State = ();
 
     fn make_request(self) -> Result<(Request, Self::State), Error> {
@@ -57,7 +62,9 @@ impl<'a, P: IntoDocumentPath> Command for DeleteDocument<'a, P> {
                      -> Result<Self::Output, Error> {
         match resp.status {
             hyper::status::StatusCode::Ok => {
-                command::content_type_must_be_application_json(&resp.headers)
+                try!(command::content_type_must_be_application_json(&resp.headers));
+                let content = try!(json::decode_json::<_, DeleteDocumentResponse>(resp));
+                Ok(content.rev)
             }
             hyper::status::StatusCode::BadRequest => Err(make_couchdb_error!(BadRequest, resp)),
             hyper::status::StatusCode::Unauthorized => Err(make_couchdb_error!(Unauthorized, resp)),
