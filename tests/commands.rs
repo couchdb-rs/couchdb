@@ -414,15 +414,17 @@ fn get_view_nonempty_result() {
                     .unwrap();
     assert_eq!(Some(2), got.total_rows);
     assert_eq!(Some(0), got.offset);
-    assert_eq!(vec![couchdb::ViewRow {
-                        id: Some(babe_ruth_id),
-                        key: Some("Babe Ruth".to_string()),
-                        value: 714,
+    assert_eq!(vec![{
+                        let mut v = couchdb::ViewRow::new(714);
+                        v.id = Some(babe_ruth_id);
+                        v.key = Some("Babe Ruth".to_string());
+                        v
                     },
-                    couchdb::ViewRow {
-                        id: Some(hank_aaron_id),
-                        key: Some("Hank Aaron".to_string()),
-                        value: 755,
+                    {
+                        let mut v = couchdb::ViewRow::new(755);
+                        v.id = Some(hank_aaron_id);
+                        v.key = Some("Hank Aaron".to_string());
+                        v
                     }],
                got.rows);
 }
@@ -453,10 +455,11 @@ fn get_view_with_endkey() {
                     .unwrap();
     assert_eq!(Some(2), got.total_rows);
     assert_eq!(Some(0), got.offset);
-    assert_eq!(vec![couchdb::ViewRow {
-                        id: Some(babe_ruth_id),
-                        key: Some("Babe Ruth".to_string()),
-                        value: 714,
+    assert_eq!(vec![{
+                        let mut v = couchdb::ViewRow::new(714);
+                        v.id = Some(babe_ruth_id);
+                        v.key = Some("Babe Ruth".to_string());
+                        v
                     }],
                got.rows);
 }
@@ -487,10 +490,11 @@ fn get_view_with_startkey() {
                     .unwrap();
     assert_eq!(Some(2), got.total_rows);
     assert_eq!(Some(1), got.offset);
-    assert_eq!(vec![couchdb::ViewRow {
-                        id: Some(hank_aaron_id),
-                        key: Some("Hank Aaron".to_string()),
-                        value: 755,
+    assert_eq!(vec![{
+                        let mut v = couchdb::ViewRow::new(755);
+                        v.id = Some(hank_aaron_id);
+                        v.key = Some("Hank Aaron".to_string());
+                        v
                     }],
                got.rows);
 }
@@ -521,10 +525,5 @@ fn get_view_reduced() {
                     .unwrap();
     assert_eq!(None, got.total_rows);
     assert_eq!(None, got.offset);
-    assert_eq!(vec![couchdb::ViewRow {
-                        id: None,
-                        key: None,
-                        value: 714 + 755,
-                    }],
-               got.rows);
+    assert_eq!(vec![couchdb::ViewRow::new(714 + 755)], got.rows);
 }

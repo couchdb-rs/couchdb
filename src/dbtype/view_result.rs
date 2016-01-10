@@ -5,8 +5,6 @@ use ViewRow;
 
 /// Response resulting from executing a view.
 ///
-/// DEPRECATION NOTICE: Applications must not directly construct a `ViewResult`.
-///
 /// A `ViewResult` contains all content in the response from the CouchDB server
 /// as a result of executing a view.
 ///
@@ -15,7 +13,7 @@ use ViewRow;
 /// and the `rows` field contains a single row containing the reduced result.
 /// The second form is that the view has not been reduced, in which case the
 /// `total_rows` and `offset` fields are `Some` and the `rows` field contains
-/// zero or more rows containing the non-reduced result.
+/// zero or more rows containing the unreduced result.
 ///
 /// Although the `ViewResult` type implements the `Ord` and `PartialOrd` traits,
 /// it provides no guarantees how that ordering is defined and may change the
@@ -29,17 +27,42 @@ pub struct ViewResult<K, V>
     where K: serde::Deserialize,
           V: serde::Deserialize
 {
-    /// Number of rows in a non-reduced view, including rows excluded in the
+    /// Number of rows in an unreduced view, including rows excluded in the
     /// `rows` field.
     pub total_rows: Option<u64>,
 
-    /// Number of rows in a non-reduced view that were excluded in the `rows`
-    /// field.
+    /// Number of rows in an unreduced view excluded before the first row in the
+    /// `rows` field.
     pub offset: Option<u64>,
 
-    /// All rows included in the response content for a non-reduced view, or,
-    /// for a reduced view, the one row containing the reduced result.
+    /// All rows included in the response content for an unreduced view, or, for
+    /// a reduced view, the one row containing the reduced result.
     pub rows: Vec<ViewRow<K, V>>,
+
+    // Include a private field to prevent applications from directly
+    // constructing this struct. This allows us to add new fields without
+    // breaking applications.
+    _dummy: std::marker::PhantomData<()>,
+}
+
+impl<K, V> ViewResult<K, V>
+    where K: serde::Deserialize,
+          V: serde::Deserialize
+{
+    /// Constructs an empty view result.
+    pub fn new() -> Self {
+        ViewResult {
+            total_rows: None,
+            offset: None,
+            rows: Vec::new(),
+            _dummy: std::marker::PhantomData,
+        }
+    }
+
+    /// Constructs a view result containing only the given value.
+    pub fn new_reduced<T: Into<V>>(value: T) -> Self {
+        ViewResult { rows: vec![ViewRow::new(value)], ..Self::new() }
+    }
 }
 
 impl<K, V> serde::Deserialize for ViewResult<K, V>
@@ -128,6 +151,7 @@ impl<K, V> serde::Deserialize for ViewResult<K, V>
                     total_rows: total_rows,
                     offset: offset,
                     rows: rows,
+                    _dummy: std::marker::PhantomData,
                 })
             }
         }
@@ -146,25 +170,53 @@ impl<K, V> serde::Deserialize for ViewResult<K, V>
 mod tests {
 
     use serde_json;
+    use std;
 
     use ViewResult;
     use ViewRow;
 
     #[test]
-    fn view_result_deserialization_non_reduced_view() {
+    fn view_result_new() {
+        let expected = ViewResult::<String, i32> {
+            total_rows: None,
+            offset: None,
+            rows: vec![],
+            _dummy: std::marker::PhantomData,
+        };
+        let got = ViewResult::new();
+        assert_eq!(expected, got);
+    }
+
+    #[test]
+    fn view_result_new_reduced() {
+        let expected = ViewResult::<String, i32> {
+            total_rows: None,
+            offset: None,
+            rows: vec![ViewRow::new(42)],
+            _dummy: std::marker::PhantomData,
+        };
+        let got = ViewResult::new_reduced(42);
+        assert_eq!(expected, got);
+    }
+
+    #[test]
+    fn view_result_deserialization_unreduced_view() {
         let expected = ViewResult::<String, i32> {
             total_rows: Some(42),
             offset: Some(17),
-            rows: vec![ViewRow {
-                           id: Some("foo".into()),
-                           key: Some("bar".into()),
-                           value: 5,
+            rows: vec![{
+                           let mut v = ViewRow::new(5);
+                           v.id = Some("foo".into());
+                           v.key = Some("bar".into());
+                           v
                        },
-                       ViewRow {
-                           id: Some("qux".into()),
-                           key: Some("kit".into()),
-                           value: 13,
+                       {
+                           let mut v = ViewRow::new(13);
+                           v.id = Some("qux".into());
+                           v.key = Some("kit".into());
+                           v
                        }],
+            _dummy: std::marker::PhantomData,
         };
         let source = serde_json::builder::ObjectBuilder::new()
                          .insert("total_rows", 42)
@@ -192,11 +244,13 @@ mod tests {
         let expected = ViewResult::<String, i32> {
             total_rows: None,
             offset: None,
-            rows: vec![ViewRow {
-                           id: Some("foo".into()),
-                           key: Some("bar".into()),
-                           value: 5,
+            rows: vec![{
+                           let mut v = ViewRow::new(5);
+                           v.id = Some("foo".into());
+                           v.key = Some("bar".into());
+                           v
                        }],
+            _dummy: std::marker::PhantomData,
         };
         let source = serde_json::builder::ObjectBuilder::new()
                          .insert_array("rows", |x| {

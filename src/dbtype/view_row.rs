@@ -5,8 +5,6 @@ use DocumentId;
 
 /// Single row contained in the response resulting from executing a view.
 ///
-/// DEPRECATION NOTICE: Applications must not directly construct a `ViewRow`.
-///
 /// A `ViewRow` takes one of two forms. The first form is that the view has been
 /// reduced, in which case the `id` and `key` fields are `None` and the `value`
 /// field contains the reduced result. The second form is that the view has not
@@ -33,6 +31,29 @@ pub struct ViewRow<K, V>
 
     /// Emitted value, either reduced or not.
     pub value: V,
+
+    // Include a private field to prevent applications from directly
+    // constructing this struct. This allows us to add new fields without
+    // breaking applications.
+    _dummy: std::marker::PhantomData<()>,
+}
+
+impl<K, V> ViewRow<K, V>
+    where K: serde::Deserialize,
+          V: serde::Deserialize
+{
+    /// Constructs a minimum view row containing only a value.
+    ///
+    /// The newly constructed view row has no id and no key.
+    ///
+    pub fn new<T: Into<V>>(value: T) -> Self {
+        ViewRow {
+            id: None,
+            key: None,
+            value: value.into(),
+            _dummy: std::marker::PhantomData,
+        }
+    }
 }
 
 impl<K, V> serde::Deserialize for ViewRow<K, V>
@@ -121,6 +142,7 @@ impl<K, V> serde::Deserialize for ViewRow<K, V>
                     id: id,
                     key: key,
                     value: value,
+                    _dummy: std::marker::PhantomData,
                 })
             }
         }
@@ -139,9 +161,22 @@ impl<K, V> serde::Deserialize for ViewRow<K, V>
 mod tests {
 
     use serde_json;
+    use std;
 
     use DocumentId;
     use ViewRow;
+
+    #[test]
+    fn view_row_new() {
+        let expected = ViewRow::<String, i32> {
+            id: None,
+            key: None,
+            value: 42,
+            _dummy: std::marker::PhantomData,
+        };
+        let got = ViewRow::new(42);
+        assert_eq!(expected, got);
+    }
 
     #[test]
     fn view_row_deserialization_with_all_fields() {
@@ -149,6 +184,7 @@ mod tests {
             id: Some(DocumentId::Normal("foo".into())),
             key: Some("bar".to_string()),
             value: 42,
+            _dummy: std::marker::PhantomData,
         };
         let source = serde_json::builder::ObjectBuilder::new()
                          .insert("id", "foo")
@@ -166,6 +202,7 @@ mod tests {
             id: None,
             key: Some("bar".to_string()),
             value: 42,
+            _dummy: std::marker::PhantomData,
         };
         let source = serde_json::builder::ObjectBuilder::new()
                          .insert("key", "bar")
@@ -182,6 +219,7 @@ mod tests {
             id: Some(DocumentId::Normal("foo".into())),
             key: None,
             value: 42,
+            _dummy: std::marker::PhantomData,
         };
         let source = serde_json::builder::ObjectBuilder::new()
                          .insert("id", "foo")
