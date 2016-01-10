@@ -23,12 +23,6 @@
     * `ViewResult`
     * `ViewRow`
 
-### Deprecations
-
-* Applications must not directly construct any of the following types:
-    * `ViewResult`
-    * `ViewRow`
-
 ### Additions
 
 * New `ViewFunctionBuilder` type for constructing a `ViewFunction`
