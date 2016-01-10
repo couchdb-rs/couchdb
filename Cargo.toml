@@ -2,8 +2,8 @@
 name = "couchdb"
 version = "0.5.0+master"
 authors = ["Craig M. Brandenburg <c.m.brandenburg@gmail.com>"]
-license = "MIT"
-description = "A simple CouchDB client"
+license = "MIT OR Apache-2.0"
+description = "A CouchDB client"
 repository = "https://github.com/couchdb-rs/couchdb"
 documentation = "https://couchdb-rs.github.io/couchdb/doc/latest/couchdb/"
 keywords = ["couch", "couchdb", "database", "nosql"]

@@ -27,6 +27,8 @@
 
 ### New
 
+* Add the Apache-2.0 license. The project is now dual-licensed under
+  Apache-2.0 and MIT.
 * New `ViewFunctionBuilder` type for constructing a `ViewFunction`
   instance.
 * New `Revision::update_number` method for getting the _update number_
