@@ -25,7 +25,7 @@
 * The `DeleteDocument` command now returns the revision of the deleted
   document. Previously the command returned `()`.
 
-### Additions
+### New
 
 * New `ViewFunctionBuilder` type for constructing a `ViewFunction`
   instance.
@@ -69,7 +69,7 @@ API and the CouchDB API.
       `BadRequest`. The new name matches HTTP status code 400 of the
       same name.
 
-### Other fixes
+### Fixes
 
 * When getting a document, the client now ignores any `_attachments`
   field in the CouchDB response. Previously, the client included the
@@ -91,7 +91,7 @@ API and the CouchDB API.
 
 This release expands the crate's coverage of the CouchDB API.
 
-### Additions
+### New
 
 * There's a new client command to POST to a database. This resolves
   issue #11.
@@ -124,7 +124,7 @@ and to be more Rust-idiomatic.
 * The `Command` trait is now private. This resolves issue #9.
 * Crate dependencies now specify explicit version ranges instead of `*`.
 
-### Other fixes
+### Fixes
 
 * All JSON-decoding errors are now reported as the `Decode` error
   variant. Previously, some decoding errors were reported as a hidden
@@ -134,7 +134,7 @@ and to be more Rust-idiomatic.
 * A bug has been fixed that caused CPU spin on Windows in the `Server`
   type. This partially resolves issue #8.
 
-### Other additions
+### New
 
 * The `Database` type now includes all fields returned by the CouchDB
   server as a result of a client command to GET a database.
@@ -178,11 +178,11 @@ and to be more Rust-idiomatic.
 * There's a new `IntoUrl` trait that aliases `hyper::IntoUrl`. This
   resolves issue #2.
 
-### Other fixes
+### Fixes
 
 * The `views` field of the `Design` struct is now public.
 
-### Other additions
+### New
 
 * There's a new `ViewFunctionMap` collection type.
 
