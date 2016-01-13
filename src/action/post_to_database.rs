@@ -8,20 +8,20 @@ use ErrorResponse;
 use IntoDatabasePath;
 use Revision;
 use client::ClientState;
-use command::{self, Command, Request, Response};
+use action::{self, Action, Request, Response};
 use dbtype::PostToDatabaseResponse;
 use error::EncodeErrorKind;
 
-/// Command to create a document.
+/// Action to create a document.
 ///
 /// # Return
 ///
-/// This command returns the new document's revision and id.
+/// This action returns the new document's revision and id.
 ///
 /// # Errors
 ///
 /// The following are some of the errors that may occur as a result of executing
-/// this command:
+/// this action:
 ///
 /// * `Error::NotFound`: The database does not exist.
 /// * `Error::Unauthorized`: The client is unauthorized.
@@ -47,10 +47,10 @@ impl<'a, P: IntoDatabasePath, T: 'a + serde::Serialize> PostToDatabase<'a, P, T>
         }
     }
 
-    impl_command_public_methods!((Revision, DocumentId));
+    impl_action_public_methods!((Revision, DocumentId));
 }
 
-impl<'a, P: IntoDatabasePath, T: 'a + serde::Serialize> Command for PostToDatabase<'a, P, T> {
+impl<'a, P: IntoDatabasePath, T: 'a + serde::Serialize> Action for PostToDatabase<'a, P, T> {
     type Output = (Revision, DocumentId);
 
     fn make_request(self) -> Result<Request, Error> {
@@ -80,7 +80,7 @@ impl<'a, P: IntoDatabasePath, T: 'a + serde::Serialize> Command for PostToDataba
             }
             hyper::status::StatusCode::NotFound => Err(make_couchdb_error!(NotFound, response)),
             hyper::status::StatusCode::Conflict => {
-                // Need to include this error variant in the command's
+                // Need to include this error variant in the action's
                 // documentation if we ever add support for an explicit id.
                 Err(make_couchdb_error!(DocumentConflict, response))
             }
@@ -99,7 +99,7 @@ mod tests {
     use DocumentId;
     use Revision;
     use client::ClientState;
-    use command::{Command, JsonResponse};
+    use action::{Action, JsonResponse};
     use super::PostToDatabase;
 
     #[test]
@@ -109,8 +109,8 @@ mod tests {
                           .insert("foo", 17)
                           .insert("bar", "hello")
                           .unwrap();
-        let command = PostToDatabase::new(&client_state, "/db", &content);
-        let request = command.make_request().unwrap();
+        let action = PostToDatabase::new(&client_state, "/db", &content);
+        let request = action.make_request().unwrap();
         expect_request_method!(request, hyper::Post);
         expect_request_uri!(request, "http://example.com:1234/db");
         expect_request_accept_application_json!(request);

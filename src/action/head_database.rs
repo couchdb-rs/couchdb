@@ -3,14 +3,14 @@ use hyper;
 use Error;
 use IntoDatabasePath;
 use client::ClientState;
-use command::{self, Command, Request, Response};
+use action::{self, Action, Request, Response};
 
-/// Command to check whether a database exists.
+/// Action to check whether a database exists.
 ///
 /// # Errors
 ///
 /// The following are some of the errors that may occur as a result of executing
-/// this command:
+/// this action:
 ///
 /// * `Error::NotFound`: The database does not exist.
 ///
@@ -30,10 +30,10 @@ impl<'a, P: IntoDatabasePath> HeadDatabase<'a, P> {
         }
     }
 
-    impl_command_public_methods!(());
+    impl_action_public_methods!(());
 }
 
-impl<'a, P: IntoDatabasePath> Command for HeadDatabase<'a, P> {
+impl<'a, P: IntoDatabasePath> Action for HeadDatabase<'a, P> {
     type Output = ();
 
     fn make_request(self) -> Result<Request, Error> {
@@ -59,14 +59,14 @@ mod tests {
 
     use DatabasePath;
     use client::ClientState;
-    use command::{Command, NoContentResponse};
+    use action::{Action, NoContentResponse};
     use super::HeadDatabase;
 
     #[test]
     fn make_request_default() {
         let client_state = ClientState::new("http://example.com:1234/").unwrap();
-        let command = HeadDatabase::new(&client_state, "/foo");
-        let request = command.make_request().unwrap();
+        let action = HeadDatabase::new(&client_state, "/foo");
+        let request = action.make_request().unwrap();
         expect_request_method!(request, hyper::method::Method::Head);
         expect_request_uri!(request, "http://example.com:1234/foo");
     }

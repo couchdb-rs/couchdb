@@ -5,19 +5,19 @@ use ErrorResponse;
 use IntoDocumentPath;
 use Revision;
 use client::{self, ClientState};
-use command::{self, Command, Request, Response};
+use action::{self, Action, Request, Response};
 use dbtype::DeleteDocumentResponse;
 
-/// Command to delete a document.
+/// Action to delete a document.
 ///
 /// # Return
 ///
-/// This command returns the document's new revision.
+/// This action returns the document's new revision.
 ///
 /// # Errors
 ///
 /// The following are some of the errors that may occur as a result of executing
-/// this command:
+/// this action:
 ///
 /// * `Error::DocumentConflict`: The revision is not the latest for the
 ///   document.
@@ -40,10 +40,10 @@ impl<'a, P: IntoDocumentPath> DeleteDocument<'a, P> {
         }
     }
 
-    impl_command_public_methods!(Revision);
+    impl_action_public_methods!(Revision);
 }
 
-impl<'a, P: IntoDocumentPath> Command for DeleteDocument<'a, P> {
+impl<'a, P: IntoDocumentPath> Action for DeleteDocument<'a, P> {
     type Output = Revision;
 
     fn make_request(self) -> Result<Request, Error> {
@@ -84,15 +84,15 @@ mod tests {
     use DocumentPath;
     use Revision;
     use client::ClientState;
-    use command::{Command, JsonResponse};
+    use action::{Action, JsonResponse};
     use super::DeleteDocument;
 
     #[test]
     fn make_request_default() {
         let client_state = ClientState::new("http://example.com:1234/").unwrap();
         let rev = Revision::parse("42-1234567890abcdef1234567890abcdef").unwrap();
-        let command = DeleteDocument::new(&client_state, "/foo/bar", &rev);
-        let request = command.make_request().unwrap();
+        let action = DeleteDocument::new(&client_state, "/foo/bar", &rev);
+        let request = action.make_request().unwrap();
         expect_request_method!(request, hyper::method::Method::Delete);
         expect_request_uri!(request, "http://example.com:1234/foo/bar");
         expect_request_accept_application_json!(request);

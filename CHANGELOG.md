@@ -4,6 +4,10 @@
 
 ### Breaking changes
 
+* The term “command” has been replaced with “action” throughout the
+  project (issue [#32][issue_32]). The only API change is that the
+  `command` module is now named the `action` module. This should _not_
+  affect applications.
 * The `Document` type has been refactored to make it easier to use.
     * The `Document` type is no longer generic, nor is the `content`
       field publicly accessible. Applications access document content
@@ -202,3 +206,5 @@ This release adds and improves API doc comments.
 This is the first release. It provides support for client commands to
 manipulate databases (HEAD, GET, PUT, and DELETE), to manipulate
 documents (HEAD, GET, PUT, and DELETE), and to execute views (GET).
+
+[issue_32]: https://github.com/couchdb-rs/couchdb/issues/32 "Issue #32"

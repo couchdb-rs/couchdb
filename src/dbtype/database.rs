@@ -3,7 +3,7 @@ use std;
 
 use DatabaseName;
 
-/// Database meta-information, as returned from a command to GET a database.
+/// Database meta-information, as returned from an action to GET a database.
 ///
 /// Although the `Database` type implements the `Ord` and `PartialOrd` traits,
 /// it provides no guarantees how that ordering is defined and may change the

@@ -3,13 +3,13 @@ use hyper;
 use DatabaseName;
 use Error;
 use client::ClientState;
-use command::{self, Command, Request, Response};
+use action::{self, Action, Request, Response};
 
-/// Command to get all database names.
+/// Action to get all database names.
 ///
 /// # Errors
 ///
-/// All errors that occur as a result of executing this command are private.
+/// All errors that occur as a result of executing this action are private.
 ///
 pub struct GetAllDatabases<'a> {
     client_state: &'a ClientState,
@@ -21,10 +21,10 @@ impl<'a> GetAllDatabases<'a> {
         GetAllDatabases { client_state: client_state }
     }
 
-    impl_command_public_methods!(Vec<DatabaseName>);
+    impl_action_public_methods!(Vec<DatabaseName>);
 }
 
-impl<'a> Command for GetAllDatabases<'a> {
+impl<'a> Action for GetAllDatabases<'a> {
     type Output = Vec<DatabaseName>;
 
     fn make_request(self) -> Result<Request, Error> {
@@ -56,14 +56,14 @@ mod tests {
 
     use DatabaseName;
     use client::ClientState;
-    use command::{Command, JsonResponse};
+    use action::{Action, JsonResponse};
     use super::GetAllDatabases;
 
     #[test]
     fn make_request() {
         let client_state = ClientState::new("http://example.com:1234/").unwrap();
-        let command = GetAllDatabases::new(&client_state);
-        let request = command.make_request().unwrap();
+        let action = GetAllDatabases::new(&client_state);
+        let request = action.make_request().unwrap();
         expect_request_method!(request, hyper::Get);
         expect_request_uri!(request, "http://example.com:1234/_all_dbs");
         expect_request_accept_application_json!(request);

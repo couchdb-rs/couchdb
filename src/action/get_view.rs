@@ -8,15 +8,15 @@ use ErrorResponse;
 use IntoViewPath;
 use ViewResult;
 use client::ClientState;
-use command::{self, Command, Request, Response};
+use action::{self, Action, Request, Response};
 use error::EncodeErrorKind;
 
-/// Command to execute a view.
+/// Action to execute a view.
 ///
 /// # Errors
 ///
 /// The following are some of the errors that may occur as a result of executing
-/// this command:
+/// this action:
 ///
 /// * `Error::InternalServerError`: An error occurred when executing the view.
 /// * `Error::NotFound`: The view does not exist.
@@ -74,10 +74,10 @@ impl<'a, P, K, V> GetView<'a, P, K, V>
         self
     }
 
-    impl_command_public_methods!(ViewResult<K, V>);
+    impl_action_public_methods!(ViewResult<K, V>);
 }
 
-impl<'a, P, K, V> Command for GetView<'a, P, K, V>
+impl<'a, P, K, V> Action for GetView<'a, P, K, V>
     where P: IntoViewPath,
           K: serde::Deserialize + serde::Serialize,
           V: serde::Deserialize
@@ -156,14 +156,14 @@ mod tests {
     use ViewPath;
     use ViewRow;
     use client::ClientState;
-    use command::{Command, JsonResponse};
+    use action::{Action, JsonResponse};
     use super::GetView;
 
     #[test]
     fn make_request_default() {
         let client_state = ClientState::new("http://example.com:1234/").unwrap();
-        let command = GetView::<_, String, i32>::new(&client_state, "/foo/_design/bar/_view/qux");
-        let request = command.make_request().unwrap();
+        let action = GetView::<_, String, i32>::new(&client_state, "/foo/_design/bar/_view/qux");
+        let request = action.make_request().unwrap();
         expect_request_method!(request, hyper::Get);
         expect_request_uri!(request, "http://example.com:1234/foo/_design/bar/_view/qux");
         expect_request_accept_application_json!(request);
@@ -172,9 +172,9 @@ mod tests {
     #[test]
     fn make_request_reduce() {
         let client_state = ClientState::new("http://example.com:1234/").unwrap();
-        let command = GetView::<_, String, i32>::new(&client_state, "/foo/_design/bar/_view/qux")
-                          .reduce(true);
-        let request = command.make_request().unwrap();
+        let action = GetView::<_, String, i32>::new(&client_state, "/foo/_design/bar/_view/qux")
+                         .reduce(true);
+        let request = action.make_request().unwrap();
         expect_request_method!(request, hyper::Get);
         expect_request_uri!(request,
                             "http://example.com:1234/foo/_design/bar/_view/qux?reduce=true");
@@ -185,9 +185,9 @@ mod tests {
     fn make_request_startkey() {
         let client_state = ClientState::new("http://example.com:1234/").unwrap();
         let path = ViewPath::parse("/foo/_design/bar/_view/qux").unwrap();
-        let command = GetView::<ViewPath, String, i32>::new(&client_state, path)
-                          .startkey("baz".to_string());
-        let request = command.make_request().unwrap();
+        let action = GetView::<ViewPath, String, i32>::new(&client_state, path)
+                         .startkey("baz".to_string());
+        let request = action.make_request().unwrap();
         expect_request_method!(request, hyper::Get);
         expect_request_uri!(request,
                             "http://example.com:1234/foo/_design/bar/_view/qux?startkey=\"baz\"");
@@ -198,9 +198,9 @@ mod tests {
     fn make_request_endkey() {
         let client_state = ClientState::new("http://example.com:1234/").unwrap();
         let path = ViewPath::parse("/foo/_design/bar/_view/qux").unwrap();
-        let command = GetView::<ViewPath, String, i32>::new(&client_state, path)
-                          .endkey("baz".to_string());
-        let request = command.make_request().unwrap();
+        let action = GetView::<ViewPath, String, i32>::new(&client_state, path)
+                         .endkey("baz".to_string());
+        let request = action.make_request().unwrap();
         expect_request_method!(request, hyper::Get);
         expect_request_uri!(request,
                             "http://example.com:1234/foo/_design/bar/_view/qux?endkey=\"baz\"");

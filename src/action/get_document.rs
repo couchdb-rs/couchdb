@@ -6,21 +6,21 @@ use ErrorResponse;
 use IntoDocumentPath;
 use Revision;
 use client::ClientState;
-use command::{self, Command, Request, Response};
+use action::{self, Action, Request, Response};
 
-/// Command to get document meta-information and application-defined content.
+/// Action to get document meta-information and application-defined content.
 ///
 /// # Return
 ///
-/// This command returns an `Option` type. The return value is `None` if the
-/// command specifies a revision and the document hasn't been modified since
+/// This action returns an `Option` type. The return value is `None` if the
+/// action specifies a revision and the document hasn't been modified since
 /// that revision. Otherwise, the return value is `Some` and contains the
 /// document meta-information and application-defined content.
 ///
 /// # Errors
 ///
 /// The following are some of the errors that may occur as a result of executing
-/// this command:
+/// this action:
 ///
 ///
 /// * `Error::NotFound`: The document does not exist.
@@ -50,10 +50,10 @@ impl<'a, P: IntoDocumentPath> GetDocument<'a, P> {
         self
     }
 
-    impl_command_public_methods!(Option<Document>);
+    impl_action_public_methods!(Option<Document>);
 }
 
-impl<'a, P: IntoDocumentPath> Command for GetDocument<'a, P> {
+impl<'a, P: IntoDocumentPath> Action for GetDocument<'a, P> {
     type Output = Option<Document>;
 
     fn make_request(self) -> Result<Request, Error> {
@@ -92,14 +92,14 @@ mod tests {
     use DocumentPath;
     use Revision;
     use client::ClientState;
-    use command::{Command, JsonResponse, NoContentResponse};
+    use action::{Action, JsonResponse, NoContentResponse};
     use super::GetDocument;
 
     #[test]
     fn make_request_default() {
         let client_state = ClientState::new("http://example.com:1234/").unwrap();
-        let command = GetDocument::new(&client_state, "/foo/bar");
-        let request = command.make_request().unwrap();
+        let action = GetDocument::new(&client_state, "/foo/bar");
+        let request = action.make_request().unwrap();
         expect_request_method!(request, hyper::Get);
         expect_request_uri!(request, "http://example.com:1234/foo/bar");
         expect_request_accept_application_json!(request);
@@ -109,8 +109,8 @@ mod tests {
     fn make_request_if_none_match() {
         let client_state = ClientState::new("http://example.com:1234/").unwrap();
         let rev = Revision::parse("42-1234567890abcdef1234567890abcdef").unwrap();
-        let command = GetDocument::new(&client_state, "/foo/bar").if_none_match(&rev);
-        let request = command.make_request().unwrap();
+        let action = GetDocument::new(&client_state, "/foo/bar").if_none_match(&rev);
+        let request = action.make_request().unwrap();
         expect_request_method!(request, hyper::Get);
         expect_request_uri!(request, "http://example.com:1234/foo/bar");
         expect_request_accept_application_json!(request);

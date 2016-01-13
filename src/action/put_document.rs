@@ -7,20 +7,20 @@ use ErrorResponse;
 use IntoDocumentPath;
 use Revision;
 use client::ClientState;
-use command::{self, Command, Request, Response};
+use action::{self, Action, Request, Response};
 use dbtype::PutDocumentResponse;
 use error::EncodeErrorKind;
 
-/// Command to create or update a document.
+/// Action to create or update a document.
 ///
 /// # Return
 ///
-/// This command returns the document's new revision.
+/// This action returns the document's new revision.
 ///
 /// # Errors
 ///
 /// The following are some of the errors that may occur as a result of executing
-/// this command:
+/// this action:
 ///
 /// * `Error::DocumentConflict`: The revision is not the latest for the
 ///   document.
@@ -51,10 +51,10 @@ impl<'a, P: IntoDocumentPath, T: 'a + serde::Serialize> PutDocument<'a, P, T> {
         self
     }
 
-    impl_command_public_methods!(Revision);
+    impl_action_public_methods!(Revision);
 }
 
-impl<'a, P: IntoDocumentPath, T: 'a + serde::Serialize> Command for PutDocument<'a, P, T> {
+impl<'a, P: IntoDocumentPath, T: 'a + serde::Serialize> Action for PutDocument<'a, P, T> {
     type Output = Revision;
 
     fn make_request(self) -> Result<Request, Error> {
@@ -100,7 +100,7 @@ mod tests {
     use DocumentPath;
     use Revision;
     use client::ClientState;
-    use command::{Command, JsonResponse};
+    use action::{Action, JsonResponse};
     use super::PutDocument;
 
     #[test]
@@ -110,8 +110,8 @@ mod tests {
                           .insert("foo", 17)
                           .insert("bar", "hello")
                           .unwrap();
-        let command = PutDocument::new(&client_state, "/db/doc-id", &content);
-        let request = command.make_request().unwrap();
+        let action = PutDocument::new(&client_state, "/db/doc-id", &content);
+        let request = action.make_request().unwrap();
         expect_request_method!(request, hyper::method::Method::Put);
         expect_request_uri!(request, "http://example.com:1234/db/doc-id");
         expect_request_accept_application_json!(request);
@@ -128,8 +128,8 @@ mod tests {
                           .insert("bar", "hello")
                           .unwrap();
         let rev = Revision::parse("42-1234567890abcdef1234567890abcdef").unwrap();
-        let command = PutDocument::new(&client_state, "/db/doc-id", &content).if_match(&rev);
-        let request = command.make_request().unwrap();
+        let action = PutDocument::new(&client_state, "/db/doc-id", &content).if_match(&rev);
+        let request = action.make_request().unwrap();
         expect_request_method!(request, hyper::method::Method::Put);
         expect_request_uri!(request, "http://example.com:1234/db/doc-id");
         expect_request_accept_application_json!(request);

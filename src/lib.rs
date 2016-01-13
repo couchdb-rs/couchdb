@@ -1,8 +1,7 @@
-//! The couchdb crate is a thin wrapper around the CouchDB API, providing
-//! low-level access to individual CouchDB commands—e.g., PUT database, GET
-//! document, etc. The goal for the crate is to deal with the menial task of
-//! sending HTTP requests and receiving HTTP responses and to allow application
-//! programmers to focus on their business logic.
+//! The couchdb crate provides low-level access to individual HTTP actions—e.g.,
+//! PUT database, GET document, etc. It handles the menial task of sending
+//! requests and receiving responses, thereby allowing application programmers
+//! to focus on their business logic.
 //!
 //! This documentation has been written assuming the application programmer is
 //! familiar with the CouchDB API. Descriptions of types, methods, etc. in the
@@ -164,7 +163,7 @@ extern crate serde_json;
 extern crate tempdir;
 extern crate url;
 
-pub mod command;
+pub mod action;
 
 mod client;
 mod dbtype;

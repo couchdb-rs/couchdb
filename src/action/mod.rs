@@ -1,15 +1,15 @@
-//! Module for individual command types.
+//! Module for individual action types.
 //!
-//! Applications should not access the `command` module directly. Instead, they
-//! should use the appropriate `Client` method to construct a command. For
+//! Applications should not access the `action` module directly. Instead, they
+//! should use the appropriate `Client` method to construct an action. For
 //! example, the method `post_to_database` constructs a `PostToDatabase`
-//! command.
+//! action.
 
-macro_rules! impl_command_public_methods {
-    ($command_output:ty) => {
-        /// Sends the command request and waits for the response.
-        pub fn run(self) -> Result<$command_output, Error> {
-            command::run_command(self)
+macro_rules! impl_action_public_methods {
+    ($action_output:ty) => {
+        /// Sends the action request and waits for the response.
+        pub fn run(self) -> Result<$action_output, Error> {
+            action::run_action(self)
         }
     }
 }
@@ -55,32 +55,32 @@ use Error;
 use Revision;
 use error::{DecodeErrorKind, TransportKind};
 
-// The Command trait abstracts the machinery for executing CouchDB commands.
-// Types implementing the Command trait define only how they construct requests
-// and process responses. This separates the command logic from the
-// responsibility of sending a request and receiving its response.
-trait Command: Sized {
+// The Action trait abstracts the machinery for executing CouchDB actions. Types
+// implementing the Action trait define only how they construct requests and
+// process responses. This separates the action logic from the responsibility of
+// sending the request and receiving its response.
+trait Action: Sized {
     type Output;
     fn make_request(self) -> Result<Request, Error>;
     fn take_response<R: Response>(response: R) -> Result<Self::Output, Error>;
 }
 
-fn run_command<C>(command: C) -> Result<C::Output, Error>
-    where C: Command
+fn run_action<A>(action: A) -> Result<A::Output, Error>
+    where A: Action
 {
-    let command_request = try!(command.make_request());
+    let action_request = try!(action.make_request());
 
-    let command_response = {
+    let action_response = {
         use std::io::Write;
-        let mut hyper_request = try!(hyper::client::Request::new(command_request.method,
-                                                                 command_request.uri)
+        let mut hyper_request = try!(hyper::client::Request::new(action_request.method,
+                                                                 action_request.uri)
                                          .map_err(|e| Error::Transport(TransportKind::Hyper(e))));
-        *hyper_request.headers_mut() = command_request.headers;
+        *hyper_request.headers_mut() = action_request.headers;
         let mut request_stream = try!(hyper_request.start()
                                                    .map_err(|e| {
                                                        Error::Transport(TransportKind::Hyper(e))
                                                    }));
-        try!(request_stream.write_all(&command_request.body)
+        try!(request_stream.write_all(&action_request.body)
                            .map_err(|e| Error::Transport(TransportKind::Io(e))));
         let hyper_response = try!(request_stream.send().map_err(|e| {
             Error::Transport(TransportKind::Hyper(e))
@@ -88,7 +88,7 @@ fn run_command<C>(command: C) -> Result<C::Output, Error>
         HyperResponse::new(hyper_response)
     };
 
-    C::take_response(command_response)
+    A::take_response(action_response)
 }
 
 struct Request {

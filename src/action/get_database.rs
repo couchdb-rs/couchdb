@@ -5,14 +5,14 @@ use Error;
 use ErrorResponse;
 use IntoDatabasePath;
 use client::ClientState;
-use command::{self, Command, Request, Response};
+use action::{self, Action, Request, Response};
 
-/// Command to get database meta-information.
+/// Action to get database meta-information.
 ///
 /// # Errors
 ///
 /// The following are some of the errors that may occur as a result of executing
-/// this command:
+/// this action:
 ///
 /// * `Error::NotFound`: The database does not exist.
 ///
@@ -32,10 +32,10 @@ impl<'a, P: IntoDatabasePath> GetDatabase<'a, P> {
         }
     }
 
-    impl_command_public_methods!(Database);
+    impl_action_public_methods!(Database);
 }
 
-impl<'a, P: IntoDatabasePath> Command for GetDatabase<'a, P> {
+impl<'a, P: IntoDatabasePath> Action for GetDatabase<'a, P> {
     type Output = Database;
 
     fn make_request(self) -> Result<Request, Error> {
@@ -65,14 +65,14 @@ mod tests {
 
     use DatabasePath;
     use client::ClientState;
-    use command::{Command, JsonResponse};
+    use action::{Action, JsonResponse};
     use super::GetDatabase;
 
     #[test]
     fn make_request() {
         let client_state = ClientState::new("http://example.com:1234/").unwrap();
-        let command = GetDatabase::new(&client_state, "/foo");
-        let request = command.make_request().unwrap();
+        let action = GetDatabase::new(&client_state, "/foo");
+        let request = action.make_request().unwrap();
         expect_request_method!(request, hyper::Get);
         expect_request_uri!(request, "http://example.com:1234/foo");
         expect_request_accept_application_json!(request);
