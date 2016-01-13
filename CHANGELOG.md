@@ -27,12 +27,17 @@
 
 ### New
 
-* Add the Apache-2.0 license. The project is now dual-licensed under
-  Apache-2.0 and MIT.
 * New `ViewFunctionBuilder` type for constructing a `ViewFunction`
   instance.
 * New `Revision::update_number` method for getting the _update number_
   part of a revision.
+
+### Additional notes
+
+* Add the Apache-2.0 license. The project is now dual-licensed under
+  Apache-2.0 and MIT.
+* Commands are now tested as unit tests. Previously they were tested as
+  an integration test (issue #21).
 
 ## v0.4.0 (2016-01-03)
 
@@ -80,7 +85,7 @@ API and the CouchDB API.
   when the client receives an "unauthorized" error as a result of
   executing a client command to HEAD a document.
 
-### Implementation notes
+### Additional notes
 
 * Test coverage has expanded, and test cases have been broken out into
   smaller cases. Consequently, there are now more than 200 additional
@@ -155,7 +160,7 @@ and to be more Rust-idiomatic.
 * The client command to GET a design document now strips `"_design/"`
   from the resulting document id. This resolves issue #7.
 
-### Implementation notes
+### Additional notes
 
 * The integration test has been split into separate test cases, one for
   each CouchDB command.

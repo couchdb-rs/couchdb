@@ -6,8 +6,7 @@ use ErrorResponse;
 use IntoDocumentPath;
 use Revision;
 use client::ClientState;
-use command::{self, Command, Request};
-use json;
+use command::{self, Command, Request, Response};
 
 /// Command to get document meta-information and application-defined content.
 ///
@@ -56,31 +55,125 @@ impl<'a, P: IntoDocumentPath> GetDocument<'a, P> {
 
 impl<'a, P: IntoDocumentPath> Command for GetDocument<'a, P> {
     type Output = Option<Document>;
-    type State = ();
 
-    fn make_request(self) -> Result<(Request, Self::State), Error> {
+    fn make_request(self) -> Result<Request, Error> {
         let doc_path = try!(self.path.into_document_path());
         let uri = doc_path.into_uri(self.client_state.uri.clone());
-        let req = try!(Request::new(hyper::Get, uri))
-                      .accept_application_json()
-                      .if_none_match_revision(self.if_none_match);
-        Ok((req, ()))
+        let request = Request::new(hyper::Get, uri)
+                          .set_accept_application_json()
+                          .set_if_none_match_revision(self.if_none_match);
+        Ok(request)
     }
 
-    fn take_response(resp: hyper::client::Response,
-                     _state: Self::State)
-                     -> Result<Self::Output, Error> {
-        match resp.status {
+    fn take_response<R: Response>(mut response: R) -> Result<Self::Output, Error> {
+        match response.status() {
             hyper::status::StatusCode::Ok => {
-                try!(command::content_type_must_be_application_json(&resp.headers));
-                let doc = try!(json::decode_json::<_, Document>(resp));
+                try!(response.content_type_must_be_application_json());
+                let doc = try!(response.decode_json::<Document>());
                 Ok(Some(doc))
             }
             hyper::status::StatusCode::NotModified => Ok(None),
-            hyper::status::StatusCode::BadRequest => Err(make_couchdb_error!(BadRequest, resp)),
-            hyper::status::StatusCode::Unauthorized => Err(make_couchdb_error!(Unauthorized, resp)),
-            hyper::status::StatusCode::NotFound => Err(make_couchdb_error!(NotFound, resp)),
-            _ => Err(Error::UnexpectedHttpStatus { got: resp.status }),
+            hyper::status::StatusCode::BadRequest => Err(make_couchdb_error!(BadRequest, response)),
+            hyper::status::StatusCode::Unauthorized => {
+                Err(make_couchdb_error!(Unauthorized, response))
+            }
+            hyper::status::StatusCode::NotFound => Err(make_couchdb_error!(NotFound, response)),
+            _ => Err(Error::UnexpectedHttpStatus { got: response.status() }),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+
+    use hyper;
+    use serde_json;
+
+    use DocumentPath;
+    use Revision;
+    use client::ClientState;
+    use command::{Command, JsonResponse, NoContentResponse};
+    use super::GetDocument;
+
+    #[test]
+    fn make_request_default() {
+        let client_state = ClientState::new("http://example.com:1234/").unwrap();
+        let command = GetDocument::new(&client_state, "/foo/bar");
+        let request = command.make_request().unwrap();
+        expect_request_method!(request, hyper::Get);
+        expect_request_uri!(request, "http://example.com:1234/foo/bar");
+        expect_request_accept_application_json!(request);
+    }
+
+    #[test]
+    fn make_request_if_none_match() {
+        let client_state = ClientState::new("http://example.com:1234/").unwrap();
+        let rev = Revision::parse("42-1234567890abcdef1234567890abcdef").unwrap();
+        let command = GetDocument::new(&client_state, "/foo/bar").if_none_match(&rev);
+        let request = command.make_request().unwrap();
+        expect_request_method!(request, hyper::Get);
+        expect_request_uri!(request, "http://example.com:1234/foo/bar");
+        expect_request_accept_application_json!(request);
+        expect_request_if_none_match_revision!(request, "42-1234567890abcdef1234567890abcdef");
+    }
+
+    #[test]
+    fn take_response_ok() {
+        let source = serde_json::builder::ObjectBuilder::new()
+                         .insert("_id", "foo")
+                         .insert("_rev", "42-1234567890abcdef1234567890abcdef")
+                         .insert("bar", 17)
+                         .unwrap();
+        let response = JsonResponse::new(hyper::Ok, &source);
+        let got = GetDocument::<DocumentPath>::take_response(response).unwrap();
+        let got = got.unwrap();
+        assert_eq!(got.id, "foo".into());
+        assert_eq!(got.rev,
+                   "42-1234567890abcdef1234567890abcdef".parse().unwrap());
+        let expected = serde_json::builder::ObjectBuilder::new()
+                           .insert("bar", 17)
+                           .unwrap();
+        let got = got.into_content::<serde_json::Value>().unwrap();
+        assert_eq!(expected, got);
+    }
+
+    #[test]
+    fn take_response_not_modified() {
+        let response = NoContentResponse::new(hyper::status::StatusCode::NotModified);
+        let got = GetDocument::<DocumentPath>::take_response(response).unwrap();
+        assert!(got.is_none());
+    }
+
+    #[test]
+    fn take_response_bad_request() {
+        let source = serde_json::builder::ObjectBuilder::new()
+                         .insert("error", "bad_request")
+                         .insert("reason", "Invalid rev format")
+                         .unwrap();
+        let response = JsonResponse::new(hyper::BadRequest, &source);
+        let got = GetDocument::<DocumentPath>::take_response(response);
+        expect_couchdb_error!(got, BadRequest);
+    }
+
+    #[test]
+    fn take_response_not_found() {
+        let source = serde_json::builder::ObjectBuilder::new()
+                         .insert("error", "not_found")
+                         .insert("reason", "missing")
+                         .unwrap();
+        let response = JsonResponse::new(hyper::NotFound, &source);
+        let got = GetDocument::<DocumentPath>::take_response(response);
+        expect_couchdb_error!(got, NotFound);
+    }
+
+    #[test]
+    fn take_response_unauthorized() {
+        let source = serde_json::builder::ObjectBuilder::new()
+                         .insert("error", "unauthorized")
+                         .insert("reason", "blah blah blah")
+                         .unwrap();
+        let response = JsonResponse::new(hyper::status::StatusCode::Unauthorized, &source);
+        let got = GetDocument::<DocumentPath>::take_response(response);
+        expect_couchdb_error!(got, Unauthorized);
     }
 }

@@ -4,8 +4,7 @@ use Error;
 use ErrorResponse;
 use IntoDatabasePath;
 use client::ClientState;
-use command::{self, Command, Request};
-use json;
+use command::{self, Command, Request, Response};
 
 /// Command to create a database.
 ///
@@ -38,28 +37,89 @@ impl<'a, P: IntoDatabasePath> PutDatabase<'a, P> {
 
 impl<'a, P: IntoDatabasePath> Command for PutDatabase<'a, P> {
     type Output = ();
-    type State = ();
 
-    fn make_request(self) -> Result<(Request, Self::State), Error> {
+    fn make_request(self) -> Result<Request, Error> {
         let db_path = try!(self.path.into_database_path());
         let uri = db_path.into_uri(self.client_state.uri.clone());
-        let req = try!(Request::new(hyper::method::Method::Put, uri)).accept_application_json();
-        Ok((req, ()))
+        let request = Request::new(hyper::method::Method::Put, uri).set_accept_application_json();
+        Ok(request)
     }
 
-    fn take_response(resp: hyper::client::Response,
-                     _state: Self::State)
-                     -> Result<Self::Output, Error> {
-        match resp.status {
-            hyper::status::StatusCode::Created => {
-                command::content_type_must_be_application_json(&resp.headers)
+    fn take_response<R: Response>(mut response: R) -> Result<Self::Output, Error> {
+        match response.status() {
+            hyper::status::StatusCode::Created => response.content_type_must_be_application_json(),
+            hyper::status::StatusCode::BadRequest => Err(make_couchdb_error!(BadRequest, response)),
+            hyper::status::StatusCode::Unauthorized => {
+                Err(make_couchdb_error!(Unauthorized, response))
             }
-            hyper::status::StatusCode::BadRequest => Err(make_couchdb_error!(BadRequest, resp)),
-            hyper::status::StatusCode::Unauthorized => Err(make_couchdb_error!(Unauthorized, resp)),
             hyper::status::StatusCode::PreconditionFailed => {
-                Err(make_couchdb_error!(DatabaseExists, resp))
+                Err(make_couchdb_error!(DatabaseExists, response))
             }
-            _ => Err(Error::UnexpectedHttpStatus { got: resp.status }),
+            _ => Err(Error::UnexpectedHttpStatus { got: response.status() }),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+
+    use hyper;
+    use serde_json;
+
+    use DatabasePath;
+    use client::ClientState;
+    use command::{Command, JsonResponse};
+    use super::PutDatabase;
+
+    #[test]
+    fn make_request_default() {
+        let client_state = ClientState::new("http://example.com:1234/").unwrap();
+        let command = PutDatabase::new(&client_state, "/foo");
+        let request = command.make_request().unwrap();
+        expect_request_method!(request, hyper::method::Method::Put);
+        expect_request_uri!(request, "http://example.com:1234/foo");
+        expect_request_accept_application_json!(request);
+    }
+
+    #[test]
+    fn take_response_created() {
+        let source = serde_json::builder::ObjectBuilder::new()
+                         .insert("ok", true)
+                         .unwrap();
+        let response = JsonResponse::new(hyper::status::StatusCode::Created, &source);
+        PutDatabase::<DatabasePath>::take_response(response).unwrap();
+    }
+
+    #[test]
+    fn take_response_bad_request() {
+        let source = serde_json::builder::ObjectBuilder::new()
+                         .insert("error", "bad_request")
+                         .insert("reason", "blah blah blah")
+                         .unwrap();
+        let response = JsonResponse::new(hyper::BadRequest, &source);
+        let got = PutDatabase::<DatabasePath>::take_response(response);
+        expect_couchdb_error!(got, BadRequest);
+    }
+
+    #[test]
+    fn take_response_precondition_failed() {
+        let source = serde_json::builder::ObjectBuilder::new()
+                         .insert("error", "precondition_failed")
+                         .insert("reason", "blah blah blah")
+                         .unwrap();
+        let response = JsonResponse::new(hyper::status::StatusCode::PreconditionFailed, &source);
+        let got = PutDatabase::<DatabasePath>::take_response(response);
+        expect_couchdb_error!(got, DatabaseExists);
+    }
+
+    #[test]
+    fn take_response_unauthorized() {
+        let source = serde_json::builder::ObjectBuilder::new()
+                         .insert("error", "unauthorized")
+                         .insert("reason", "blah blah blah")
+                         .unwrap();
+        let response = JsonResponse::new(hyper::status::StatusCode::Unauthorized, &source);
+        let got = PutDatabase::<DatabasePath>::take_response(response);
+        expect_couchdb_error!(got, Unauthorized);
     }
 }

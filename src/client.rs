@@ -20,6 +20,17 @@ pub struct ClientState {
     pub uri: hyper::Url,
 }
 
+impl ClientState {
+    pub fn new<U: IntoUrl>(uri: U) -> Result<Self, Error> {
+        let client_state = ClientState {
+            http_client: hyper::Client::new(),
+            uri: try!(uri.into_url()
+                         .or_else(|e| Err(Error::UriParse { cause: e }))),
+        };
+        Ok(client_state)
+    }
+}
+
 /// Entry point for communicating with a CouchDB server.
 ///
 /// The `Client` is the principal type for communicating with a CouchDB server.
@@ -35,14 +46,9 @@ pub struct Client {
 
 impl<'a> Client {
     /// Constructs a CouchDB client.
-    pub fn new<U: IntoUrl>(uri: U) -> Result<Client, Error> {
-        Ok(Client {
-            state: ClientState {
-                http_client: hyper::Client::new(),
-                uri: try!(uri.into_url()
-                             .or_else(|e| Err(Error::UriParse { cause: e }))),
-            },
-        })
+    pub fn new<U: IntoUrl>(uri: U) -> Result<Self, Error> {
+        let client = Client { state: try!(ClientState::new(uri)) };
+        Ok(client)
     }
 
     /// Gets the server URI the client connects to.

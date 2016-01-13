@@ -5,8 +5,7 @@ use Error;
 use ErrorResponse;
 use IntoDatabasePath;
 use client::ClientState;
-use command::{self, Command, Request};
-use json;
+use command::{self, Command, Request, Response};
 
 /// Command to get database meta-information.
 ///
@@ -38,25 +37,85 @@ impl<'a, P: IntoDatabasePath> GetDatabase<'a, P> {
 
 impl<'a, P: IntoDatabasePath> Command for GetDatabase<'a, P> {
     type Output = Database;
-    type State = ();
 
-    fn make_request(self) -> Result<(Request, Self::State), Error> {
+    fn make_request(self) -> Result<Request, Error> {
         let db_path = try!(self.path.into_database_path());
         let uri = db_path.into_uri(self.client_state.uri.clone());
-        let req = try!(Request::new(hyper::Get, uri)).accept_application_json();
-        Ok((req, ()))
+        let request = Request::new(hyper::Get, uri).set_accept_application_json();
+        Ok(request)
     }
 
-    fn take_response(resp: hyper::client::Response,
-                     _state: Self::State)
-                     -> Result<Self::Output, Error> {
-        match resp.status {
+    fn take_response<R: Response>(mut response: R) -> Result<Self::Output, Error> {
+        match response.status() {
             hyper::status::StatusCode::Ok => {
-                try!(command::content_type_must_be_application_json(&resp.headers));
-                json::decode_json::<_, Database>(resp)
+                try!(response.content_type_must_be_application_json());
+                response.decode_json::<Database>()
             }
-            hyper::status::StatusCode::NotFound => Err(make_couchdb_error!(NotFound, resp)),
-            _ => Err(Error::UnexpectedHttpStatus { got: resp.status }),
+            hyper::status::StatusCode::NotFound => Err(make_couchdb_error!(NotFound, response)),
+            _ => Err(Error::UnexpectedHttpStatus { got: response.status() }),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+
+    use hyper;
+    use serde_json;
+
+    use DatabasePath;
+    use client::ClientState;
+    use command::{Command, JsonResponse};
+    use super::GetDatabase;
+
+    #[test]
+    fn make_request() {
+        let client_state = ClientState::new("http://example.com:1234/").unwrap();
+        let command = GetDatabase::new(&client_state, "/foo");
+        let request = command.make_request().unwrap();
+        expect_request_method!(request, hyper::Get);
+        expect_request_uri!(request, "http://example.com:1234/foo");
+        expect_request_accept_application_json!(request);
+    }
+
+    #[test]
+    fn take_response_ok() {
+        let source = serde_json::builder::ObjectBuilder::new()
+                         .insert("db_name", "foo")
+                         .insert("doc_count", 3)
+                         .insert("doc_del_count", 1)
+                         .insert("update_seq", 16)
+                         .insert("purge_seq", 0)
+                         .insert("compact_running", true)
+                         .insert("disk_size", 65637)
+                         .insert("data_size", 1385)
+                         .insert("instance_start_time", "1452379292782729")
+                         .insert("disk_format_version", 6)
+                         .insert("committed_update_seq", 15)
+                         .unwrap();
+        let response = JsonResponse::new(hyper::Ok, &source);
+        let got = GetDatabase::<DatabasePath>::take_response(response).unwrap();
+        assert_eq!(got.db_name, "foo".into());
+        assert_eq!(3, got.doc_count);
+        assert_eq!(1, got.doc_del_count);
+        assert_eq!(16, got.update_seq);
+        assert_eq!(0, got.purge_seq);
+        assert_eq!(true, got.compact_running);
+        assert_eq!(65637, got.disk_size);
+        assert_eq!(1385, got.data_size);
+        assert_eq!(1452379292782729, got.instance_start_time);
+        assert_eq!(6, got.disk_format_version);
+        assert_eq!(15, got.committed_update_seq);
+    }
+
+    #[test]
+    fn take_response_not_found() {
+        let source = serde_json::builder::ObjectBuilder::new()
+                         .insert("error", "not_found")
+                         .insert("reason", "no_db_file")
+                         .unwrap();
+        let response = JsonResponse::new(hyper::NotFound, &source);
+        let got = GetDatabase::<DatabasePath>::take_response(response);
+        expect_couchdb_error!(got, NotFound);
     }
 }

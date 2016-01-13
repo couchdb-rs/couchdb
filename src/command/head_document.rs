@@ -4,7 +4,7 @@ use Error;
 use IntoDocumentPath;
 use Revision;
 use client::ClientState;
-use command::{self, Command, Request};
+use command::{self, Command, Request, Response};
 
 /// Command to check whether a document exists.
 ///
@@ -51,24 +51,81 @@ impl<'a, P: IntoDocumentPath> HeadDocument<'a, P> {
 
 impl<'a, P: IntoDocumentPath> Command for HeadDocument<'a, P> {
     type Output = Option<()>;
-    type State = ();
 
-    fn make_request(self) -> Result<(Request, Self::State), Error> {
+    fn make_request(self) -> Result<Request, Error> {
         let doc_path = try!(self.path.into_document_path());
         let uri = doc_path.into_uri(self.client_state.uri.clone());
-        let req = try!(Request::new(hyper::Head, uri)).if_none_match_revision(self.if_none_match);
-        Ok((req, ()))
+        let request = Request::new(hyper::Head, uri).set_if_none_match_revision(self.if_none_match);
+        Ok(request)
     }
 
-    fn take_response(resp: hyper::client::Response,
-                     _state: Self::State)
-                     -> Result<Self::Output, Error> {
-        match resp.status {
+    fn take_response<R: Response>(response: R) -> Result<Self::Output, Error> {
+        match response.status() {
             hyper::status::StatusCode::Ok => Ok(Some(())),
             hyper::status::StatusCode::NotModified => Ok(None),
             hyper::status::StatusCode::Unauthorized => Err(Error::Unauthorized(None)),
             hyper::status::StatusCode::NotFound => Err(Error::NotFound(None)),
-            _ => Err(Error::UnexpectedHttpStatus { got: resp.status }),
+            _ => Err(Error::UnexpectedHttpStatus { got: response.status() }),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+
+    use hyper;
+
+    use DocumentPath;
+    use Revision;
+    use client::ClientState;
+    use command::{Command, NoContentResponse};
+    use super::HeadDocument;
+
+    #[test]
+    fn make_request_default() {
+        let client_state = ClientState::new("http://example.com:1234/").unwrap();
+        let command = HeadDocument::new(&client_state, "/foo/bar");
+        let request = command.make_request().unwrap();
+        expect_request_method!(request, hyper::method::Method::Head);
+        expect_request_uri!(request, "http://example.com:1234/foo/bar");
+    }
+
+    #[test]
+    fn make_request_if_none_match() {
+        let client_state = ClientState::new("http://example.com:1234/").unwrap();
+        let rev = Revision::parse("42-1234567890abcdef1234567890abcdef").unwrap();
+        let command = HeadDocument::new(&client_state, "/foo/bar").if_none_match(&rev);
+        let request = command.make_request().unwrap();
+        expect_request_method!(request, hyper::method::Method::Head);
+        expect_request_uri!(request, "http://example.com:1234/foo/bar");
+        expect_request_if_none_match_revision!(request, rev.to_string().as_ref());
+    }
+
+    #[test]
+    fn take_response_ok() {
+        let response = NoContentResponse::new(hyper::Ok);
+        let got = HeadDocument::<DocumentPath>::take_response(response).unwrap();
+        assert!(got.is_some());
+    }
+
+    #[test]
+    fn take_response_not_modified() {
+        let response = NoContentResponse::new(hyper::status::StatusCode::NotModified);
+        let got = HeadDocument::<DocumentPath>::take_response(response).unwrap();
+        assert!(got.is_none());
+    }
+
+    #[test]
+    fn take_response_not_found() {
+        let response = NoContentResponse::new(hyper::NotFound);
+        let got = HeadDocument::<DocumentPath>::take_response(response);
+        expect_couchdb_error!(got, NotFound);
+    }
+
+    #[test]
+    fn take_response_unauthorized() {
+        let response = NoContentResponse::new(hyper::status::StatusCode::Unauthorized);
+        let got = HeadDocument::<DocumentPath>::take_response(response);
+        expect_couchdb_error!(got, Unauthorized);
     }
 }

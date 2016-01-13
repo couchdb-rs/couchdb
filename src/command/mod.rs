@@ -16,9 +16,12 @@ macro_rules! impl_command_public_methods {
 
 macro_rules! make_couchdb_error {
     ($error_variant:ident, $response:expr) => {
-        Error::$error_variant(Some(try!(json::decode_json::<_, ErrorResponse>($response))))
+        Error::$error_variant(Some(try!($response.decode_json::<ErrorResponse>())))
     }
 }
+
+#[macro_use]
+mod test_macro;
 
 mod delete_database;
 mod delete_document;
@@ -45,10 +48,12 @@ pub use self::put_database::PutDatabase;
 pub use self::put_document::PutDocument;
 
 use hyper;
+use serde;
+use serde_json;
 
 use Error;
 use Revision;
-use error::TransportKind;
+use error::{DecodeErrorKind, TransportKind};
 
 // The Command trait abstracts the machinery for executing CouchDB commands.
 // Types implementing the Command trait define only how they construct requests
@@ -56,116 +61,230 @@ use error::TransportKind;
 // responsibility of sending a request and receiving its response.
 trait Command: Sized {
     type Output;
-    type State;
-    fn make_request(self) -> Result<(Request, Self::State), Error>;
-    fn take_response(resp: hyper::client::Response,
-                     state: Self::State)
-                     -> Result<Self::Output, Error>;
+    fn make_request(self) -> Result<Request, Error>;
+    fn take_response<R: Response>(response: R) -> Result<Self::Output, Error>;
 }
 
-fn run_command<C>(cmd: C) -> Result<C::Output, Error>
+fn run_command<C>(command: C) -> Result<C::Output, Error>
     where C: Command
 {
-    let (resp, state) = {
+    let command_request = try!(command.make_request());
+
+    let command_response = {
         use std::io::Write;
-        let (req, state) = try!(cmd.make_request());
-        let mut stream = try!(req.request
-                                 .start()
-                                 .map_err(|e| Error::Transport(TransportKind::Hyper(e))));
-        try!(stream.write_all(&req.body)
-                   .map_err(|e| Error::Transport(TransportKind::Io(e))));
-        let resp = try!(stream.send()
-                              .map_err(|e| Error::Transport(TransportKind::Hyper(e))));
-        (resp, state)
+        let mut hyper_request = try!(hyper::client::Request::new(command_request.method,
+                                                                 command_request.uri)
+                                         .map_err(|e| Error::Transport(TransportKind::Hyper(e))));
+        *hyper_request.headers_mut() = command_request.headers;
+        let mut request_stream = try!(hyper_request.start()
+                                                   .map_err(|e| {
+                                                       Error::Transport(TransportKind::Hyper(e))
+                                                   }));
+        try!(request_stream.write_all(&command_request.body)
+                           .map_err(|e| Error::Transport(TransportKind::Io(e))));
+        let hyper_response = try!(request_stream.send().map_err(|e| {
+            Error::Transport(TransportKind::Hyper(e))
+        }));
+        HyperResponse::new(hyper_response)
     };
-    C::take_response(resp, state)
+
+    C::take_response(command_response)
 }
 
 struct Request {
-    request: hyper::client::Request<hyper::net::Fresh>,
+    method: hyper::method::Method,
+    uri: hyper::Url,
+    headers: hyper::header::Headers,
     body: Vec<u8>,
 }
 
 impl Request {
-    pub fn new(method: hyper::method::Method, uri: hyper::Url) -> Result<Self, Error> {
-        let r = try!(hyper::client::Request::new(method, uri)
-                         .map_err(|e| Error::Transport(TransportKind::Hyper(e))));
-
-        Ok(Request {
-            request: r,
+    pub fn new(method: hyper::method::Method, uri: hyper::Url) -> Self {
+        Request {
+            method: method,
+            uri: uri,
+            headers: hyper::header::Headers::new(),
             body: Vec::new(),
-        })
+        }
     }
 
-    pub fn body(mut self, body: Vec<u8>) -> Self {
+    #[cfg(test)]
+    pub fn method(&self) -> &hyper::method::Method {
+        &self.method
+    }
+
+    #[cfg(test)]
+    pub fn uri(&self) -> &hyper::Url {
+        &self.uri
+    }
+
+    #[cfg(test)]
+    pub fn headers(&self) -> &hyper::header::Headers {
+        &self.headers
+    }
+
+    pub fn set_body(mut self, body: Vec<u8>) -> Self {
         self.body = body;
         self
     }
 
-    pub fn accept_application_json(mut self) -> Self {
+    pub fn set_accept_application_json(mut self) -> Self {
         let qitems = {
             use hyper::mime::{Mime, TopLevel, SubLevel};
             vec![hyper::header::qitem(Mime(TopLevel::Application, SubLevel::Json, vec![]))]
         };
-        self.request.headers_mut().set(hyper::header::Accept(qitems));
+        self.headers.set(hyper::header::Accept(qitems));
         self
     }
 
-    pub fn content_type_application_json(mut self) -> Self {
+    pub fn set_content_type_application_json(mut self) -> Self {
         let qitems = {
             use hyper::mime::{Mime, TopLevel, SubLevel};
             Mime(TopLevel::Application, SubLevel::Json, vec![])
         };
-        self.request.headers_mut().set(hyper::header::ContentType(qitems));
+        self.headers.set(hyper::header::ContentType(qitems));
         self
     }
 
-    pub fn if_match_revision(mut self, rev: Option<&Revision>) -> Self {
+    pub fn set_if_match_revision(mut self, rev: Option<&Revision>) -> Self {
         match rev {
             None => self,
             Some(rev) => {
                 let etags = new_revision_etags(rev);
-                self.request.headers_mut().set(hyper::header::IfMatch::Items(etags));
+                self.headers.set(hyper::header::IfMatch::Items(etags));
                 self
             }
         }
     }
 
-    pub fn if_none_match_revision(mut self, rev: Option<&Revision>) -> Self {
+    pub fn set_if_none_match_revision(mut self, rev: Option<&Revision>) -> Self {
         match rev {
             None => self,
             Some(rev) => {
                 let etags = new_revision_etags(rev);
-                self.request
-                    .headers_mut()
-                    .set(hyper::header::IfNoneMatch::Items(etags));
+                self.headers.set(hyper::header::IfNoneMatch::Items(etags));
                 self
             }
         }
+    }
+}
+
+trait Response {
+
+    fn status(&self) -> hyper::status::StatusCode {
+        hyper::status::StatusCode::InternalServerError
+    }
+
+    fn content_type_must_be_application_json(&self) -> Result<(), Error> {
+        Err(Error::NoContentTypeHeader { expected: "application/json" })
+    }
+
+    fn decode_json<T: serde::Deserialize>(&mut self) -> Result<T, Error> {
+        serde_json::from_str("").map_err(|e| Error::Decode(DecodeErrorKind::Serde { cause: e }))
+    }
+}
+
+struct HyperResponse {
+    hyper_response: hyper::client::Response,
+}
+
+impl HyperResponse {
+    fn new(hyper_response: hyper::client::Response) -> Self {
+        HyperResponse { hyper_response: hyper_response }
+    }
+}
+
+impl Response for HyperResponse {
+    fn status(&self) -> hyper::status::StatusCode {
+        self.hyper_response.status
+    }
+
+    // Returns an error if the HTTP response doesn't have a Content-Type of
+    // `application/json`.
+    fn content_type_must_be_application_json(&self) -> Result<(), Error> {
+        // FIXME: Test this.
+        match self.hyper_response.headers.get::<hyper::header::ContentType>() {
+            None => Err(Error::NoContentTypeHeader { expected: "application/json" }),
+            Some(content_type) => {
+                use hyper::mime::*;
+                let exp = hyper::mime::Mime(TopLevel::Application, SubLevel::Json, vec![]);
+                let &hyper::header::ContentType(ref got) = content_type;
+                if *got != exp {
+                    Err(Error::UnexpectedContentTypeHeader {
+                        expected: "application/json",
+                        got: format!("{}", got),
+                    })
+                } else {
+                    Ok(())
+                }
+            }
+        }
+    }
+
+    fn decode_json<T: serde::Deserialize>(&mut self) -> Result<T, Error> {
+        serde_json::from_reader::<_, T>(&mut self.hyper_response).map_err(|e| {
+            match e {
+                serde_json::Error::IoError(e) => Error::Transport(TransportKind::Io(e)),
+                _ => Error::Decode(DecodeErrorKind::Serde { cause: e }),
+            }
+        })
+    }
+}
+
+// Mock response encapsulating a typical application/json response.
+#[cfg(test)]
+struct JsonResponse {
+    status_code: hyper::status::StatusCode,
+    body: String,
+}
+
+#[cfg(test)]
+impl JsonResponse {
+    fn new<T: serde::Serialize>(status_code: hyper::status::StatusCode, body: &T) -> Self {
+        JsonResponse {
+            status_code: status_code,
+            body: serde_json::to_string(&body).unwrap(),
+        }
+    }
+}
+
+#[cfg(test)]
+impl Response for JsonResponse {
+    fn status(&self) -> hyper::status::StatusCode {
+        self.status_code
+    }
+
+    fn content_type_must_be_application_json(&self) -> Result<(), Error> {
+        Ok(())
+    }
+
+    fn decode_json<T: serde::Deserialize>(&mut self) -> Result<T, Error> {
+        serde_json::from_str(&self.body)
+            .map_err(|e| Error::Decode(DecodeErrorKind::Serde { cause: e }))
+    }
+}
+
+// Mock response encapsulating a response with no body.
+#[cfg(test)]
+struct NoContentResponse {
+    status_code: hyper::status::StatusCode,
+}
+
+#[cfg(test)]
+impl NoContentResponse {
+    fn new(status_code: hyper::status::StatusCode) -> Self {
+        NoContentResponse { status_code: status_code }
+    }
+}
+
+#[cfg(test)]
+impl Response for NoContentResponse {
+    fn status(&self) -> hyper::status::StatusCode {
+        self.status_code
     }
 }
 
 fn new_revision_etags(rev: &Revision) -> Vec<hyper::header::EntityTag> {
+    // FIXME: Test this.
     vec![hyper::header::EntityTag::new(false, rev.to_string())]
-}
-
-// Returns an error if the HTTP response doesn't have a Content-Type of
-// `application/json`.
-fn content_type_must_be_application_json(headers: &hyper::header::Headers) -> Result<(), Error> {
-    match headers.get::<hyper::header::ContentType>() {
-        None => Err(Error::NoContentTypeHeader { expected: "application/json" }),
-        Some(content_type) => {
-            use hyper::mime::*;
-            let exp = hyper::mime::Mime(TopLevel::Application, SubLevel::Json, vec![]);
-            let &hyper::header::ContentType(ref got) = content_type;
-            if *got != exp {
-                Err(Error::UnexpectedContentTypeHeader {
-                    expected: "application/json",
-                    got: format!("{}", got),
-                })
-            } else {
-                Ok(())
-            }
-        }
-    }
 }

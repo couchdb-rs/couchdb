@@ -169,7 +169,6 @@ pub mod command;
 mod client;
 mod dbtype;
 mod error;
-mod json;
 mod path;
 mod server;
 
