@@ -15,7 +15,7 @@ The latest release is **v0.4.0**.
 * [Documentation](https://couchdb-rs.github.io/couchdb/doc/v0.4.0/couchdb/index.html).
 * [Crates.io page](https://crates.io/crates/couchdb/).
 
-The next release will be **v0.5.0** and should happen in **Jan 2015.**
+The next release will be **v0.5.0** and should happen in **Jan 2016.**
 
 * [All related
   issues](https://github.com/couchdb-rs/couchdb/issues?q=milestone%3Av0.5.0+),
