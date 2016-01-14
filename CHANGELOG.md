@@ -10,8 +10,9 @@
   affect applications.
 * The `Document` type has been refactored to make it easier to use.
     * The `Document` type is no longer generic, nor is the `content`
-      field publicly accessible. Applications access document content
-      via a new `into_content` method, which does JSON-decoding.
+      field publicly accessible (issues [#22][issue_22] and
+      [#28][issue_28]). Applications access document content via a new
+      `into_content` method, which does JSON-decoding.
     * The `revision` field has been renamed to `rev`, which more closely
       matches the CouchDB name.
     * The `Document` type implements `serde::Deserialize` instead of the
@@ -22,14 +23,14 @@
   `(Revision, DocumentId)` (issue [#35][issue_35]).
 * The following types now have at least one private field and can no
   longer be directly constructed by applications:
-    * `Database`
-    * `Design`
-    * `ErrorResponse`
-    * `ViewFunction`
-    * `ViewResult`
-    * `ViewRow`
-* The `DeleteDocument` command now returns the revision of the deleted
-  document. Previously the command returned `()`.
+    * `Database` (issue [#24][issue_24])
+    * `Design` (issue [#19][issue_19])
+    * `ErrorResponse` (issue [#23][issue_23])
+    * `ViewFunction` (issue [#25][issue_25])
+    * `ViewResult` (issue [#26][issue_26])
+    * `ViewRow` (issue [#27][issue_27])
+* The `DeleteDocument` action now returns the revision of the deleted
+  document (issue [#18][issue_18]). Previously the action returned `()`.
 
 ### New
 
@@ -40,10 +41,10 @@
 
 ### Additional notes
 
-* Add the Apache-2.0 license. The project is now dual-licensed under
-  Apache-2.0 and MIT.
+* New additional license: Apache-2.0 license (issue [#31][issue_31]).
+  The project is now dual-licensed under Apache-2.0 and MIT.
 * Commands are now tested as unit tests. Previously they were tested as
-  an integration test (issue #21).
+  an integration test (issue [#21][issue_21]).
 
 ## v0.4.0 (2016-01-03)
 
@@ -209,5 +210,16 @@ This is the first release. It provides support for client commands to
 manipulate databases (HEAD, GET, PUT, and DELETE), to manipulate
 documents (HEAD, GET, PUT, and DELETE), and to execute views (GET).
 
+[issue_18]: https://github.com/couchdb-rs/couchdb/issues/18 "Issue #18"
+[issue_19]: https://github.com/couchdb-rs/couchdb/issues/19 "Issue #19"
+[issue_21]: https://github.com/couchdb-rs/couchdb/issues/21 "Issue #21"
+[issue_22]: https://github.com/couchdb-rs/couchdb/issues/22 "Issue #22"
+[issue_23]: https://github.com/couchdb-rs/couchdb/issues/23 "Issue #23"
+[issue_24]: https://github.com/couchdb-rs/couchdb/issues/24 "Issue #24"
+[issue_25]: https://github.com/couchdb-rs/couchdb/issues/25 "Issue #25"
+[issue_26]: https://github.com/couchdb-rs/couchdb/issues/26 "Issue #26"
+[issue_27]: https://github.com/couchdb-rs/couchdb/issues/27 "Issue #27"
+[issue_28]: https://github.com/couchdb-rs/couchdb/issues/28 "Issue #28"
+[issue_31]: https://github.com/couchdb-rs/couchdb/issues/31 "Issue #31"
 [issue_32]: https://github.com/couchdb-rs/couchdb/issues/32 "Issue #32"
 [issue_35]: https://github.com/couchdb-rs/couchdb/issues/35 "Issue #35"
