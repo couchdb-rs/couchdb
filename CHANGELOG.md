@@ -18,6 +18,8 @@
       `from_reader` deserialization method.
     * The `Document` type no longer implements these traits: `Eq`,
       `Hash`, `Ord`, and `PartialOrd`.
+* The `PostToDatabase` action now returns `(DocumentId, Revision)`, not
+  `(Revision, DocumentId)` (issue [#35][issue_35]).
 * The following types now have at least one private field and can no
   longer be directly constructed by applications:
     * `Database`
@@ -208,3 +210,4 @@ manipulate databases (HEAD, GET, PUT, and DELETE), to manipulate
 documents (HEAD, GET, PUT, and DELETE), and to execute views (GET).
 
 [issue_32]: https://github.com/couchdb-rs/couchdb/issues/32 "Issue #32"
+[issue_35]: https://github.com/couchdb-rs/couchdb/issues/35 "Issue #35"

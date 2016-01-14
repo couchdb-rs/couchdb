@@ -48,7 +48,7 @@
 //!                   .insert("name", "Babe Ruth")
 //!                   .insert("career_hr", 714)
 //!                   .unwrap();
-//! let (rev, id) = client.post_to_database("/baseball", &content)
+//! let (id, rev) = client.post_to_database("/baseball", &content)
 //!                       .run()
 //!                       .unwrap();
 //!

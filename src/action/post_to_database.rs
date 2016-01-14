@@ -47,11 +47,11 @@ impl<'a, P: IntoDatabasePath, T: 'a + serde::Serialize> PostToDatabase<'a, P, T>
         }
     }
 
-    impl_action_public_methods!((Revision, DocumentId));
+    impl_action_public_methods!((DocumentId, Revision));
 }
 
 impl<'a, P: IntoDatabasePath, T: 'a + serde::Serialize> Action for PostToDatabase<'a, P, T> {
-    type Output = (Revision, DocumentId);
+    type Output = (DocumentId, Revision);
 
     fn make_request(self) -> Result<Request, Error> {
         let db_path = try!(self.path.into_database_path());
@@ -72,7 +72,7 @@ impl<'a, P: IntoDatabasePath, T: 'a + serde::Serialize> Action for PostToDatabas
                 let content = try!(response.decode_json::<PostToDatabaseResponse>());
                 let id = DocumentId::from(String::from(content.id));
                 let rev: Revision = content.rev.into();
-                Ok((rev, id))
+                Ok((id, rev))
             }
             hyper::status::StatusCode::BadRequest => Err(make_couchdb_error!(BadRequest, response)),
             hyper::status::StatusCode::Unauthorized => {
@@ -128,7 +128,7 @@ mod tests {
                          .insert("rev", source_rev.to_string())
                          .unwrap();
         let response = JsonResponse::new(hyper::status::StatusCode::Created, &source);
-        let (rev, id) = PostToDatabase::<DatabasePath, serde_json::Value>::take_response(response)
+        let (id, rev) = PostToDatabase::<DatabasePath, serde_json::Value>::take_response(response)
                             .unwrap();
         assert_eq!(id, DocumentId::Normal("doc-id".into()));
         assert_eq!(rev, source_rev);
