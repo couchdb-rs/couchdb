@@ -45,6 +45,7 @@
   The project is now dual-licensed under Apache-2.0 and MIT.
 * Commands are now tested as unit tests. Previously they were tested as
   an integration test (issue [#21][issue_21]).
+* The project now has support for Travis CI (issue [#20][issue_20]).
 
 ## v0.4.0 (2016-01-03)
 
@@ -212,6 +213,7 @@ documents (HEAD, GET, PUT, and DELETE), and to execute views (GET).
 
 [issue_18]: https://github.com/couchdb-rs/couchdb/issues/18 "Issue #18"
 [issue_19]: https://github.com/couchdb-rs/couchdb/issues/19 "Issue #19"
+[issue_20]: https://github.com/couchdb-rs/couchdb/issues/20 "Issue #20"
 [issue_21]: https://github.com/couchdb-rs/couchdb/issues/21 "Issue #21"
 [issue_22]: https://github.com/couchdb-rs/couchdb/issues/22 "Issue #22"
 [issue_23]: https://github.com/couchdb-rs/couchdb/issues/23 "Issue #23"
