@@ -1,5 +1,7 @@
 # CouchDB
 
+[![Build Status](https://travis-ci.org/couchdb-rs/couchdb.svg?branch=master)](https://travis-ci.org/couchdb-rs/couchdb)
+
 This project comprises a CouchDB client library for the Rust programming
 language.
 
