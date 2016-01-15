@@ -164,12 +164,12 @@ extern crate tempdir;
 extern crate url;
 
 pub mod action;
+pub mod testing;
 
 mod client;
 mod dbtype;
 mod error;
 mod path;
-mod server;
 
 pub use client::{Client, IntoUrl};
 pub use dbtype::{Database, DatabaseName, Design, DesignBuilder, DesignDocumentName, Document,
@@ -178,4 +178,3 @@ pub use dbtype::{Database, DatabaseName, Design, DesignBuilder, DesignDocumentNa
 pub use path::{IntoDatabasePath, IntoDesignDocumentPath, IntoDocumentPath, IntoViewPath,
                DatabasePath, DesignDocumentPath, DocumentPath, ViewPath};
 pub use error::Error;
-pub use server::Server;

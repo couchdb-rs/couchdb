@@ -1,4 +1,4 @@
-//! Module for individual action types.
+//! Action types.
 //!
 //! Applications should not access the `action` module directly. Instead, they
 //! should use the appropriate `Client` method to construct an action. For

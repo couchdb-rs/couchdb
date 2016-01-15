@@ -31,6 +31,8 @@
     * `ViewRow` (issue [#27][issue_27])
 * The `DeleteDocument` action now returns the revision of the deleted
   document (issue [#18][issue_18]). Previously the action returned `()`.
+* The `Server` type has been moved and renamed to `testing::FakeServer`
+  (issue [#33][issue_33]).
 
 ### New
 
@@ -224,4 +226,5 @@ documents (HEAD, GET, PUT, and DELETE), and to execute views (GET).
 [issue_28]: https://github.com/couchdb-rs/couchdb/issues/28 "Issue #28"
 [issue_31]: https://github.com/couchdb-rs/couchdb/issues/31 "Issue #31"
 [issue_32]: https://github.com/couchdb-rs/couchdb/issues/32 "Issue #32"
+[issue_33]: https://github.com/couchdb-rs/couchdb/issues/33 "Issue #33"
 [issue_35]: https://github.com/couchdb-rs/couchdb/issues/35 "Issue #35"

@@ -17,11 +17,11 @@ impl Drop for AutoKillProcess {
 
 /// RAII wrapper for running a CouchDB server process.
 ///
-/// The `Server` type is provided for testing purposes. The database persists to
-/// the system's default temporary directory (e.g., `/tmp`) and is deleted when
-/// the `Server` instance drops.
+/// The `FakeServer` type is provided for testing purposes. The database
+/// persists to the system's default temporary directory (e.g., `/tmp`) and is
+/// deleted when the `FakeServer` instance drops.
 ///
-pub struct Server {
+pub struct FakeServer {
     // Rust drops structure fields in forward order, not reverse order. The child process must exit
     // before we remove the temporary directory.
     _process: AutoKillProcess,
@@ -29,9 +29,9 @@ pub struct Server {
     uri: String,
 }
 
-impl Server {
+impl FakeServer {
     /// Spawns a CouchDB server process.
-    pub fn new() -> Result<Server, Error> {
+    pub fn new() -> Result<FakeServer, Error> {
 
         let tmp_root = try!(tempdir::TempDir::new("couchdb_client_test").map_err(|e| {
             Error::Io {
@@ -126,7 +126,7 @@ impl Server {
                              }
                          }));
 
-        Ok(Server {
+        Ok(FakeServer {
             _process: process,
             _tmp_root: tmp_root,
             uri: uri,

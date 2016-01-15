@@ -21,8 +21,8 @@ macro_rules! expect_couchdb_error {
     }
 }
 
-fn make_server_and_client() -> (couchdb::Server, couchdb::Client) {
-    let server = couchdb::Server::new().unwrap();
+fn make_server_and_client() -> (couchdb::testing::FakeServer, couchdb::Client) {
+    let server = couchdb::testing::FakeServer::new().unwrap();
     let client = couchdb::Client::new(server.uri()).unwrap();
     (server, client)
 }
