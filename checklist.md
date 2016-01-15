@@ -24,7 +24,11 @@
 1. Update project files.
 
     1. Edit `Cargo.toml` to declare the correct version for this
-       crate—e.g., remove the `+master` suffix.
+       crate.
+
+        1. E.g., remove the `+master` suffix.
+
+        1. Ensure the documentation link is correct.
 
     1. Edit `CHANGELOG.md` to add the date for the new release and
        remove the “unreleased” adjective. Ensure the change log is
