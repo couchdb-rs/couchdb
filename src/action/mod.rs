@@ -202,23 +202,7 @@ impl Response for HyperResponse {
     // Returns an error if the HTTP response doesn't have a Content-Type of
     // `application/json`.
     fn content_type_must_be_application_json(&self) -> Result<(), Error> {
-        // FIXME: Test this.
-        match self.hyper_response.headers.get::<hyper::header::ContentType>() {
-            None => Err(Error::NoContentTypeHeader { expected: "application/json" }),
-            Some(content_type) => {
-                use hyper::mime::*;
-                let exp = hyper::mime::Mime(TopLevel::Application, SubLevel::Json, vec![]);
-                let &hyper::header::ContentType(ref got) = content_type;
-                if *got != exp {
-                    Err(Error::UnexpectedContentTypeHeader {
-                        expected: "application/json",
-                        got: format!("{}", got),
-                    })
-                } else {
-                    Ok(())
-                }
-            }
-        }
+        headers_content_type_must_be_application_json(&self.hyper_response.headers)
     }
 
     fn decode_json<T: serde::Deserialize>(&mut self) -> Result<T, Error> {
@@ -284,7 +268,58 @@ impl Response for NoContentResponse {
     }
 }
 
+fn headers_content_type_must_be_application_json(headers: &hyper::header::Headers)
+                                                 -> Result<(), Error> {
+    use hyper::header::ContentType;
+    use hyper::mime::{Mime, TopLevel, SubLevel};
+    let c = "application/json";
+    match headers.get::<ContentType>() {
+        None => Err(Error::NoContentTypeHeader { expected: c }),
+        Some(&ContentType(Mime(TopLevel::Application, SubLevel::Json, ref _param))) => Ok(()),
+        Some(&ContentType(ref mime)) => {
+            Err(Error::UnexpectedContentTypeHeader {
+                expected: c,
+                got: format!("{}", mime),
+            })
+        }
+    }
+}
+
 fn new_revision_etags(rev: &Revision) -> Vec<hyper::header::EntityTag> {
-    // FIXME: Test this.
     vec![hyper::header::EntityTag::new(false, rev.to_string())]
+}
+
+#[cfg(test)]
+mod tests {
+
+    #[test]
+    fn headers_content_type_must_be_application_json_ok_with_charset() {
+        use hyper::header::{ContentType, Headers};
+        let mut headers = Headers::new();
+        headers.set(ContentType("application/json; charset=utf-8".parse().unwrap()));
+        super::headers_content_type_must_be_application_json(&headers).unwrap();
+    }
+
+    #[test]
+    fn headers_content_type_must_be_application_json_ok_without_charset() {
+        use hyper::header::{ContentType, Headers};
+        let mut headers = Headers::new();
+        headers.set(ContentType("application/json".parse().unwrap()));
+        super::headers_content_type_must_be_application_json(&headers).unwrap();
+    }
+
+    #[test]
+    fn headers_content_type_must_be_application_json_no_header() {
+        use hyper::header::Headers;
+        let headers = Headers::new();
+        super::headers_content_type_must_be_application_json(&headers).unwrap_err();
+    }
+
+    #[test]
+    fn headers_content_type_must_be_application_json_wrong_type() {
+        use hyper::header::{ContentType, Headers};
+        let mut headers = Headers::new();
+        headers.set(ContentType("plain/text".parse().unwrap()));
+        super::headers_content_type_must_be_application_json(&headers).unwrap_err();
+    }
 }
