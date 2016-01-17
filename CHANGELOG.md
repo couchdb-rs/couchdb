@@ -1,5 +1,9 @@
 # CouchDB-rs Change Log
 
+## v0.5.1 (unreleased)
+
+No changes yet!
+
 ## v0.5.0 (2016-01-17)
 
 This release makes a few API changes to continue the library's progress
