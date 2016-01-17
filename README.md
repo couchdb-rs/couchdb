@@ -12,30 +12,29 @@ application programmers to focus on their business logic.
 
 ## Project roadmap
 
-The latest release is **v0.4.0**.
+The latest release is **v0.5.0**, which was released **2016-01-17**.
 
-* [Documentation](https://couchdb-rs.github.io/couchdb/doc/v0.4.0/couchdb/index.html).
-* [Crates.io page](https://crates.io/crates/couchdb/).
+* [v0.5.0 change log](https://github.com/couchdb-rs/couchdb/blob/v0.5.0/CHANGELOG.md).
+* [v0.5.0 documentation](https://couchdb-rs.github.io/couchdb/doc/v0.5.0/couchdb/index.html).
+* [v0.5.0 issues](https://github.com/couchdb-rs/couchdb/issues?q=milestone%3Av0.5.0).
+* [v0.5.0 crates.io page](https://crates.io/crates/couchdb/0.5.0).
 
-The next release will be **v0.5.0** and should happen in **Jan 2016.**
+The next release will _probably_ be **v0.5.1** and is _loosely
+scheduled_ for **February 2016.**
 
-* [All related
-  issues](https://github.com/couchdb-rs/couchdb/issues?q=milestone%3Av0.5.0+),
-  including ones opened or closed. 
-* [Change
-  log](https://github.com/couchdb-rs/couchdb/blob/master/CHANGELOG.md).
-  This may give a higher-level view of what's happening.
+* [v0.5.1 issues](https://github.com/couchdb-rs/couchdb/issues?q=milestone%3Av0.5.1).
+
+Another place to peek at upcoming changes is the [master branch change
+log](https://github.com/couchdb-rs/couchdb/blob/master/CHANGELOG.md).
 
 ## License
 
-Licensed under either of
+CouchDB-rs is licensed under either of:
 
 * Apache License, Version 2.0, ([LICENSE-APACHE](LICENSE-APACHE) or
-  http://www.apache.org/licenses/LICENSE-2.0)
+  http://www.apache.org/licenses/LICENSE-2.0), or
 * MIT license ([LICENSE-MIT](LICENSE-MIT) or
-  http://opensource.org/licenses/MIT)
-
-at your option.
+  http://opensource.org/licenses/MIT).
 
 ## Feedback
 

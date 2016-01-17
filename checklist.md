@@ -51,20 +51,14 @@
               cargo doc --no-deps &&
               ver=$(grep '^version' Cargo.toml | sed -e 's/.*\([[:digit:]]\+\.[[:digit:]]\+\.[[:digit:]]\+\).*/\1/') &&
               git checkout gh-pages &&
-              git rm -r doc/latest &&
               cp -a target/doc doc/v$ver &&
-              git add doc/v$ver &&
-              cp -a target/doc doc/latest &&
-              git add doc/latest
+              git add doc/v$ver
 
-    1. Review.
-
-        * `doc/latest/couchdb/index.html`
-        * `doc/v$ver/couchdb/index.html`
+    1. Review `doc/v$ver/couchdb/index.html`.
 
     1. Publish.
 
-            $ git commit -a -m "Add v$ver documentation as latest" &&
+            $ git commit -a -m "Add v$ver documentation" &&
               git push origin &&
               git checkout release_prep
 

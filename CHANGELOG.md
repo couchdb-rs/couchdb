@@ -1,24 +1,28 @@
 # CouchDB-rs Change Log
 
-## v0.5.0 (unreleased)
+## v0.5.0 (2016-01-17)
+
+This release makes a few API changes to continue the library's progress
+towards optimal type-safety and convenience.
 
 ### Breaking changes
 
-* The term “command” has been replaced with “action” throughout the
-  project (issue [#32][issue_32]). The only API change is that the
-  `command` module is now named the `action` module. This should _not_
-  affect applications.
 * The `Document` type has been refactored to make it easier to use.
-    * The `Document` type is no longer generic, nor is the `content`
-      field publicly accessible (issues [#22][issue_22] and
+    * The `Document` type is no longer a generic type, nor is the
+      `content` field publicly accessible (issues [#22][issue_22] and
       [#28][issue_28]). Applications access document content via a new
-      `into_content` method, which does JSON-decoding.
+      `into_content` method, which does the JSON-decoding.
     * The `revision` field has been renamed to `rev`, which more closely
       matches the CouchDB name.
-    * The `Document` type implements `serde::Deserialize` instead of the
-      `from_reader` deserialization method.
+    * The `Document` type implements `serde::Deserialize` instead of a
+      custom `from_reader` deserialization method. This should _not_
+      affect applications.
     * The `Document` type no longer implements these traits: `Eq`,
       `Hash`, `Ord`, and `PartialOrd`.
+* Throughout the project, the term “command” has been replaced with
+  “action” (issue [#32][issue_32]). The only API change is that the
+  `command` module is now named the `action` module. This should _not_
+  affect applications.
 * The `PostToDatabase` action now returns `(DocumentId, Revision)`, not
   `(Revision, DocumentId)` (issue [#35][issue_35]).
 * The following types now have at least one private field and can no
@@ -30,8 +34,9 @@
     * `ViewResult` (issue [#26][issue_26])
     * `ViewRow` (issue [#27][issue_27])
 * The `DeleteDocument` action now returns the revision of the deleted
-  document (issue [#18][issue_18]). Previously the action returned `()`.
-* The `Server` type has been moved and renamed to `testing::FakeServer`
+  document (issue [#18][issue_18]). Previously the action returned
+  nothing.
+* The `Server` type has been moved/renamed to `testing::FakeServer`
   (issue [#33][issue_33]).
 
 ### New
@@ -45,8 +50,10 @@
 
 * New additional license: Apache-2.0 license (issue [#31][issue_31]).
   The project is now dual-licensed under Apache-2.0 and MIT.
-* Commands are now tested as unit tests. Previously they were tested as
-  an integration test (issue [#21][issue_21]).
+* Actions are now tested as unit tests _and_ integration tests (issue
+  [#21][issue_21]). Previously, actions were tested only as integration
+  tests. Unit-testing provides greater test coverage without having the
+  CouchDB server installed on the local machine.
 * The project now has support for Travis CI (issue [#20][issue_20]).
 
 ## v0.4.0 (2016-01-03)
