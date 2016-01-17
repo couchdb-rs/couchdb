@@ -88,3 +88,6 @@
     1. Commit changes
 
             $ git commit
+
+    1. Close the issue milestone for the new release:
+       https://github.com/couchdb-rs/couchdb/milestones.
