@@ -1,1 +1,0 @@
-initSidebarItems({"struct":[["DatabasePath","Path part of a URI specifying a database."]],"trait":[["IntoDatabasePath","Trait for converting a type into a `DatabasePath`."]]});

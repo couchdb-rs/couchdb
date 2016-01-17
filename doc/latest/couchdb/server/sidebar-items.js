@@ -1,1 +1,0 @@
-initSidebarItems({"struct":[["Server","RAII wrapper for running a CouchDB server process."]]});

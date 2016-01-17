@@ -1,1 +1,0 @@
-initSidebarItems({"struct":[["HeadDatabase","Command to check whether a database exists."]]});

@@ -1,1 +1,0 @@
-initSidebarItems({"enum":[["Error","Principal error type."]]});

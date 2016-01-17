@@ -1,1 +1,0 @@
-initSidebarItems({"struct":[["Document","Document, including both meta-information and application-defined content."]]});

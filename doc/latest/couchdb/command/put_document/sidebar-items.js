@@ -1,1 +1,0 @@
-initSidebarItems({"struct":[["PutDocument","Command to create or update a document."]]});

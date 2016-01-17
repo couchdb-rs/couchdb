@@ -1,1 +1,0 @@
-initSidebarItems({"struct":[["ViewResult","Response resulting from executing a view."]]});

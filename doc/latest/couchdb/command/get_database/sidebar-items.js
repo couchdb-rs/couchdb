@@ -1,1 +1,0 @@
-initSidebarItems({"struct":[["GetDatabase","Command to get database meta-information."]]});
