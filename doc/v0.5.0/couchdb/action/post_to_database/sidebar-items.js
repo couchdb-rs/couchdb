@@ -1,0 +1,1 @@
+initSidebarItems({"struct":[["PostToDatabase","Action to create a document."]]});

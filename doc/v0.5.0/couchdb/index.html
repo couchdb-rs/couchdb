@@ -1,0 +1,529 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="generator" content="rustdoc">
+    <meta name="description" content="API documentation for the Rust `couchdb` crate.">
+    <meta name="keywords" content="rust, rustlang, rust-lang, couchdb">
+
+    <title>couchdb - Rust</title>
+
+    <link rel="stylesheet" type="text/css" href="../main.css">
+
+    
+    
+</head>
+<body class="rustdoc">
+    <!--[if lte IE 8]>
+    <div class="warning">
+        This old browser is unsupported and will most likely display funky
+        things.
+    </div>
+    <![endif]-->
+
+    
+
+    <nav class="sidebar">
+        
+        <p class='location'></p><script>window.sidebarCurrent = {name: 'couchdb', ty: 'mod', relpath: '../'};</script>
+    </nav>
+
+    <nav class="sub">
+        <form class="search-form js-only">
+            <div class="search-container">
+                <input class="search-input" name="search"
+                       autocomplete="off"
+                       placeholder="Click or press ‘S’ to search, ‘?’ for more options…"
+                       type="search">
+            </div>
+        </form>
+    </nav>
+
+    <section id='main' class="content mod">
+<h1 class='fqn'><span class='in-band'>Crate <a class='mod' href=''>couchdb</a></span><span class='out-of-band'><span id='render-detail'>
+            <a id="toggle-all-docs" href="javascript:void(0)" title="collapse all docs">
+                [<span class='inner'>&#x2212;</span>]
+            </a>
+        </span><a id='src-0' class='srclink' href='../src/couchdb/lib.rs.html#1-180' title='goto source code'>[src]</a></span></h1>
+<div class='docblock'><p>The couchdb crate provides low-level access to individual HTTP actions—e.g.,
+PUT database, GET document, etc. It handles the menial task of sending
+requests and receiving responses, thereby allowing application programmers
+to focus on their business logic.</p>
+
+<p>This documentation has been written assuming the application programmer is
+familiar with the CouchDB API. Descriptions of types, methods, etc. in the
+couchdb crate should provide just enough information for the programmer to
+map the crate&#39;s concepts onto the CouchDB API and then use the CouchDB
+documentation as needed to fill in remaining details. Most names in the
+crate API are identical to the names used in the CouchDB API so as to make
+this mapping straightforward. There&#39;s also a table, below, that <a href="#couchdb-api-coverage">shows the
+mapping at a high level</a>.</p>
+
+<p>One key difference between the couchdb crate&#39;s API and the CouchDB API is
+the crate provides stronger type-safety beyond working with raw strings. For
+example, applications get and put documents using structured types, and
+other types, such as revisions and views, are strongly typed as well.</p>
+
+<p>To deal with JSON, the couchdb crate relies on Serde and its traits
+<code>serde::Serialize</code> and <code>serde::Deserialize</code>. These traits are fundamental to
+the crate&#39;s API—they are not mere implementation details. As such,
+applications must use these traits when working with documents, views, or
+any type that is JSON-encoded in the CouchDB API.</p>
+
+<h2 id='example-create-a-document-read-a-document' class='section-header'><a href='#example-create-a-document-read-a-document'>Example: Create a document, read a document</a></h2>
+<p>This example shows how the couchdb crates thinly wraps the CouchDB API.</p>
+
+<p>The following program (1) constructs a <code>Client</code> with which to connect to the
+CouchDB server, (2) creates a database (via the <code>put_database</code> method), (3)
+creates a document within that database (via the <code>post_to_database</code> method),
+and (4) reads the new document (via the <code>get_document</code> method).</p>
+<pre class='rust rust-example-rendered'>
+<span class='kw'>extern</span> <span class='kw'>crate</span> <span class='ident'>couchdb</span>;
+<span class='kw'>extern</span> <span class='kw'>crate</span> <span class='ident'>serde_json</span>;
+
+<span class='comment'>// The `Client` type is the entry point for sending all HTTP requests to the</span>
+<span class='comment'>// CouchDB server.</span>
+<span class='kw'>let</span> <span class='ident'>client</span> <span class='op'>=</span> <span class='ident'>couchdb</span>::<span class='ident'>Client</span>::<span class='ident'>new</span>(<span class='string'>&quot;http://couchdb-server:5984/&quot;</span>).<span class='ident'>unwrap</span>();
+
+<span class='comment'>// PUT http://couchdb-server:5984/baseball</span>
+<span class='ident'>client</span>.<span class='ident'>put_database</span>(<span class='string'>&quot;/baseball&quot;</span>).<span class='ident'>run</span>().<span class='ident'>unwrap</span>();
+
+<span class='comment'>// POST http://couchdb-server:5984/baseball</span>
+<span class='kw'>let</span> <span class='ident'>content</span> <span class='op'>=</span> <span class='ident'>serde_json</span>::<span class='ident'>builder</span>::<span class='ident'>ObjectBuilder</span>::<span class='ident'>new</span>()
+                  .<span class='ident'>insert</span>(<span class='string'>&quot;name&quot;</span>, <span class='string'>&quot;Babe Ruth&quot;</span>)
+                  .<span class='ident'>insert</span>(<span class='string'>&quot;career_hr&quot;</span>, <span class='number'>714</span>)
+                  .<span class='ident'>unwrap</span>();
+<span class='kw'>let</span> (<span class='ident'>id</span>, <span class='ident'>rev</span>) <span class='op'>=</span> <span class='ident'>client</span>.<span class='ident'>post_to_database</span>(<span class='string'>&quot;/baseball&quot;</span>, <span class='kw-2'>&amp;</span><span class='ident'>content</span>)
+                      .<span class='ident'>run</span>()
+                      .<span class='ident'>unwrap</span>();
+
+<span class='comment'>// GET http://couchdb-server:5984/baseball/&lt;doc_id&gt;</span>
+<span class='kw'>let</span> <span class='ident'>doc</span> <span class='op'>=</span> <span class='ident'>client</span>.<span class='ident'>get_document</span>((<span class='string'>&quot;/baseball&quot;</span>, <span class='ident'>id</span>.<span class='ident'>clone</span>()))
+                .<span class='ident'>run</span>()
+                .<span class='ident'>unwrap</span>()
+                .<span class='ident'>unwrap</span>();
+<span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>id</span>, <span class='ident'>doc</span>.<span class='ident'>id</span>);
+<span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>rev</span>, <span class='ident'>doc</span>.<span class='ident'>rev</span>);
+<span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>content</span>, <span class='ident'>doc</span>.<span class='ident'>into_content</span>().<span class='ident'>unwrap</span>());</pre>
+
+<h2 id='couchdb-api-coverage' class='section-header'><a href='#couchdb-api-coverage'>CouchDB API coverage</a></h2>
+<p>In the couchdb crate, the <code>Client</code> type is the principal type for
+communicating with a CouchDB server. All HTTP requests to the CouchDB server
+go through a <code>Client</code> instance.</p>
+
+<p>This table maps each CouchDB API resource to the <code>Client</code> method that accesses
+that resource.</p>
+
+<table>
+ <thead>
+  <tr>
+   <th>CouchDB URI</td>
+   <th>HTTP method</td>
+   <th><span style="font-family:monospace;">Client</span> method</td>
+   <th>Description</th>
+  </tr>
+ </thead>
+ <tbody>
+  <tr>
+   <td style="font-family:monospace;">
+    <ul><li>/_all_dbs</li></ul>
+   </td>
+   <td>GET</td>
+   <td style="font-family:monospace;">get_all_databases</td>
+   <td>Get list of all databases.</td>
+  </tr>
+  <tr>
+   <td style="font-family:monospace;" rowspan="5">
+    <ul><li>/db</li></ul>
+   </td>
+   <td>HEAD</td>
+   <td style="font-family:monospace;">head_database</td>
+   <td>Test whether a database exists.</td>
+  </tr>
+  <tr>
+   <td>GET</td>
+   <td style="font-family:monospace;">get_database</td>
+   <td>Get meta-information about a database.</td>
+  </tr>
+  <tr>
+   <td>PUT</td>
+   <td style="font-family:monospace;">put_database</td>
+   <td>Create a database.</td>
+  </tr>
+  <tr>
+   <td>DELETE</td>
+   <td style="font-family:monospace;">delete_database</td>
+   <td>Delete a database.</td>
+  </tr>
+  <tr>
+   <td>POST</td>
+   <td style="font-family:monospace;">post_to_database</td>
+   <td>Create a document.</td>
+  </tr>
+  <tr>
+   <td style="font-family:monospace;" rowspan="4">
+    <ul>
+     <li>/db/doc<br></li>
+     <li>/db/_design/design-doc</li>
+     <li>/db/_local/id</li>
+    </ul>
+   </td>
+   <td>HEAD</td>
+   <td style="font-family:monospace;">head_document</td>
+   <td>Test whether a document exists.</td>
+  </tr>
+  <tr>
+   <td>GET</td>
+   <td style="font-family:monospace;">get_document</td>
+   <td>Get meta-information and application-defined content for a
+   document.</td>
+  </tr>
+  <tr>
+   <td>PUT</td>
+   <td style="font-family:monospace;">put_document</td>
+   <td>Create or update a document.</td>
+  </tr>
+  <tr>
+   <td>DELETE</td>
+   <td style="font-family:monospace;">delete_document</td>
+   <td>Delete a document.</td>
+  </tr>
+  <tr>
+   <td style="font-family:monospace;">
+    <ul><li>/db/_design/design-doc/_view/view</li></ul>
+   </td>
+   <td>GET</td>
+   <td style="font-family:monospace;">get_view</td>
+   <td>Execute a view.</td>
+  </tr>
+ </tbody>
+</table>
+</div><h2 id='modules' class='section-header'><a href="#modules">Modules</a></h2>
+<table>
+                    <tr class=' module-item'>
+                        <td><a class='mod' href='action/index.html'
+                               title='couchdb::action'>action</a></td>
+                        <td class='docblock short'>
+                             <p>Action types.</p>
+
+                        </td>
+                    </tr>
+                
+                    <tr class=' module-item'>
+                        <td><a class='mod' href='testing/index.html'
+                               title='couchdb::testing'>testing</a></td>
+                        <td class='docblock short'>
+                             <p>Test utilities.</p>
+
+                        </td>
+                    </tr>
+                </table><h2 id='structs' class='section-header'><a href="#structs">Structs</a></h2>
+<table>
+                    <tr class=' module-item'>
+                        <td><a class='struct' href='struct.Client.html'
+                               title='couchdb::Client'>Client</a></td>
+                        <td class='docblock short'>
+                             <p>Entry point for communicating with a CouchDB server.</p>
+
+                        </td>
+                    </tr>
+                
+                    <tr class=' module-item'>
+                        <td><a class='struct' href='struct.Database.html'
+                               title='couchdb::Database'>Database</a></td>
+                        <td class='docblock short'>
+                             <p>Database meta-information, as returned from an action to GET a database.</p>
+
+                        </td>
+                    </tr>
+                
+                    <tr class=' module-item'>
+                        <td><a class='struct' href='struct.DatabaseName.html'
+                               title='couchdb::DatabaseName'>DatabaseName</a></td>
+                        <td class='docblock short'>
+                             <p>Name of a database.</p>
+
+                        </td>
+                    </tr>
+                
+                    <tr class=' module-item'>
+                        <td><a class='struct' href='struct.DatabasePath.html'
+                               title='couchdb::DatabasePath'>DatabasePath</a></td>
+                        <td class='docblock short'>
+                             <p>Path part of a URI specifying a database.</p>
+
+                        </td>
+                    </tr>
+                
+                    <tr class=' module-item'>
+                        <td><a class='struct' href='struct.Design.html'
+                               title='couchdb::Design'>Design</a></td>
+                        <td class='docblock short'>
+                             <p>Content of a design document.</p>
+
+                        </td>
+                    </tr>
+                
+                    <tr class=' module-item'>
+                        <td><a class='struct' href='struct.DesignBuilder.html'
+                               title='couchdb::DesignBuilder'>DesignBuilder</a></td>
+                        <td class='docblock short'>
+                             <p>Builder for constructing a design document.</p>
+
+                        </td>
+                    </tr>
+                
+                    <tr class=' module-item'>
+                        <td><a class='struct' href='struct.DesignDocumentName.html'
+                               title='couchdb::DesignDocumentName'>DesignDocumentName</a></td>
+                        <td class='docblock short'>
+                             <p>Name of a design document.</p>
+
+                        </td>
+                    </tr>
+                
+                    <tr class=' module-item'>
+                        <td><a class='struct' href='struct.DesignDocumentPath.html'
+                               title='couchdb::DesignDocumentPath'>DesignDocumentPath</a></td>
+                        <td class='docblock short'>
+                             <p>Path part of a URI specifying a design document.</p>
+
+                        </td>
+                    </tr>
+                
+                    <tr class=' module-item'>
+                        <td><a class='struct' href='struct.Document.html'
+                               title='couchdb::Document'>Document</a></td>
+                        <td class='docblock short'>
+                             <p>Document, including both meta-information and application-defined content.</p>
+
+                        </td>
+                    </tr>
+                
+                    <tr class=' module-item'>
+                        <td><a class='struct' href='struct.DocumentName.html'
+                               title='couchdb::DocumentName'>DocumentName</a></td>
+                        <td class='docblock short'>
+                             <p>Name of a document.</p>
+
+                        </td>
+                    </tr>
+                
+                    <tr class=' module-item'>
+                        <td><a class='struct' href='struct.DocumentPath.html'
+                               title='couchdb::DocumentPath'>DocumentPath</a></td>
+                        <td class='docblock short'>
+                             <p>Path part of a URI specifying a document.</p>
+
+                        </td>
+                    </tr>
+                
+                    <tr class=' module-item'>
+                        <td><a class='struct' href='struct.ErrorResponse.html'
+                               title='couchdb::ErrorResponse'>ErrorResponse</a></td>
+                        <td class='docblock short'>
+                             <p>Response content from the CouchDB server in case of error.</p>
+
+                        </td>
+                    </tr>
+                
+                    <tr class=' module-item'>
+                        <td><a class='struct' href='struct.Revision.html'
+                               title='couchdb::Revision'>Revision</a></td>
+                        <td class='docblock short'>
+                             <p>Revision of a document.</p>
+
+                        </td>
+                    </tr>
+                
+                    <tr class=' module-item'>
+                        <td><a class='struct' href='struct.ViewFunction.html'
+                               title='couchdb::ViewFunction'>ViewFunction</a></td>
+                        <td class='docblock short'>
+                             <p>JavaScript <code>map</code> and <code>reduce</code> functions for a CouchDB view.</p>
+
+                        </td>
+                    </tr>
+                
+                    <tr class=' module-item'>
+                        <td><a class='struct' href='struct.ViewFunctionBuilder.html'
+                               title='couchdb::ViewFunctionBuilder'>ViewFunctionBuilder</a></td>
+                        <td class='docblock short'>
+                             <p>Builder for constructing a view function.</p>
+
+                        </td>
+                    </tr>
+                
+                    <tr class=' module-item'>
+                        <td><a class='struct' href='struct.ViewName.html'
+                               title='couchdb::ViewName'>ViewName</a></td>
+                        <td class='docblock short'>
+                             <p>Name of a view.</p>
+
+                        </td>
+                    </tr>
+                
+                    <tr class=' module-item'>
+                        <td><a class='struct' href='struct.ViewPath.html'
+                               title='couchdb::ViewPath'>ViewPath</a></td>
+                        <td class='docblock short'>
+                             <p>Path part of a URI specifying a view.</p>
+
+                        </td>
+                    </tr>
+                
+                    <tr class=' module-item'>
+                        <td><a class='struct' href='struct.ViewResult.html'
+                               title='couchdb::ViewResult'>ViewResult</a></td>
+                        <td class='docblock short'>
+                             <p>Response resulting from executing a view.</p>
+
+                        </td>
+                    </tr>
+                
+                    <tr class=' module-item'>
+                        <td><a class='struct' href='struct.ViewRow.html'
+                               title='couchdb::ViewRow'>ViewRow</a></td>
+                        <td class='docblock short'>
+                             <p>Single row contained in the response resulting from executing a view.</p>
+
+                        </td>
+                    </tr>
+                </table><h2 id='enums' class='section-header'><a href="#enums">Enums</a></h2>
+<table>
+                    <tr class=' module-item'>
+                        <td><a class='enum' href='enum.DocumentId.html'
+                               title='couchdb::DocumentId'>DocumentId</a></td>
+                        <td class='docblock short'>
+                             <p>Document identifier.</p>
+
+                        </td>
+                    </tr>
+                
+                    <tr class=' module-item'>
+                        <td><a class='enum' href='enum.Error.html'
+                               title='couchdb::Error'>Error</a></td>
+                        <td class='docblock short'>
+                             <p>Principal error type.</p>
+
+                        </td>
+                    </tr>
+                </table><h2 id='traits' class='section-header'><a href="#traits">Traits</a></h2>
+<table>
+                    <tr class=' module-item'>
+                        <td><a class='trait' href='trait.IntoDatabasePath.html'
+                               title='couchdb::IntoDatabasePath'>IntoDatabasePath</a></td>
+                        <td class='docblock short'>
+                             <p>Trait for converting a type into a <code>DatabasePath</code>.</p>
+
+                        </td>
+                    </tr>
+                
+                    <tr class=' module-item'>
+                        <td><a class='trait' href='trait.IntoDesignDocumentPath.html'
+                               title='couchdb::IntoDesignDocumentPath'>IntoDesignDocumentPath</a></td>
+                        <td class='docblock short'>
+                             <p>Trait for converting a type into a <code>DesignDocumentPath</code>.</p>
+
+                        </td>
+                    </tr>
+                
+                    <tr class=' module-item'>
+                        <td><a class='trait' href='trait.IntoDocumentPath.html'
+                               title='couchdb::IntoDocumentPath'>IntoDocumentPath</a></td>
+                        <td class='docblock short'>
+                             <p>Trait for converting a type into a <code>DocumentPath</code>.</p>
+
+                        </td>
+                    </tr>
+                
+                    <tr class=' module-item'>
+                        <td><a class='trait' href='trait.IntoUrl.html'
+                               title='couchdb::IntoUrl'>IntoUrl</a></td>
+                        <td class='docblock short'>
+                             <p>Trait for converting a type into a URI.</p>
+
+                        </td>
+                    </tr>
+                
+                    <tr class=' module-item'>
+                        <td><a class='trait' href='trait.IntoViewPath.html'
+                               title='couchdb::IntoViewPath'>IntoViewPath</a></td>
+                        <td class='docblock short'>
+                             <p>Trait for converting a type into a <code>ViewPath</code>.</p>
+
+                        </td>
+                    </tr>
+                </table><h2 id='types' class='section-header'><a href="#types">Type Definitions</a></h2>
+<table>
+                    <tr class=' module-item'>
+                        <td><a class='type' href='type.ViewFunctionMap.html'
+                               title='couchdb::ViewFunctionMap'>ViewFunctionMap</a></td>
+                        <td class='docblock short'>
+                             <p>Associative collection for view functions.</p>
+
+                        </td>
+                    </tr>
+                </table></section>
+    <section id='search' class="content hidden"></section>
+
+    <section class="footer"></section>
+
+    <aside id="help" class="hidden">
+        <div>
+            <h1 class="hidden">Help</h1>
+
+            <div class="shortcuts">
+                <h2>Keyboard Shortcuts</h2>
+
+                <dl>
+                    <dt>?</dt>
+                    <dd>Show this help dialog</dd>
+                    <dt>S</dt>
+                    <dd>Focus the search field</dd>
+                    <dt>&larrb;</dt>
+                    <dd>Move up in search results</dd>
+                    <dt>&rarrb;</dt>
+                    <dd>Move down in search results</dd>
+                    <dt>&#9166;</dt>
+                    <dd>Go to active search result</dd>
+                </dl>
+            </div>
+
+            <div class="infos">
+                <h2>Search Tricks</h2>
+
+                <p>
+                    Prefix searches with a type followed by a colon (e.g.
+                    <code>fn:</code>) to restrict the search to a given type.
+                </p>
+
+                <p>
+                    Accepted types are: <code>fn</code>, <code>mod</code>,
+                    <code>struct</code>, <code>enum</code>,
+                    <code>trait</code>, <code>type</code>, <code>macro</code>,
+                    and <code>const</code>.
+                </p>
+
+                <p>
+                    Search functions by type signature (e.g.
+                    <code>vec -> usize</code>)
+                </p>
+            </div>
+        </div>
+    </aside>
+
+    
+
+    <script>
+        window.rootPath = "../";
+        window.currentCrate = "couchdb";
+        window.playgroundUrl = "";
+    </script>
+    <script src="../jquery.js"></script>
+    <script src="../main.js"></script>
+    
+    <script async src="../search-index.js"></script>
+</body>
+</html>

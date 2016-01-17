@@ -1,0 +1,1 @@
+initSidebarItems({"struct":[["HeadDocument","Action to check whether a document exists."]]});

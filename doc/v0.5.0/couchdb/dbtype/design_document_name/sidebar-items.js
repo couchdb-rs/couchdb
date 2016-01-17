@@ -1,0 +1,1 @@
+initSidebarItems({"struct":[["DesignDocumentName","Name of a design document."]]});

@@ -1,0 +1,1 @@
+initSidebarItems({"struct":[["ViewPath","Path part of a URI specifying a view."]],"trait":[["IntoViewPath","Trait for converting a type into a `ViewPath`."]]});

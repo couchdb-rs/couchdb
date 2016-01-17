@@ -1,0 +1,1 @@
+initSidebarItems({"struct":[["GetView","Action to execute a view."]]});
