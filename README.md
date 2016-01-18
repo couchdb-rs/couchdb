@@ -24,8 +24,8 @@ scheduled_ for **February 2016.**
 
 * [v0.5.1 issues](https://github.com/couchdb-rs/couchdb/issues?q=milestone%3Av0.5.1).
 
-Another place to peek at upcoming changes is the [master branch change
-log](https://github.com/couchdb-rs/couchdb/blob/master/CHANGELOG.md).
+Another place to peek at upcoming changes is the [change
+log](CHANGELOG.md).
 
 ## License
 
