@@ -72,6 +72,7 @@
 //! that resource.
 //!
 //! <table>
+//!
 //!  <thead>
 //!   <tr>
 //!    <th>CouchDB URI</td>
@@ -80,6 +81,7 @@
 //!    <th>Description</th>
 //!   </tr>
 //!  </thead>
+//!
 //!  <tbody>
 //!   <tr>
 //!    <td style="font-family:monospace;">
@@ -89,6 +91,7 @@
 //!    <td style="font-family:monospace;">get_all_databases</td>
 //!    <td>Get list of all databases.</td>
 //!   </tr>
+//!
 //!   <tr>
 //!    <td style="font-family:monospace;" rowspan="5">
 //!     <ul><li>/db</li></ul>
@@ -97,26 +100,42 @@
 //!    <td style="font-family:monospace;">head_database</td>
 //!    <td>Test whether a database exists.</td>
 //!   </tr>
+//!
 //!   <tr>
 //!    <td>GET</td>
 //!    <td style="font-family:monospace;">get_database</td>
 //!    <td>Get meta-information about a database.</td>
 //!   </tr>
+//!
 //!   <tr>
 //!    <td>PUT</td>
 //!    <td style="font-family:monospace;">put_database</td>
 //!    <td>Create a database.</td>
 //!   </tr>
+//!
 //!   <tr>
 //!    <td>DELETE</td>
 //!    <td style="font-family:monospace;">delete_database</td>
 //!    <td>Delete a database.</td>
 //!   </tr>
+//!
 //!   <tr>
 //!    <td>POST</td>
 //!    <td style="font-family:monospace;">post_to_database</td>
 //!    <td>Create a document.</td>
 //!   </tr>
+//!
+//!   <tr>
+//!    <td style="font-family:monospace;">
+//!     <ul>
+//!      <li>/db/_changes</li>
+//!     </ul>
+//!    </td>
+//!    <td>GET</td>
+//!    <td style="font-family:monospace;">get_changes</td>
+//!    <td>Get changes made to documents in a database.</td>
+//!   </tr>
+//!
 //!   <tr>
 //!    <td style="font-family:monospace;" rowspan="4">
 //!     <ul>
@@ -129,22 +148,26 @@
 //!    <td style="font-family:monospace;">head_document</td>
 //!    <td>Test whether a document exists.</td>
 //!   </tr>
+//!
 //!   <tr>
 //!    <td>GET</td>
 //!    <td style="font-family:monospace;">get_document</td>
 //!    <td>Get meta-information and application-defined content for a
 //!    document.</td>
 //!   </tr>
+//!
 //!   <tr>
 //!    <td>PUT</td>
 //!    <td style="font-family:monospace;">put_document</td>
 //!    <td>Create or update a document.</td>
 //!   </tr>
+//!
 //!   <tr>
 //!    <td>DELETE</td>
 //!    <td style="font-family:monospace;">delete_document</td>
 //!    <td>Delete a document.</td>
 //!   </tr>
+//!
 //!   <tr>
 //!    <td style="font-family:monospace;">
 //!     <ul><li>/db/_design/design-doc/_view/view</li></ul>
@@ -172,9 +195,10 @@ mod error;
 mod path;
 
 pub use client::{Client, IntoUrl};
-pub use dbtype::{Database, DatabaseName, Design, DesignBuilder, DesignDocumentName, Document,
-                 DocumentId, DocumentName, ErrorResponse, ViewName, Revision, ViewFunction,
-                 ViewFunctionBuilder, ViewFunctionMap, ViewResult, ViewRow};
+pub use dbtype::{Database, ChangeItem, ChangeItemBuilder, ChangeResult, ChangeResultBuilder,
+                 Changes, ChangesBuilder, DatabaseName, Design, DesignBuilder, DesignDocumentName,
+                 Document, DocumentId, DocumentName, ErrorResponse, ViewName, Revision,
+                 ViewFunction, ViewFunctionBuilder, ViewFunctionMap, ViewResult, ViewRow};
 pub use path::{IntoDatabasePath, IntoDesignDocumentPath, IntoDocumentPath, IntoViewPath,
                DatabasePath, DesignDocumentPath, DocumentPath, ViewPath};
 pub use error::Error;

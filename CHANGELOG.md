@@ -2,7 +2,10 @@
 
 ## v0.5.1 (unreleased)
 
-No changes yet!
+### New
+
+* New action `GetChanges` for getting database changes—i.e., `GET
+  /db/_changes` (issue [#12][issue_12]).
 
 ## v0.5.0 (2016-01-17)
 
@@ -224,6 +227,7 @@ This is the first release. It provides support for client commands to
 manipulate databases (HEAD, GET, PUT, and DELETE), to manipulate
 documents (HEAD, GET, PUT, and DELETE), and to execute views (GET).
 
+[issue_12]: https://github.com/couchdb-rs/couchdb/issues/12 "Issue #12"
 [issue_18]: https://github.com/couchdb-rs/couchdb/issues/18 "Issue #18"
 [issue_19]: https://github.com/couchdb-rs/couchdb/issues/19 "Issue #19"
 [issue_20]: https://github.com/couchdb-rs/couchdb/issues/20 "Issue #20"

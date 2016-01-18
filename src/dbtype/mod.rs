@@ -1,6 +1,8 @@
-// This module contains “CouchDB types,” which are types used in the requests
-// and responses when communicating with the CouchDB server. Usually these types
-// are serialized into JSON.
+// Types used in the CouchDB API.
+//
+// This module contains “CouchDB type,” which are types used in the requests
+// and/or responses when communicating with the CouchDB server. Usually these
+// types are serialized as JSON.
 
 #[macro_use]
 mod impl_name_macro;
@@ -9,6 +11,9 @@ mod impl_name_macro;
 #[macro_use]
 mod test_macro;
 
+mod change_item;
+mod change_result;
+mod changes;
 mod database;
 mod database_name;
 mod design;
@@ -24,6 +29,9 @@ mod view_result;
 mod view_row;
 mod write_document_response;
 
+pub use self::change_item::{ChangeItem, ChangeItemBuilder};
+pub use self::change_result::{ChangeResult, ChangeResultBuilder};
+pub use self::changes::{Changes, ChangesBuilder};
 pub use self::database::Database;
 pub use self::database_name::DatabaseName;
 pub use self::design::{Design, DesignBuilder};

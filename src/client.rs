@@ -92,6 +92,11 @@ impl<'a> Client {
         action::PostToDatabase::new(&self.state, path, doc_content)
     }
 
+    /// Builds an action to GET changes made to a database.
+    pub fn get_changes<P: IntoDatabasePath>(&'a self, path: P) -> action::GetChanges<'a, P> {
+        action::GetChanges::new(&self.state, path)
+    }
+
     /// Builds an action to HEAD a document.
     pub fn head_document<P: IntoDocumentPath>(&'a self, path: P) -> action::HeadDocument<'a, P> {
         action::HeadDocument::new(&self.state, path)
