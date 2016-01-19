@@ -19,6 +19,9 @@ pub struct Document {
     /// Revision of this document.
     pub rev: Revision,
 
+    /// Whether the document has been deleted.
+    pub deleted: bool,
+
     content: serde_json::Value,
 }
 
@@ -35,10 +38,11 @@ impl serde::Deserialize for Document {
         where D: serde::Deserializer
     {
         enum Field {
+            Content(String),
+            Ignored,
+            Deleted,
             Id,
             Rev,
-            Ignored,
-            Content(String),
         }
 
         impl serde::Deserialize for Field {
@@ -54,6 +58,7 @@ impl serde::Deserialize for Document {
                         where E: serde::de::Error
                     {
                         match value {
+                            "_deleted" => Ok(Field::Deleted),
                             "_id" => Ok(Field::Id),
                             "_rev" => Ok(Field::Rev),
                             "_attachments" => Ok(Field::Ignored),
@@ -74,24 +79,28 @@ impl serde::Deserialize for Document {
             fn visit_map<V>(&mut self, mut visitor: V) -> Result<Self::Value, V::Error>
                 where V: serde::de::MapVisitor
             {
+                let mut deleted = None;
                 let mut id = None;
                 let mut rev = None;
                 let mut content_builder = serde_json::builder::ObjectBuilder::new();
 
                 loop {
                     match try!(visitor.visit_key()) {
+                        Some(Field::Content(name)) => {
+                            let value = Some(try!(visitor.visit_value::<serde_json::Value>()));
+                            content_builder = content_builder.insert(name, value);
+                        }
+                        Some(Field::Ignored) => {
+                            try!(visitor.visit_value::<serde_json::Value>());
+                        }
+                        Some(Field::Deleted) => {
+                            deleted = Some(try!(visitor.visit_value()));
+                        }
                         Some(Field::Id) => {
                             id = Some(try!(visitor.visit_value()));
                         }
                         Some(Field::Rev) => {
                             rev = Some(try!(visitor.visit_value()));
-                        }
-                        Some(Field::Ignored) => {
-                            try!(visitor.visit_value::<serde_json::Value>());
-                        }
-                        Some(Field::Content(name)) => {
-                            let value = Some(try!(visitor.visit_value::<serde_json::Value>()));
-                            content_builder = content_builder.insert(name, value);
                         }
                         None => {
                             break;
@@ -100,6 +109,8 @@ impl serde::Deserialize for Document {
                 }
 
                 try!(visitor.end());
+
+                let deleted = deleted.unwrap_or(false);
 
                 let id = match id {
                     Some(x) => x,
@@ -113,6 +124,7 @@ impl serde::Deserialize for Document {
 
 
                 Ok(Document {
+                    deleted: deleted,
                     id: id,
                     rev: rev,
                     content: content_builder.unwrap(),
@@ -135,10 +147,29 @@ mod tests {
     use Revision;
 
     #[test]
-    fn document_deserialization_with_all_fields() {
+    fn deserialization_ok_with_all_fields() {
         let expected = Document {
             id: DocumentId::Normal("foo".into()),
             rev: Revision::parse("42-1234567890abcdef1234567890abcdef").unwrap(),
+            deleted: true,
+            content: serde_json::builder::ObjectBuilder::new().unwrap(),
+        };
+        let source = serde_json::builder::ObjectBuilder::new()
+                         .insert("_id", "foo")
+                         .insert("_rev", "42-1234567890abcdef1234567890abcdef")
+                         .insert("_deleted", true)
+                         .unwrap();
+        let s = serde_json::to_string(&source).unwrap();
+        let got = serde_json::from_str(&s).unwrap();
+        assert_eq!(expected, got);
+    }
+
+    #[test]
+    fn deserialization_ok_with_no_deleted_field() {
+        let expected = Document {
+            id: DocumentId::Normal("foo".into()),
+            rev: Revision::parse("42-1234567890abcdef1234567890abcdef").unwrap(),
+            deleted: false,
             content: serde_json::builder::ObjectBuilder::new().unwrap(),
         };
         let source = serde_json::builder::ObjectBuilder::new()
@@ -151,10 +182,11 @@ mod tests {
     }
 
     #[test]
-    fn document_deserialization_with_attachments_field() {
+    fn deserialization_ok_with_attachments_field() {
         let expected = Document {
             id: DocumentId::Normal("foo".into()),
             rev: Revision::parse("42-1234567890abcdef1234567890abcdef").unwrap(),
+            deleted: false,
             content: serde_json::builder::ObjectBuilder::new().unwrap(),
         };
         let source = serde_json::builder::ObjectBuilder::new()
@@ -177,10 +209,11 @@ mod tests {
     }
 
     #[test]
-    fn document_deserialization_with_content() {
+    fn deserialization_ok_with_content() {
         let expected = Document {
             id: DocumentId::Normal("foo".into()),
             rev: Revision::parse("42-1234567890abcdef1234567890abcdef").unwrap(),
+            deleted: false,
             content: serde_json::builder::ObjectBuilder::new()
                          .insert("bar", 17)
                          .insert("qux", "ipsum lorem")
@@ -198,7 +231,7 @@ mod tests {
     }
 
     #[test]
-    fn document_deserialization_with_no_id_field() {
+    fn deserialization_nok_with_no_id_field() {
         let source = serde_json::builder::ObjectBuilder::new()
                          .insert("_rev", "42-1234567890abcdef1234567890abcdef")
                          .unwrap();
@@ -208,7 +241,7 @@ mod tests {
     }
 
     #[test]
-    fn document_deserialization_with_no_rev_field() {
+    fn deserialization_nok_with_no_rev_field() {
         let source = serde_json::builder::ObjectBuilder::new()
                          .insert("_id", "foo")
                          .unwrap();

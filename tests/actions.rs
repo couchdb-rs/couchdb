@@ -244,7 +244,7 @@ fn get_document_ok_without_revision() {
 }
 
 #[test]
-fn get_document_ok_fresh_revision() {
+fn get_document_ok_if_none_match_fresh() {
     let (_server, client) = make_server_and_client();
     client.put_database("/baseball").run().unwrap();
     let source_content = serde_json::builder::ObjectBuilder::new()
@@ -260,7 +260,7 @@ fn get_document_ok_fresh_revision() {
 }
 
 #[test]
-fn get_document_ok_stale_revision() {
+fn get_document_ok_if_none_match_stale() {
     let (_server, client) = make_server_and_client();
     client.put_database("/baseball").run().unwrap();
     let expected_content = serde_json::builder::ObjectBuilder::new()
@@ -279,6 +279,56 @@ fn get_document_ok_stale_revision() {
                     .unwrap();
     assert_eq!(doc_id, got.id);
     assert_eq!(rev2, got.rev);
+    assert_eq!(expected_content, got.into_content().unwrap());
+}
+
+#[test]
+fn get_document_ok_by_revision() {
+    let (_server, client) = make_server_and_client();
+    client.put_database("/baseball").run().unwrap();
+    let expected_content = serde_json::builder::ObjectBuilder::new()
+                               .insert("name", "Babe Ruth")
+                               .insert("career_hr", 714)
+                               .unwrap();
+    let (doc_id, rev1) = client.post_to_database("/baseball", &expected_content).run().unwrap();
+    let fresh_content = serde_json::builder::ObjectBuilder::new()
+                            .insert("name", "Babe Ruth")
+                            .insert("career_hr", 714)
+                            .insert("career_hits", 2873)
+                            .unwrap();
+    client.put_document(("/baseball", doc_id.clone()), &fresh_content)
+          .if_match(&rev1)
+          .run()
+          .unwrap();
+    let got = client.get_document(("/baseball", doc_id.clone()))
+                    .rev(&rev1)
+                    .run()
+                    .unwrap()
+                    .unwrap();
+    assert_eq!(doc_id, got.id);
+    assert_eq!(rev1, got.rev);
+    assert_eq!(expected_content, got.into_content().unwrap());
+}
+
+#[test]
+fn get_document_ok_deleted() {
+    let (_server, client) = make_server_and_client();
+    client.put_database("/baseball").run().unwrap();
+    let source_content = serde_json::builder::ObjectBuilder::new()
+                             .insert("name", "Babe Ruth")
+                             .insert("career_hr", 714)
+                             .unwrap();
+    let (doc_id, rev1) = client.post_to_database("/baseball", &source_content).run().unwrap();
+    let rev2 = client.delete_document(("/baseball", doc_id.clone()), &rev1).run().unwrap();
+    let expected_content = serde_json::builder::ObjectBuilder::new().unwrap();
+    let got = client.get_document(("/baseball", doc_id.clone()))
+                    .rev(&rev2)
+                    .run()
+                    .unwrap()
+                    .unwrap();
+    assert_eq!(doc_id, got.id);
+    assert_eq!(rev2, got.rev);
+    assert!(got.deleted);
     assert_eq!(expected_content, got.into_content().unwrap());
 }
 

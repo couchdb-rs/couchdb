@@ -32,6 +32,7 @@ pub struct GetDocument<'a, P>
     client_state: &'a ClientState,
     path: P,
     if_none_match: Option<&'a Revision>,
+    rev: Option<&'a Revision>,
 }
 
 impl<'a, P: IntoDocumentPath> GetDocument<'a, P> {
@@ -41,12 +42,20 @@ impl<'a, P: IntoDocumentPath> GetDocument<'a, P> {
             client_state: client_state,
             path: path,
             if_none_match: None,
+            rev: None,
         }
     }
 
     /// Sets the If-None-Match header.
     pub fn if_none_match(mut self, rev: &'a Revision) -> Self {
         self.if_none_match = Some(rev);
+        self
+    }
+
+    /// Sets the “rev” query parameter to get the document at the given
+    /// revision.
+    pub fn rev(mut self, rev: &'a Revision) -> Self {
+        self.rev = Some(rev);
         self
     }
 
@@ -58,7 +67,17 @@ impl<'a, P: IntoDocumentPath> Action for GetDocument<'a, P> {
 
     fn make_request(self) -> Result<Request, Error> {
         let doc_path = try!(self.path.into_document_path());
-        let uri = doc_path.into_uri(self.client_state.uri.clone());
+        let uri = {
+            let mut uri = doc_path.into_uri(self.client_state.uri.clone());
+            let mut query = Vec::<(String, String)>::new();
+            if let Some(rev) = self.rev {
+                query.push(("rev".to_string(), rev.to_string()));
+            }
+            if !query.is_empty() {
+                uri.set_query_from_pairs(query);
+            }
+            uri
+        };
         let request = Request::new(hyper::Get, uri)
                           .set_accept_application_json()
                           .set_if_none_match_revision(self.if_none_match);
@@ -118,6 +137,19 @@ mod tests {
     }
 
     #[test]
+    fn make_request_rev() {
+        let client_state = ClientState::new("http://example.com:1234/").unwrap();
+        let rev = "42-1234567890abcdef1234567890abcdef".parse().unwrap();
+        let action = GetDocument::new(&client_state, "/foo/bar").rev(&rev);
+        let request = action.make_request().unwrap();
+        expect_request_method!(request, hyper::Get);
+        expect_request_uri!(request,
+                            "http://example.com:\
+                             1234/foo/bar?rev=42-1234567890abcdef1234567890abcdef");
+        expect_request_accept_application_json!(request);
+    }
+
+    #[test]
     fn take_response_ok() {
         let source = serde_json::builder::ObjectBuilder::new()
                          .insert("_id", "foo")
@@ -133,6 +165,25 @@ mod tests {
         let expected = serde_json::builder::ObjectBuilder::new()
                            .insert("bar", 17)
                            .unwrap();
+        let got = got.into_content::<serde_json::Value>().unwrap();
+        assert_eq!(expected, got);
+    }
+
+    #[test]
+    fn take_response_ok_deleted() {
+        let source = serde_json::builder::ObjectBuilder::new()
+                         .insert("_id", "foo")
+                         .insert("_rev", "42-1234567890abcdef1234567890abcdef")
+                         .insert("_deleted", true)
+                         .unwrap();
+        let response = JsonResponse::new(hyper::Ok, &source);
+        let got = GetDocument::<DocumentPath>::take_response(response).unwrap();
+        let got = got.unwrap();
+        assert_eq!(got.id, "foo".into());
+        assert_eq!(got.rev,
+                   "42-1234567890abcdef1234567890abcdef".parse().unwrap());
+        assert!(got.deleted);
+        let expected = serde_json::builder::ObjectBuilder::new().unwrap();
         let got = got.into_content::<serde_json::Value>().unwrap();
         assert_eq!(expected, got);
     }
