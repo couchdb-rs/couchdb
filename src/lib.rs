@@ -75,107 +75,108 @@
 //!
 //!  <thead>
 //!   <tr>
-//!    <th>CouchDB URI</td>
-//!    <th>HTTP method</td>
-//!    <th><span style="font-family:monospace;">Client</span> method</td>
+//!    <th>CouchDB URI</th>
+//!    <th>HTTP method</th>
+//!    <th><code>Client</code> method</th>
 //!    <th>Description</th>
 //!   </tr>
 //!  </thead>
 //!
 //!  <tbody>
 //!   <tr>
-//!    <td style="font-family:monospace;">
-//!     <ul><li>/_all_dbs</li></ul>
+//!    <td>
+//!     <ul><li><code>/_all_dbs</code></li></ul>
 //!    </td>
 //!    <td>GET</td>
-//!    <td style="font-family:monospace;">get_all_databases</td>
+//!    <td><code>get_all_databases</code></td>
 //!    <td>Get list of all databases.</td>
 //!   </tr>
 //!
 //!   <tr>
-//!    <td style="font-family:monospace;" rowspan="5">
-//!     <ul><li>/db</li></ul>
+//!    <td rowspan="5">
+//!     <ul><li><code>/db</code></li></ul>
 //!    </td>
 //!    <td>HEAD</td>
-//!    <td style="font-family:monospace;">head_database</td>
+//!    <td><code>head_database</code></td>
 //!    <td>Test whether a database exists.</td>
 //!   </tr>
 //!
 //!   <tr>
 //!    <td>GET</td>
-//!    <td style="font-family:monospace;">get_database</td>
+//!    <td><code>get_database</code></td>
 //!    <td>Get meta-information about a database.</td>
 //!   </tr>
 //!
 //!   <tr>
 //!    <td>PUT</td>
-//!    <td style="font-family:monospace;">put_database</td>
+//!    <td><code>put_database</code></td>
 //!    <td>Create a database.</td>
 //!   </tr>
 //!
 //!   <tr>
 //!    <td>DELETE</td>
-//!    <td style="font-family:monospace;">delete_database</td>
+//!    <td><code>delete_database</code></td>
 //!    <td>Delete a database.</td>
 //!   </tr>
 //!
 //!   <tr>
 //!    <td>POST</td>
-//!    <td style="font-family:monospace;">post_to_database</td>
+//!    <td><code>post_to_database</code></td>
 //!    <td>Create a document.</td>
 //!   </tr>
 //!
 //!   <tr>
-//!    <td style="font-family:monospace;">
+//!    <td>
 //!     <ul>
-//!      <li>/db/_changes</li>
+//!      <li><code>/db/_changes</code></li>
 //!     </ul>
 //!    </td>
 //!    <td>GET</td>
-//!    <td style="font-family:monospace;">get_changes</td>
+//!    <td><code>get_changes</code></td>
 //!    <td>Get changes made to documents in a database.</td>
 //!   </tr>
 //!
 //!   <tr>
-//!    <td style="font-family:monospace;" rowspan="4">
+//!    <td rowspan="4">
 //!     <ul>
-//!      <li>/db/doc<br></li>
-//!      <li>/db/_design/design-doc</li>
-//!      <li>/db/_local/id</li>
+//!      <li><code>/db/doc</code><br></li>
+//!      <li><code>/db/_design/design-doc</code></li>
+//!      <li><code>/db/_local/id</code></li>
 //!     </ul>
 //!    </td>
 //!    <td>HEAD</td>
-//!    <td style="font-family:monospace;">head_document</td>
+//!    <td><code>head_document</code></td>
 //!    <td>Test whether a document exists.</td>
 //!   </tr>
 //!
 //!   <tr>
 //!    <td>GET</td>
-//!    <td style="font-family:monospace;">get_document</td>
+//!    <td><code>get_document</code></td>
 //!    <td>Get meta-information and application-defined content for a
 //!    document.</td>
 //!   </tr>
 //!
 //!   <tr>
 //!    <td>PUT</td>
-//!    <td style="font-family:monospace;">put_document</td>
+//!    <td><code>put_document</code></td>
 //!    <td>Create or update a document.</td>
 //!   </tr>
 //!
 //!   <tr>
 //!    <td>DELETE</td>
-//!    <td style="font-family:monospace;">delete_document</td>
+//!    <td><code>delete_document</code></td>
 //!    <td>Delete a document.</td>
 //!   </tr>
 //!
 //!   <tr>
-//!    <td style="font-family:monospace;">
-//!     <ul><li>/db/_design/design-doc/_view/view</li></ul>
+//!    <td>
+//!     <ul><li><code>/db/_design/design-doc/_view/view</code></li></ul>
 //!    </td>
 //!    <td>GET</td>
-//!    <td style="font-family:monospace;">get_view</td>
+//!    <td><code>get_view</code></td>
 //!    <td>Execute a view.</td>
 //!   </tr>
+//!
 //!  </tbody>
 //! </table>
 
