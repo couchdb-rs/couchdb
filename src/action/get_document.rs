@@ -8,6 +8,55 @@ use Revision;
 use client::ClientState;
 use action::{self, Action, Request, Response};
 
+enum QueryIteration {
+    Rev,
+    Done,
+}
+
+// The query parameters reside in a separate structure to facilitate iteration,
+// which is useful when constructing the URI query string.
+struct QueryParams<'a> {
+    iteration: QueryIteration,
+    rev: Option<&'a Revision>,
+}
+
+impl<'a> QueryParams<'a> {
+    fn new() -> Self {
+        QueryParams {
+            iteration: QueryIteration::Rev,
+            rev: None,
+        }
+    }
+}
+
+impl<'a> Iterator for QueryParams<'a> {
+    type Item = (String, String);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        loop {
+            match self.iteration {
+                QueryIteration::Rev => {
+                    self.iteration = QueryIteration::Done;
+                    if let Some(ref rev) = self.rev {
+                        return Some(("rev".to_string(), rev.to_string()));
+                    }
+                }
+                QueryIteration::Done => {
+                    return None;
+                }
+            }
+        }
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        if self.rev.is_none() {
+            (0, None)
+        } else {
+            (1, None)
+        }
+    }
+}
+
 /// Action to get document meta-information and application-defined content.
 ///
 /// # Return
@@ -32,7 +81,7 @@ pub struct GetDocument<'a, P>
     client_state: &'a ClientState,
     path: P,
     if_none_match: Option<&'a Revision>,
-    rev: Option<&'a Revision>,
+    query: QueryParams<'a>,
 }
 
 impl<'a, P: IntoDocumentPath> GetDocument<'a, P> {
@@ -42,7 +91,7 @@ impl<'a, P: IntoDocumentPath> GetDocument<'a, P> {
             client_state: client_state,
             path: path,
             if_none_match: None,
-            rev: None,
+            query: QueryParams::new(),
         }
     }
 
@@ -55,7 +104,7 @@ impl<'a, P: IntoDocumentPath> GetDocument<'a, P> {
     /// Sets the “rev” query parameter to get the document at the given
     /// revision.
     pub fn rev(mut self, rev: &'a Revision) -> Self {
-        self.rev = Some(rev);
+        self.query.rev = Some(rev);
         self
     }
 
@@ -69,12 +118,8 @@ impl<'a, P: IntoDocumentPath> Action for GetDocument<'a, P> {
         let doc_path = try!(self.path.into_document_path());
         let uri = {
             let mut uri = doc_path.into_uri(self.client_state.uri.clone());
-            let mut query = Vec::<(String, String)>::new();
-            if let Some(rev) = self.rev {
-                query.push(("rev".to_string(), rev.to_string()));
-            }
-            if !query.is_empty() {
-                uri.set_query_from_pairs(query);
+            if 1 <= self.query.size_hint().0 {
+                uri.set_query_from_pairs(self.query);
             }
             uri
         };
@@ -112,7 +157,19 @@ mod tests {
     use Revision;
     use client::ClientState;
     use action::{Action, JsonResponse, NoContentResponse};
-    use super::GetDocument;
+    use super::{GetDocument, QueryIteration, QueryParams};
+
+    #[test]
+    fn query_iteration() {
+        let rev = Revision::parse("42-1234567890abcdef1234567890abcdef").unwrap();
+        let query = QueryParams {
+            iteration: QueryIteration::Rev,
+            rev: Some(&rev),
+        };
+        let expected = vec![("rev".to_string(), rev.to_string())];
+        let got = query.collect::<Vec<_>>();
+        assert_eq!(expected, got);
+    }
 
     #[test]
     fn make_request_default() {
