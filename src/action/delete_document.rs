@@ -45,21 +45,24 @@ impl<'a, P: IntoDocumentPath> DeleteDocument<'a, P> {
 
 impl<'a, P: IntoDocumentPath> Action for DeleteDocument<'a, P> {
     type Output = Revision;
+    type State = ();
 
-    fn make_request(self) -> Result<Request, Error> {
+    fn make_request(self) -> Result<(Request, Self::State), Error> {
         let doc_path = try!(self.path.into_document_path());
         let uri = doc_path.into_uri(self.client_state.uri.clone());
         let request = Request::new(hyper::Delete, uri)
                           .set_accept_application_json()
                           .set_if_match_revision(Some(self.rev));
-        Ok(request)
+        Ok((request, ()))
     }
 
-    fn take_response<R: Response>(mut response: R) -> Result<Self::Output, Error> {
+    fn take_response<R>(mut response: R, _state: Self::State) -> Result<Self::Output, Error>
+        where R: Response
+    {
         match response.status() {
             hyper::status::StatusCode::Ok => {
                 try!(response.content_type_must_be_application_json());
-                let content = try!(response.decode_json::<DeleteDocumentResponse>());
+                let content = try!(response.decode_json_all::<DeleteDocumentResponse>());
                 Ok(content.rev)
             }
             hyper::status::StatusCode::BadRequest => Err(make_couchdb_error!(BadRequest, response)),
@@ -92,7 +95,7 @@ mod tests {
         let client_state = ClientState::new("http://example.com:1234/").unwrap();
         let rev = Revision::parse("42-1234567890abcdef1234567890abcdef").unwrap();
         let action = DeleteDocument::new(&client_state, "/foo/bar", &rev);
-        let request = action.make_request().unwrap();
+        let (request, _) = action.make_request().unwrap();
         expect_request_method!(request, hyper::method::Method::Delete);
         expect_request_uri!(request, "http://example.com:1234/foo/bar");
         expect_request_accept_application_json!(request);
@@ -109,7 +112,7 @@ mod tests {
                          .insert("rev", expected.to_string())
                          .unwrap();
         let response = JsonResponse::new(hyper::Ok, &source);
-        let got = DeleteDocument::<DocumentPath>::take_response(response).unwrap();
+        let got = DeleteDocument::<DocumentPath>::take_response(response, ()).unwrap();
         assert_eq!(expected, got);
     }
 
@@ -120,7 +123,7 @@ mod tests {
                          .insert("reason", "blah blah blah")
                          .unwrap();
         let response = JsonResponse::new(hyper::BadRequest, &source);
-        let got = DeleteDocument::<DocumentPath>::take_response(response);
+        let got = DeleteDocument::<DocumentPath>::take_response(response, ());
         expect_couchdb_error!(got, BadRequest);
     }
 
@@ -131,7 +134,7 @@ mod tests {
                          .insert("reason", "blah blah blah")
                          .unwrap();
         let response = JsonResponse::new(hyper::status::StatusCode::Conflict, &source);
-        let got = DeleteDocument::<DocumentPath>::take_response(response);
+        let got = DeleteDocument::<DocumentPath>::take_response(response, ());
         expect_couchdb_error!(got, DocumentConflict);
     }
 
@@ -142,7 +145,7 @@ mod tests {
                          .insert("reason", "blah blah blah")
                          .unwrap();
         let response = JsonResponse::new(hyper::NotFound, &source);
-        let got = DeleteDocument::<DocumentPath>::take_response(response);
+        let got = DeleteDocument::<DocumentPath>::take_response(response, ());
         expect_couchdb_error!(got, NotFound);
     }
 
@@ -153,7 +156,7 @@ mod tests {
                          .insert("reason", "blah blah blah")
                          .unwrap();
         let response = JsonResponse::new(hyper::status::StatusCode::Unauthorized, &source);
-        let got = DeleteDocument::<DocumentPath>::take_response(response);
+        let got = DeleteDocument::<DocumentPath>::take_response(response, ());
         expect_couchdb_error!(got, Unauthorized);
     }
 }

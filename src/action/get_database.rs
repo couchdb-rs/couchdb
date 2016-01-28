@@ -37,19 +37,22 @@ impl<'a, P: IntoDatabasePath> GetDatabase<'a, P> {
 
 impl<'a, P: IntoDatabasePath> Action for GetDatabase<'a, P> {
     type Output = Database;
+    type State = ();
 
-    fn make_request(self) -> Result<Request, Error> {
+    fn make_request(self) -> Result<(Request, Self::State), Error> {
         let db_path = try!(self.path.into_database_path());
         let uri = db_path.into_uri(self.client_state.uri.clone());
         let request = Request::new(hyper::Get, uri).set_accept_application_json();
-        Ok(request)
+        Ok((request, ()))
     }
 
-    fn take_response<R: Response>(mut response: R) -> Result<Self::Output, Error> {
+    fn take_response<R>(mut response: R, _state: Self::State) -> Result<Self::Output, Error>
+        where R: Response
+    {
         match response.status() {
             hyper::status::StatusCode::Ok => {
                 try!(response.content_type_must_be_application_json());
-                response.decode_json::<Database>()
+                response.decode_json_all::<Database>()
             }
             hyper::status::StatusCode::NotFound => Err(make_couchdb_error!(NotFound, response)),
             _ => Err(Error::UnexpectedHttpStatus { got: response.status() }),
@@ -72,7 +75,7 @@ mod tests {
     fn make_request() {
         let client_state = ClientState::new("http://example.com:1234/").unwrap();
         let action = GetDatabase::new(&client_state, "/foo");
-        let request = action.make_request().unwrap();
+        let (request, _) = action.make_request().unwrap();
         expect_request_method!(request, hyper::Get);
         expect_request_uri!(request, "http://example.com:1234/foo");
         expect_request_accept_application_json!(request);
@@ -94,7 +97,7 @@ mod tests {
                          .insert("committed_update_seq", 15)
                          .unwrap();
         let response = JsonResponse::new(hyper::Ok, &source);
-        let got = GetDatabase::<DatabasePath>::take_response(response).unwrap();
+        let got = GetDatabase::<DatabasePath>::take_response(response, ()).unwrap();
         assert_eq!(got.db_name, "foo".into());
         assert_eq!(3, got.doc_count);
         assert_eq!(1, got.doc_del_count);
@@ -115,7 +118,7 @@ mod tests {
                          .insert("reason", "no_db_file")
                          .unwrap();
         let response = JsonResponse::new(hyper::NotFound, &source);
-        let got = GetDatabase::<DatabasePath>::take_response(response);
+        let got = GetDatabase::<DatabasePath>::take_response(response, ());
         expect_couchdb_error!(got, NotFound);
     }
 }

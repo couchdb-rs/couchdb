@@ -35,15 +35,18 @@ impl<'a, P: IntoDatabasePath> HeadDatabase<'a, P> {
 
 impl<'a, P: IntoDatabasePath> Action for HeadDatabase<'a, P> {
     type Output = ();
+    type State = ();
 
-    fn make_request(self) -> Result<Request, Error> {
+    fn make_request(self) -> Result<(Request, Self::State), Error> {
         let db_path = try!(self.path.into_database_path());
         let uri = db_path.into_uri(self.client_state.uri.clone());
         let request = Request::new(hyper::Head, uri);
-        Ok(request)
+        Ok((request, ()))
     }
 
-    fn take_response<R: Response>(response: R) -> Result<Self::Output, Error> {
+    fn take_response<R>(response: R, _state: Self::State) -> Result<Self::Output, Error>
+        where R: Response
+    {
         match response.status() {
             hyper::status::StatusCode::Ok => Ok(()),
             hyper::status::StatusCode::NotFound => Err(Error::NotFound(None)),
@@ -66,7 +69,7 @@ mod tests {
     fn make_request_default() {
         let client_state = ClientState::new("http://example.com:1234/").unwrap();
         let action = HeadDatabase::new(&client_state, "/foo");
-        let request = action.make_request().unwrap();
+        let (request, _) = action.make_request().unwrap();
         expect_request_method!(request, hyper::method::Method::Head);
         expect_request_uri!(request, "http://example.com:1234/foo");
     }
@@ -74,13 +77,13 @@ mod tests {
     #[test]
     fn take_response_ok() {
         let response = NoContentResponse::new(hyper::Ok);
-        HeadDatabase::<DatabasePath>::take_response(response).unwrap();
+        HeadDatabase::<DatabasePath>::take_response(response, ()).unwrap();
     }
 
     #[test]
     fn take_response_not_found() {
         let response = NoContentResponse::new(hyper::NotFound);
-        let got = HeadDatabase::<DatabasePath>::take_response(response);
+        let got = HeadDatabase::<DatabasePath>::take_response(response, ());
         expect_couchdb_error!(got, NotFound);
     }
 }

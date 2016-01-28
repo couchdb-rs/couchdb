@@ -52,8 +52,9 @@ impl<'a, P: IntoDatabasePath, T: 'a + serde::Serialize> PostToDatabase<'a, P, T>
 
 impl<'a, P: IntoDatabasePath, T: 'a + serde::Serialize> Action for PostToDatabase<'a, P, T> {
     type Output = (DocumentId, Revision);
+    type State = ();
 
-    fn make_request(self) -> Result<Request, Error> {
+    fn make_request(self) -> Result<(Request, Self::State), Error> {
         let db_path = try!(self.path.into_database_path());
         let uri = db_path.into_uri(self.client_state.uri.clone());
         let body = try!(serde_json::to_vec(self.doc_content)
@@ -62,14 +63,16 @@ impl<'a, P: IntoDatabasePath, T: 'a + serde::Serialize> Action for PostToDatabas
                           .set_accept_application_json()
                           .set_content_type_application_json()
                           .set_body(body);
-        Ok(request)
+        Ok((request, ()))
     }
 
-    fn take_response<R: Response>(mut response: R) -> Result<Self::Output, Error> {
+    fn take_response<R>(mut response: R, _state: Self::State) -> Result<Self::Output, Error>
+        where R: Response
+    {
         match response.status() {
             hyper::status::StatusCode::Created => {
                 try!(response.content_type_must_be_application_json());
-                let content = try!(response.decode_json::<PostToDatabaseResponse>());
+                let content = try!(response.decode_json_all::<PostToDatabaseResponse>());
                 let id = DocumentId::from(String::from(content.id));
                 let rev: Revision = content.rev.into();
                 Ok((id, rev))
@@ -110,7 +113,7 @@ mod tests {
                           .insert("bar", "hello")
                           .unwrap();
         let action = PostToDatabase::new(&client_state, "/db", &content);
-        let request = action.make_request().unwrap();
+        let (request, _) = action.make_request().unwrap();
         expect_request_method!(request, hyper::Post);
         expect_request_uri!(request, "http://example.com:1234/db");
         expect_request_accept_application_json!(request);
@@ -128,7 +131,8 @@ mod tests {
                          .insert("rev", source_rev.to_string())
                          .unwrap();
         let response = JsonResponse::new(hyper::status::StatusCode::Created, &source);
-        let (id, rev) = PostToDatabase::<DatabasePath, serde_json::Value>::take_response(response)
+        let (id, rev) = PostToDatabase::<DatabasePath, serde_json::Value>::take_response(response,
+                                                                                         ())
                             .unwrap();
         assert_eq!(id, DocumentId::Normal("doc-id".into()));
         assert_eq!(rev, source_rev);
@@ -141,7 +145,7 @@ mod tests {
                          .insert("reason", "blah blah blah")
                          .unwrap();
         let response = JsonResponse::new(hyper::BadRequest, &source);
-        let got = PostToDatabase::<DatabasePath, serde_json::Value>::take_response(response);
+        let got = PostToDatabase::<DatabasePath, serde_json::Value>::take_response(response, ());
         expect_couchdb_error!(got, BadRequest);
     }
 
@@ -152,7 +156,7 @@ mod tests {
                          .insert("reason", "blah blah blah")
                          .unwrap();
         let response = JsonResponse::new(hyper::status::StatusCode::Conflict, &source);
-        let got = PostToDatabase::<DatabasePath, serde_json::Value>::take_response(response);
+        let got = PostToDatabase::<DatabasePath, serde_json::Value>::take_response(response, ());
         expect_couchdb_error!(got, DocumentConflict);
     }
 
@@ -163,7 +167,7 @@ mod tests {
                          .insert("reason", "blah blah blah")
                          .unwrap();
         let response = JsonResponse::new(hyper::NotFound, &source);
-        let got = PostToDatabase::<DatabasePath, serde_json::Value>::take_response(response);
+        let got = PostToDatabase::<DatabasePath, serde_json::Value>::take_response(response, ());
         expect_couchdb_error!(got, NotFound);
     }
 
@@ -174,7 +178,7 @@ mod tests {
                          .insert("reason", "blah blah blah")
                          .unwrap();
         let response = JsonResponse::new(hyper::status::StatusCode::Unauthorized, &source);
-        let got = PostToDatabase::<DatabasePath, serde_json::Value>::take_response(response);
+        let got = PostToDatabase::<DatabasePath, serde_json::Value>::take_response(response, ());
         expect_couchdb_error!(got, Unauthorized);
     }
 }

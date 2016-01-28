@@ -1,9 +1,8 @@
-//! Action types.
+//! Actions and their related types.
 //!
-//! Applications should not access the `action` module directly. Instead, they
-//! should use the appropriate `Client` method to construct an action. For
-//! example, the method `post_to_database` constructs a `PostToDatabase`
-//! action.
+//! Applications should construct actions (e.g., `PutDatabase`, `GetDocument`,
+//! etc.) by calling the appropriate `Client` method. For example, the method
+//! `Client::post_to_database` constructs a `PostToDatabase` action.
 
 macro_rules! impl_action_public_methods {
     ($action_output:ty) => {
@@ -16,7 +15,7 @@ macro_rules! impl_action_public_methods {
 
 macro_rules! make_couchdb_error {
     ($error_variant:ident, $response:expr) => {
-        Error::$error_variant(Some(try!($response.decode_json::<ErrorResponse>())))
+        Error::$error_variant(Some(try!($response.decode_json_all::<ErrorResponse>())))
     }
 }
 
@@ -39,7 +38,7 @@ mod put_document;
 pub use self::delete_database::DeleteDatabase;
 pub use self::delete_document::DeleteDocument;
 pub use self::get_all_databases::GetAllDatabases;
-pub use self::get_changes::GetChanges;
+pub use self::get_changes::{GetChanges, GetChangesEvent};
 pub use self::get_database::GetDatabase;
 pub use self::get_document::GetDocument;
 pub use self::get_view::GetView;
@@ -51,11 +50,15 @@ pub use self::put_document::PutDocument;
 
 use hyper;
 use serde;
+use std;
+use std::io::prelude::*;
+
+#[cfg(test)]
 use serde_json;
 
 use Error;
 use Revision;
-use error::{DecodeErrorKind, TransportKind};
+use error::TransportKind;
 
 // The Action trait abstracts the machinery for executing CouchDB actions. Types
 // implementing the Action trait define only how they construct requests and
@@ -63,14 +66,16 @@ use error::{DecodeErrorKind, TransportKind};
 // sending the request and receiving its response.
 trait Action: Sized {
     type Output;
-    fn make_request(self) -> Result<Request, Error>;
-    fn take_response<R: Response>(response: R) -> Result<Self::Output, Error>;
+		type State;
+    fn make_request(self) -> Result<(Request, Self::State), Error>;
+    fn take_response<R>(response: R, state: Self::State) -> Result<Self::Output, Error>
+        where R: Response;
 }
 
 fn run_action<A>(action: A) -> Result<A::Output, Error>
     where A: Action
 {
-    let action_request = try!(action.make_request());
+    let (action_request, action_state) = try!(action.make_request());
 
     let action_response = {
         use std::io::Write;
@@ -90,7 +95,7 @@ fn run_action<A>(action: A) -> Result<A::Output, Error>
         HyperResponse::new(hyper_response)
     };
 
-    A::take_response(action_response)
+    A::take_response(action_response, action_state)
 }
 
 struct Request {
@@ -173,47 +178,116 @@ impl Request {
 
 trait Response {
 
+    // Returns the HTTP status code.
     fn status(&self) -> hyper::status::StatusCode {
-        hyper::status::StatusCode::InternalServerError
+        unimplemented!();
     }
 
+    // Returns an error if and only if the response does not have a Content-Type
+    // header equivalent to 'application/json'.
     fn content_type_must_be_application_json(&self) -> Result<(), Error> {
-        Err(Error::NoContentTypeHeader { expected: "application/json" })
+        unimplemented!();
     }
 
-    fn decode_json<T: serde::Deserialize>(&mut self) -> Result<T, Error> {
-        serde_json::from_str("").map_err(|e| Error::Decode(DecodeErrorKind::Serde { cause: e }))
+    // Decodes the entire response body as JSON.
+    fn decode_json_all<T: serde::Deserialize>(&mut self) -> Result<T, Error> {
+        unimplemented!();
+    }
+
+    // Decodes the next line of the response body as JSON. Returns None if and
+    // only if EOF is reached without reading a line.
+    fn decode_json_line<T: serde::Deserialize>(&mut self) -> Result<T, Error> {
+        unimplemented!();
+    }
+
+    // Returns an error if and only if the response body has non-whitespace
+    // remaining.
+    fn no_more_content(&mut self) -> Result<(), Error> {
+        unimplemented!();
     }
 }
 
-struct HyperResponse {
-    hyper_response: hyper::client::Response,
-}
+mod json {
+    use serde;
+    use serde_json;
+    use std;
 
-impl HyperResponse {
-    fn new(hyper_response: hyper::client::Response) -> Self {
-        HyperResponse { hyper_response: hyper_response }
-    }
-}
+    use Error;
+    use error::{DecodeErrorKind, TransportKind};
 
-impl Response for HyperResponse {
-    fn status(&self) -> hyper::status::StatusCode {
-        self.hyper_response.status
-    }
-
-    // Returns an error if the HTTP response doesn't have a Content-Type of
-    // `application/json`.
-    fn content_type_must_be_application_json(&self) -> Result<(), Error> {
-        headers_content_type_must_be_application_json(&self.hyper_response.headers)
-    }
-
-    fn decode_json<T: serde::Deserialize>(&mut self) -> Result<T, Error> {
-        serde_json::from_reader::<_, T>(&mut self.hyper_response).map_err(|e| {
+    pub fn decode_json_all<R, T>(reader: &mut R) -> Result<T, Error>
+        where R: std::io::Read,
+              T: serde::Deserialize
+    {
+        let reader = reader.by_ref();
+        serde_json::from_reader(reader).map_err(|e| {
             match e {
                 serde_json::Error::IoError(e) => Error::Transport(TransportKind::Io(e)),
                 _ => Error::Decode(DecodeErrorKind::Serde { cause: e }),
             }
         })
+    }
+
+    pub fn decode_json_line<R, T>(reader: &mut R) -> Result<T, Error>
+        where R: std::io::BufRead,
+              T: serde::Deserialize
+    {
+        let mut s = String::new();
+        try!(reader.read_line(&mut s)
+                   .map_err(|e| Error::Transport(TransportKind::Io(e))));
+        serde_json::from_str::<T>(&s)
+            .map_err(|e| Error::Decode(DecodeErrorKind::Serde { cause: e }))
+    }
+
+    pub fn no_more_content<R>(reader: &mut R) -> Result<(), Error>
+        where R: std::io::Read
+    {
+        let mut s = String::new();
+        try!(reader.read_to_string(&mut s)
+                   .map_err(|e| Error::Transport(TransportKind::Io(e))));
+        for c in s.chars() {
+            match c {
+                '\r' | '\n' | ' ' => (),
+                _ => {
+                    return Err(Error::Decode(DecodeErrorKind::TrailingContent));
+                }
+            }
+        }
+        Ok(())
+    }
+}
+
+struct HyperResponse {
+    hyper_response: std::io::BufReader<hyper::client::Response>,
+}
+
+impl HyperResponse {
+    fn new(hyper_response: hyper::client::Response) -> Self {
+        HyperResponse { hyper_response: std::io::BufReader::new(hyper_response) }
+    }
+}
+
+impl Response for HyperResponse {
+    fn status(&self) -> hyper::status::StatusCode {
+        self.hyper_response.get_ref().status
+    }
+
+    // Returns an error if the HTTP response doesn't have a Content-Type of
+    // `application/json`.
+    fn content_type_must_be_application_json(&self) -> Result<(), Error> {
+        headers_content_type_must_be_application_json(&self.hyper_response.get_ref().headers)
+    }
+
+    fn decode_json_all<T: serde::Deserialize>(&mut self) -> Result<T, Error> {
+        json::decode_json_all(&mut self.hyper_response)
+    }
+
+    fn decode_json_line<T: serde::Deserialize>(&mut self) -> Result<T, Error> {
+        json::decode_json_line(&mut self.hyper_response)
+    }
+
+    fn no_more_content(&mut self) -> Result<(), Error> {
+        json::no_more_content(&mut self.hyper_response)
     }
 }
 
@@ -221,15 +295,26 @@ impl Response for HyperResponse {
 #[cfg(test)]
 struct JsonResponse {
     status_code: hyper::status::StatusCode,
-    body: String,
+    body: std::io::BufReader<std::io::Cursor<String>>,
 }
 
 #[cfg(test)]
 impl JsonResponse {
     fn new<T: serde::Serialize>(status_code: hyper::status::StatusCode, body: &T) -> Self {
+        let body = serde_json::to_string(&body).unwrap();
+        let body = std::io::BufReader::new(std::io::Cursor::new(body));
         JsonResponse {
             status_code: status_code,
-            body: serde_json::to_string(&body).unwrap(),
+            body: body,
+        }
+    }
+
+    fn new_from_string<S>(status_code: hyper::status::StatusCode, body: S) -> Self
+        where S: Into<String>
+    {
+        JsonResponse {
+            status_code: status_code,
+            body: std::io::BufReader::new(std::io::Cursor::new(body.into())),
         }
     }
 }
@@ -244,9 +329,16 @@ impl Response for JsonResponse {
         Ok(())
     }
 
-    fn decode_json<T: serde::Deserialize>(&mut self) -> Result<T, Error> {
-        serde_json::from_str(&self.body)
-            .map_err(|e| Error::Decode(DecodeErrorKind::Serde { cause: e }))
+    fn decode_json_all<T: serde::Deserialize>(&mut self) -> Result<T, Error> {
+        json::decode_json_all(&mut self.body)
+    }
+
+    fn decode_json_line<T: serde::Deserialize>(&mut self) -> Result<T, Error> {
+        json::decode_json_line(&mut self.body)
+    }
+
+    fn no_more_content(&mut self) -> Result<(), Error> {
+        json::no_more_content(&mut self.body)
     }
 }
 

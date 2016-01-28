@@ -56,8 +56,9 @@ impl<'a, P: IntoDocumentPath, T: 'a + serde::Serialize> PutDocument<'a, P, T> {
 
 impl<'a, P: IntoDocumentPath, T: 'a + serde::Serialize> Action for PutDocument<'a, P, T> {
     type Output = Revision;
+    type State = ();
 
-    fn make_request(self) -> Result<Request, Error> {
+    fn make_request(self) -> Result<(Request, Self::State), Error> {
         let doc_path = try!(self.path.into_document_path());
         let uri = doc_path.into_uri(self.client_state.uri.clone());
         let body = try!(serde_json::to_vec(self.doc_content)
@@ -67,14 +68,16 @@ impl<'a, P: IntoDocumentPath, T: 'a + serde::Serialize> Action for PutDocument<'
                           .set_content_type_application_json()
                           .set_if_match_revision(self.if_match)
                           .set_body(body);
-        Ok(request)
+        Ok((request, ()))
     }
 
-    fn take_response<R: Response>(mut response: R) -> Result<Self::Output, Error> {
+    fn take_response<R>(mut response: R, _state: Self::State) -> Result<Self::Output, Error>
+        where R: Response
+    {
         match response.status() {
             hyper::status::StatusCode::Created => {
                 try!(response.content_type_must_be_application_json());
-                let content = try!(response.decode_json::<PutDocumentResponse>());
+                let content = try!(response.decode_json_all::<PutDocumentResponse>());
                 let rev: Revision = content.rev.into();
                 Ok(rev)
             }
@@ -111,7 +114,7 @@ mod tests {
                           .insert("bar", "hello")
                           .unwrap();
         let action = PutDocument::new(&client_state, "/db/doc-id", &content);
-        let request = action.make_request().unwrap();
+        let (request, _) = action.make_request().unwrap();
         expect_request_method!(request, hyper::method::Method::Put);
         expect_request_uri!(request, "http://example.com:1234/db/doc-id");
         expect_request_accept_application_json!(request);
@@ -129,7 +132,7 @@ mod tests {
                           .unwrap();
         let rev = Revision::parse("42-1234567890abcdef1234567890abcdef").unwrap();
         let action = PutDocument::new(&client_state, "/db/doc-id", &content).if_match(&rev);
-        let request = action.make_request().unwrap();
+        let (request, _) = action.make_request().unwrap();
         expect_request_method!(request, hyper::method::Method::Put);
         expect_request_uri!(request, "http://example.com:1234/db/doc-id");
         expect_request_accept_application_json!(request);
@@ -148,7 +151,8 @@ mod tests {
                          .insert("rev", source_rev.to_string())
                          .unwrap();
         let response = JsonResponse::new(hyper::status::StatusCode::Created, &source);
-        let rev = PutDocument::<DocumentPath, serde_json::Value>::take_response(response).unwrap();
+        let rev = PutDocument::<DocumentPath, serde_json::Value>::take_response(response, ())
+                      .unwrap();
         assert_eq!(rev, source_rev);
     }
 
@@ -159,7 +163,7 @@ mod tests {
                          .insert("reason", "blah blah blah")
                          .unwrap();
         let response = JsonResponse::new(hyper::BadRequest, &source);
-        let got = PutDocument::<DocumentPath, serde_json::Value>::take_response(response);
+        let got = PutDocument::<DocumentPath, serde_json::Value>::take_response(response, ());
         expect_couchdb_error!(got, BadRequest);
     }
 
@@ -170,7 +174,7 @@ mod tests {
                          .insert("reason", "blah blah blah")
                          .unwrap();
         let response = JsonResponse::new(hyper::status::StatusCode::Conflict, &source);
-        let got = PutDocument::<DocumentPath, serde_json::Value>::take_response(response);
+        let got = PutDocument::<DocumentPath, serde_json::Value>::take_response(response, ());
         expect_couchdb_error!(got, DocumentConflict);
     }
 
@@ -181,7 +185,7 @@ mod tests {
                          .insert("reason", "blah blah blah")
                          .unwrap();
         let response = JsonResponse::new(hyper::NotFound, &source);
-        let got = PutDocument::<DocumentPath, serde_json::Value>::take_response(response);
+        let got = PutDocument::<DocumentPath, serde_json::Value>::take_response(response, ());
         expect_couchdb_error!(got, NotFound);
     }
 
@@ -192,7 +196,7 @@ mod tests {
                          .insert("reason", "blah blah blah")
                          .unwrap();
         let response = JsonResponse::new(hyper::status::StatusCode::Unauthorized, &source);
-        let got = PutDocument::<DocumentPath, serde_json::Value>::take_response(response);
+        let got = PutDocument::<DocumentPath, serde_json::Value>::take_response(response, ());
         expect_couchdb_error!(got, Unauthorized);
     }
 }

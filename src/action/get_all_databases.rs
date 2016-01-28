@@ -26,22 +26,25 @@ impl<'a> GetAllDatabases<'a> {
 
 impl<'a> Action for GetAllDatabases<'a> {
     type Output = Vec<DatabaseName>;
+    type State = ();
 
-    fn make_request(self) -> Result<Request, Error> {
+    fn make_request(self) -> Result<(Request, Self::State), Error> {
         let uri = {
             let mut uri = self.client_state.uri.clone();
             uri.path_mut().unwrap()[0] = "_all_dbs".to_string();
             uri
         };
         let request = Request::new(hyper::Get, uri).set_accept_application_json();
-        Ok(request)
+        Ok((request, ()))
     }
 
-    fn take_response<R: Response>(mut response: R) -> Result<Self::Output, Error> {
+    fn take_response<R>(mut response: R, _state: Self::State) -> Result<Self::Output, Error>
+        where R: Response
+    {
         match response.status() {
             hyper::status::StatusCode::Ok => {
                 try!(response.content_type_must_be_application_json());
-                response.decode_json::<Vec<DatabaseName>>()
+                response.decode_json_all::<Vec<DatabaseName>>()
             }
             _ => Err(Error::UnexpectedHttpStatus { got: response.status() }),
         }
@@ -63,7 +66,7 @@ mod tests {
     fn make_request() {
         let client_state = ClientState::new("http://example.com:1234/").unwrap();
         let action = GetAllDatabases::new(&client_state);
-        let request = action.make_request().unwrap();
+        let (request, _) = action.make_request().unwrap();
         expect_request_method!(request, hyper::Get);
         expect_request_uri!(request, "http://example.com:1234/_all_dbs");
         expect_request_accept_application_json!(request);
@@ -81,7 +84,7 @@ mod tests {
                            .into_iter()
                            .map(|x| DatabaseName::from(x))
                            .collect::<Vec<_>>();
-        let got = GetAllDatabases::take_response(response).unwrap();
+        let got = GetAllDatabases::take_response(response, ()).unwrap();
         assert_eq!(expected, got);
     }
 }

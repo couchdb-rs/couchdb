@@ -83,8 +83,9 @@ impl<'a, P, K, V> Action for GetView<'a, P, K, V>
           V: serde::Deserialize
 {
     type Output = ViewResult<K, V>;
+    type State = ();
 
-    fn make_request(self) -> Result<Request, Error> {
+    fn make_request(self) -> Result<(Request, Self::State), Error> {
 
         let uri = {
 
@@ -123,14 +124,16 @@ impl<'a, P, K, V> Action for GetView<'a, P, K, V>
         };
 
         let request = Request::new(hyper::Get, uri).set_accept_application_json();
-        Ok(request)
+        Ok((request, ()))
     }
 
-    fn take_response<R: Response>(mut response: R) -> Result<Self::Output, Error> {
+    fn take_response<R>(mut response: R, _state: Self::State) -> Result<Self::Output, Error>
+        where R: Response
+    {
         match response.status() {
             hyper::status::StatusCode::Ok => {
                 try!(response.content_type_must_be_application_json());
-                let view_result = try!(response.decode_json::<ViewResult<K, V>>());
+                let view_result = try!(response.decode_json_all::<ViewResult<K, V>>());
                 Ok(view_result)
             }
             hyper::status::StatusCode::BadRequest => Err(make_couchdb_error!(BadRequest, response)),
@@ -163,7 +166,7 @@ mod tests {
     fn make_request_default() {
         let client_state = ClientState::new("http://example.com:1234/").unwrap();
         let action = GetView::<_, String, i32>::new(&client_state, "/foo/_design/bar/_view/qux");
-        let request = action.make_request().unwrap();
+        let (request, _) = action.make_request().unwrap();
         expect_request_method!(request, hyper::Get);
         expect_request_uri!(request, "http://example.com:1234/foo/_design/bar/_view/qux");
         expect_request_accept_application_json!(request);
@@ -174,7 +177,7 @@ mod tests {
         let client_state = ClientState::new("http://example.com:1234/").unwrap();
         let action = GetView::<_, String, i32>::new(&client_state, "/foo/_design/bar/_view/qux")
                          .reduce(true);
-        let request = action.make_request().unwrap();
+        let (request, _) = action.make_request().unwrap();
         expect_request_method!(request, hyper::Get);
         expect_request_uri!(request,
                             "http://example.com:1234/foo/_design/bar/_view/qux?reduce=true");
@@ -187,7 +190,7 @@ mod tests {
         let path = ViewPath::parse("/foo/_design/bar/_view/qux").unwrap();
         let action = GetView::<ViewPath, String, i32>::new(&client_state, path)
                          .startkey("baz".to_string());
-        let request = action.make_request().unwrap();
+        let (request, ()) = action.make_request().unwrap();
         expect_request_method!(request, hyper::Get);
         expect_request_uri!(request,
                             "http://example.com:1234/foo/_design/bar/_view/qux?startkey=\"baz\"");
@@ -200,7 +203,7 @@ mod tests {
         let path = ViewPath::parse("/foo/_design/bar/_view/qux").unwrap();
         let action = GetView::<ViewPath, String, i32>::new(&client_state, path)
                          .endkey("baz".to_string());
-        let request = action.make_request().unwrap();
+        let (request, _) = action.make_request().unwrap();
         expect_request_method!(request, hyper::Get);
         expect_request_uri!(request,
                             "http://example.com:1234/foo/_design/bar/_view/qux?endkey=\"baz\"");
@@ -221,7 +224,7 @@ mod tests {
                          .insert("total_rows", 42)
                          .unwrap();
         let response = JsonResponse::new(hyper::Ok, &source);
-        let got = GetView::<ViewPath, String, i32>::take_response(response).unwrap();
+        let got = GetView::<ViewPath, String, i32>::take_response(response, ()).unwrap();
         assert_eq!(got.total_rows, Some(42));
         assert_eq!(got.offset, Some(17));
         assert_eq!(got.rows,
@@ -240,7 +243,7 @@ mod tests {
                          .insert("reason", "blah blah blah")
                          .unwrap();
         let response = JsonResponse::new(hyper::BadRequest, &source);
-        let got = GetView::<ViewPath, String, i32>::take_response(response);
+        let got = GetView::<ViewPath, String, i32>::take_response(response, ());
         expect_couchdb_error!(got, BadRequest);
     }
 
@@ -251,7 +254,7 @@ mod tests {
                          .insert("reason", "blah blah blah")
                          .unwrap();
         let response = JsonResponse::new(hyper::status::StatusCode::InternalServerError, &source);
-        let got = GetView::<ViewPath, String, i32>::take_response(response);
+        let got = GetView::<ViewPath, String, i32>::take_response(response, ());
         expect_couchdb_error!(got, InternalServerError);
     }
 
@@ -262,7 +265,7 @@ mod tests {
                          .insert("reason", "blah blah blah")
                          .unwrap();
         let response = JsonResponse::new(hyper::NotFound, &source);
-        let got = GetView::<ViewPath, String, i32>::take_response(response);
+        let got = GetView::<ViewPath, String, i32>::take_response(response, ());
         expect_couchdb_error!(got, NotFound);
     }
 
@@ -273,7 +276,7 @@ mod tests {
                          .insert("reason", "blah blah blah")
                          .unwrap();
         let response = JsonResponse::new(hyper::status::StatusCode::Unauthorized, &source);
-        let got = GetView::<ViewPath, String, i32>::take_response(response);
+        let got = GetView::<ViewPath, String, i32>::take_response(response, ());
         expect_couchdb_error!(got, Unauthorized);
     }
 }

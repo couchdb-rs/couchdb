@@ -36,6 +36,26 @@ macro_rules! expect_json_error_missing_field {
     }
 }
 
+// Panics if the given result, $result, is not a serde_json 'unknown field'
+// error.
+macro_rules! expect_json_error_unknown_field {
+    ($result:expr, $expected_unknown_field_name:expr) => {
+        {
+            use serde_json;
+            match $result {
+                Err(serde_json::Error::SyntaxError(serde_json::ErrorCode::UnknownField(ref field), _, _)) => {
+                    if $expected_unknown_field_name != field {
+                        panic!("Got unexpected unknown field: {}", field);
+                    }
+                    // Okay
+                }
+                Err(ref e) => { panic!("Got unexpected error result: {:?}", e); }
+                Ok(..) => { panic!("Got unexpected OK result"); }
+            }
+        }
+    }
+}
+
 macro_rules! expect_json_error_invalid_value {
     ($result:ident) => {
         match $result {

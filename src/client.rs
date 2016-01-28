@@ -93,7 +93,9 @@ impl<'a> Client {
     }
 
     /// Builds an action to GET changes made to a database.
-    pub fn get_changes<P: IntoDatabasePath>(&'a self, path: P) -> action::GetChanges<'a, P> {
+    pub fn get_changes<P>(&'a self, path: P) -> action::GetChanges<'a, P>
+        where P: IntoDatabasePath
+    {
         action::GetChanges::new(&self.state, path)
     }
 

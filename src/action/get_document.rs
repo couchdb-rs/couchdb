@@ -8,52 +8,45 @@ use Revision;
 use client::ClientState;
 use action::{self, Action, Request, Response};
 
-enum QueryIteration {
-    Rev,
+enum QueryIterator<'a> {
+    Rev(&'a QueryParams<'a>),
     Done,
 }
 
-// The query parameters reside in a separate structure to facilitate iteration,
-// which is useful when constructing the URI query string.
-struct QueryParams<'a> {
-    iteration: QueryIteration,
-    rev: Option<&'a Revision>,
-}
-
-impl<'a> QueryParams<'a> {
-    fn new() -> Self {
-        QueryParams {
-            iteration: QueryIteration::Rev,
-            rev: None,
-        }
-    }
-}
-
-impl<'a> Iterator for QueryParams<'a> {
+impl<'a> Iterator for QueryIterator<'a> {
     type Item = (String, String);
 
     fn next(&mut self) -> Option<Self::Item> {
         loop {
-            match self.iteration {
-                QueryIteration::Rev => {
-                    self.iteration = QueryIteration::Done;
-                    if let Some(ref rev) = self.rev {
+            match self {
+                &mut QueryIterator::Rev(params) => {
+                    *self = QueryIterator::Done;
+                    if let Some(ref rev) = params.rev {
                         return Some(("rev".to_string(), rev.to_string()));
                     }
                 }
-                QueryIteration::Done => {
+                &mut QueryIterator::Done => {
                     return None;
                 }
             }
         }
     }
+}
 
-    fn size_hint(&self) -> (usize, Option<usize>) {
-        if self.rev.is_none() {
-            (0, None)
-        } else {
-            (1, None)
-        }
+// The query parameters reside in a separate structure to facilitate iteration,
+// which is useful when constructing the URI query string.
+#[derive(Default)]
+struct QueryParams<'a> {
+    rev: Option<&'a Revision>,
+}
+
+impl<'a> QueryParams<'a> {
+    fn is_default(&self) -> bool {
+        self.rev.is_none()
+    }
+
+    fn iter(&self) -> QueryIterator {
+        QueryIterator::Rev(self)
     }
 }
 
@@ -91,7 +84,7 @@ impl<'a, P: IntoDocumentPath> GetDocument<'a, P> {
             client_state: client_state,
             path: path,
             if_none_match: None,
-            query: QueryParams::new(),
+            query: Default::default(),
         }
     }
 
@@ -101,7 +94,7 @@ impl<'a, P: IntoDocumentPath> GetDocument<'a, P> {
         self
     }
 
-    /// Sets the “rev” query parameter to get the document at the given
+    /// Sets the `rev` query parameter to get the document at the given
     /// revision.
     pub fn rev(mut self, rev: &'a Revision) -> Self {
         self.query.rev = Some(rev);
@@ -113,27 +106,30 @@ impl<'a, P: IntoDocumentPath> GetDocument<'a, P> {
 
 impl<'a, P: IntoDocumentPath> Action for GetDocument<'a, P> {
     type Output = Option<Document>;
+    type State = ();
 
-    fn make_request(self) -> Result<Request, Error> {
+    fn make_request(self) -> Result<(Request, Self::State), Error> {
         let doc_path = try!(self.path.into_document_path());
         let uri = {
             let mut uri = doc_path.into_uri(self.client_state.uri.clone());
-            if 1 <= self.query.size_hint().0 {
-                uri.set_query_from_pairs(self.query);
+            if !self.query.is_default() {
+                uri.set_query_from_pairs(self.query.iter());
             }
             uri
         };
         let request = Request::new(hyper::Get, uri)
                           .set_accept_application_json()
                           .set_if_none_match_revision(self.if_none_match);
-        Ok(request)
+        Ok((request, ()))
     }
 
-    fn take_response<R: Response>(mut response: R) -> Result<Self::Output, Error> {
+    fn take_response<R>(mut response: R, _state: Self::State) -> Result<Self::Output, Error>
+        where R: Response
+    {
         match response.status() {
             hyper::status::StatusCode::Ok => {
                 try!(response.content_type_must_be_application_json());
-                let doc = try!(response.decode_json::<Document>());
+                let doc = try!(response.decode_json_all::<Document>());
                 Ok(Some(doc))
             }
             hyper::status::StatusCode::NotModified => Ok(None),
@@ -157,17 +153,14 @@ mod tests {
     use Revision;
     use client::ClientState;
     use action::{Action, JsonResponse, NoContentResponse};
-    use super::{GetDocument, QueryIteration, QueryParams};
+    use super::{GetDocument, QueryParams};
 
     #[test]
-    fn query_iteration() {
+    fn query_iterator() {
         let rev = Revision::parse("42-1234567890abcdef1234567890abcdef").unwrap();
-        let query = QueryParams {
-            iteration: QueryIteration::Rev,
-            rev: Some(&rev),
-        };
+        let query = QueryParams { rev: Some(&rev) };
         let expected = vec![("rev".to_string(), rev.to_string())];
-        let got = query.collect::<Vec<_>>();
+        let got = query.iter().collect::<Vec<_>>();
         assert_eq!(expected, got);
     }
 
@@ -175,7 +168,7 @@ mod tests {
     fn make_request_default() {
         let client_state = ClientState::new("http://example.com:1234/").unwrap();
         let action = GetDocument::new(&client_state, "/foo/bar");
-        let request = action.make_request().unwrap();
+        let (request, ()) = action.make_request().unwrap();
         expect_request_method!(request, hyper::Get);
         expect_request_uri!(request, "http://example.com:1234/foo/bar");
         expect_request_accept_application_json!(request);
@@ -186,7 +179,7 @@ mod tests {
         let client_state = ClientState::new("http://example.com:1234/").unwrap();
         let rev = Revision::parse("42-1234567890abcdef1234567890abcdef").unwrap();
         let action = GetDocument::new(&client_state, "/foo/bar").if_none_match(&rev);
-        let request = action.make_request().unwrap();
+        let (request, ()) = action.make_request().unwrap();
         expect_request_method!(request, hyper::Get);
         expect_request_uri!(request, "http://example.com:1234/foo/bar");
         expect_request_accept_application_json!(request);
@@ -198,7 +191,7 @@ mod tests {
         let client_state = ClientState::new("http://example.com:1234/").unwrap();
         let rev = "42-1234567890abcdef1234567890abcdef".parse().unwrap();
         let action = GetDocument::new(&client_state, "/foo/bar").rev(&rev);
-        let request = action.make_request().unwrap();
+        let (request, ()) = action.make_request().unwrap();
         expect_request_method!(request, hyper::Get);
         expect_request_uri!(request,
                             "http://example.com:\
@@ -214,7 +207,7 @@ mod tests {
                          .insert("bar", 17)
                          .unwrap();
         let response = JsonResponse::new(hyper::Ok, &source);
-        let got = GetDocument::<DocumentPath>::take_response(response).unwrap();
+        let got = GetDocument::<DocumentPath>::take_response(response, ()).unwrap();
         let got = got.unwrap();
         assert_eq!(got.id, "foo".into());
         assert_eq!(got.rev,
@@ -234,7 +227,7 @@ mod tests {
                          .insert("_deleted", true)
                          .unwrap();
         let response = JsonResponse::new(hyper::Ok, &source);
-        let got = GetDocument::<DocumentPath>::take_response(response).unwrap();
+        let got = GetDocument::<DocumentPath>::take_response(response, ()).unwrap();
         let got = got.unwrap();
         assert_eq!(got.id, "foo".into());
         assert_eq!(got.rev,
@@ -248,7 +241,7 @@ mod tests {
     #[test]
     fn take_response_not_modified() {
         let response = NoContentResponse::new(hyper::status::StatusCode::NotModified);
-        let got = GetDocument::<DocumentPath>::take_response(response).unwrap();
+        let got = GetDocument::<DocumentPath>::take_response(response, ()).unwrap();
         assert!(got.is_none());
     }
 
@@ -259,7 +252,7 @@ mod tests {
                          .insert("reason", "Invalid rev format")
                          .unwrap();
         let response = JsonResponse::new(hyper::BadRequest, &source);
-        let got = GetDocument::<DocumentPath>::take_response(response);
+        let got = GetDocument::<DocumentPath>::take_response(response, ());
         expect_couchdb_error!(got, BadRequest);
     }
 
@@ -270,7 +263,7 @@ mod tests {
                          .insert("reason", "missing")
                          .unwrap();
         let response = JsonResponse::new(hyper::NotFound, &source);
-        let got = GetDocument::<DocumentPath>::take_response(response);
+        let got = GetDocument::<DocumentPath>::take_response(response, ());
         expect_couchdb_error!(got, NotFound);
     }
 
@@ -281,7 +274,7 @@ mod tests {
                          .insert("reason", "blah blah blah")
                          .unwrap();
         let response = JsonResponse::new(hyper::status::StatusCode::Unauthorized, &source);
-        let got = GetDocument::<DocumentPath>::take_response(response);
+        let got = GetDocument::<DocumentPath>::take_response(response, ());
         expect_couchdb_error!(got, Unauthorized);
     }
 }

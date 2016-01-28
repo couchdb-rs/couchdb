@@ -5,7 +5,8 @@
 ### New
 
 * New action `GetChanges` for getting database changes—i.e., `GET
-  /db/_changes` (issue [#12][issue_12]).
+  /db/_changes` (issues [#12][issue_12], [#37][issue_37], and
+  [#38][issue_38]).
 * New support for getting documents at a specific revision via the `rev`
   query parameter—i.e., `GET /db/doc?rev=<revision>` (issue
   [#29][issue_29]).
@@ -250,3 +251,5 @@ documents (HEAD, GET, PUT, and DELETE), and to execute views (GET).
 [issue_32]: https://github.com/couchdb-rs/couchdb/issues/32 "Issue #32"
 [issue_33]: https://github.com/couchdb-rs/couchdb/issues/33 "Issue #33"
 [issue_35]: https://github.com/couchdb-rs/couchdb/issues/35 "Issue #35"
+[issue_37]: https://github.com/couchdb-rs/couchdb/issues/37 "Issue #37"
+[issue_38]: https://github.com/couchdb-rs/couchdb/issues/38 "Issue #38"

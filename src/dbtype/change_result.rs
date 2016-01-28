@@ -96,6 +96,19 @@ pub struct ChangeResult {
     _dummy: std::marker::PhantomData<()>,
 }
 
+impl ChangeResult {
+    #[doc(hidden)]
+    pub fn new(seq: u64, id: DocumentId, changes: Vec<ChangeItem>, deleted: bool) -> Self {
+        ChangeResult {
+            seq: seq,
+            id: id,
+            changes: changes,
+            deleted: deleted,
+            _dummy: std::marker::PhantomData,
+        }
+    }
+}
+
 impl serde::Deserialize for ChangeResult {
     fn deserialize<D>(d: &mut D) -> Result<Self, D::Error>
         where D: serde::Deserializer

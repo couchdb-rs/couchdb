@@ -175,6 +175,69 @@ fn get_changes_ok_with_changes() {
 }
 
 #[test]
+fn get_changes_ok_longpoll() {
+    let (_server, client) = make_server_and_client();
+    client.put_database("/baseball").run().unwrap();
+    let source_content = serde_json::builder::ObjectBuilder::new()
+                             .insert("name", "Babe Ruth")
+                             .insert("career_hr", 714)
+                             .unwrap();
+    let (babe_ruth_id, babe_ruth_rev) = client.post_to_database("/baseball", &source_content)
+                                              .run()
+                                              .unwrap();
+    let source_content = serde_json::builder::ObjectBuilder::new()
+                             .insert("name", "Hank Aaron")
+                             .insert("career_hr", 755)
+                             .unwrap();
+    let (hank_aaron_id, hank_aaron_rev) = client.post_to_database("/baseball", &source_content)
+                                                .run()
+                                                .unwrap();
+    let expected = couchdb::ChangesBuilder::new(2)
+                       .build_result(1, babe_ruth_id, |x| x.build_change(babe_ruth_rev, |x| x))
+                       .build_result(2, hank_aaron_id, |x| x.build_change(hank_aaron_rev, |x| x))
+                       .unwrap();
+    let got = client.get_changes("/baseball").longpoll().run().unwrap();
+    assert_eq!(expected, got);
+}
+
+#[test]
+fn get_changes_ok_continuous() {
+    let (_server, client) = make_server_and_client();
+    client.put_database("/baseball").run().unwrap();
+    let source_content = serde_json::builder::ObjectBuilder::new()
+                             .insert("name", "Babe Ruth")
+                             .insert("career_hr", 714)
+                             .unwrap();
+    let (babe_ruth_id, babe_ruth_rev) = client.post_to_database("/baseball", &source_content)
+                                              .run()
+                                              .unwrap();
+    let source_content = serde_json::builder::ObjectBuilder::new()
+                             .insert("name", "Hank Aaron")
+                             .insert("career_hr", 755)
+                             .unwrap();
+    let (hank_aaron_id, hank_aaron_rev) = client.post_to_database("/baseball", &source_content)
+                                                .run()
+                                                .unwrap();
+    let change_results = std::sync::Mutex::new(Vec::new());
+    let expected = couchdb::ChangesBuilder::new(2).unwrap();
+    let got = {
+        client.get_changes("/baseball")
+              .continuous(|result| change_results.lock().unwrap().push(result))
+              .timeout(std::time::Duration::new(0, 0))
+              .run()
+              .unwrap()
+    };
+    assert_eq!(expected, got);
+    let expected = vec![couchdb::ChangeResultBuilder::new(1, babe_ruth_id)
+                            .build_change(babe_ruth_rev, |x| x)
+                            .unwrap(),
+                        couchdb::ChangeResultBuilder::new(2, hank_aaron_id)
+                            .build_change(hank_aaron_rev, |x| x)
+                            .unwrap()];
+    assert_eq!(expected, change_results.into_inner().unwrap());
+}
+
+#[test]
 fn head_document_ok_without_revision() {
     let (_server, client) = make_server_and_client();
     client.put_database("/baseball").run().unwrap();

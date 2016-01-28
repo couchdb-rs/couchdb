@@ -12,6 +12,7 @@ mod impl_name_macro;
 mod test_macro;
 
 mod change_item;
+mod change_line;
 mod change_result;
 mod changes;
 mod database;
@@ -30,6 +31,7 @@ mod view_row;
 mod write_document_response;
 
 pub use self::change_item::{ChangeItem, ChangeItemBuilder};
+pub use self::change_line::ChangeLine;
 pub use self::change_result::{ChangeResult, ChangeResultBuilder};
 pub use self::changes::{Changes, ChangesBuilder};
 pub use self::database::Database;

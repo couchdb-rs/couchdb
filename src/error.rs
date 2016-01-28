@@ -276,6 +276,7 @@ pub enum DecodeErrorKind {
     Serde {
         cause: serde_json::Error,
     },
+    TrailingContent,
 }
 
 impl DecodeErrorKind {
@@ -283,6 +284,7 @@ impl DecodeErrorKind {
         use self::DecodeErrorKind::*;
         match *self {
             Serde { ref cause } => Some(cause),
+            TrailingContent => None,
         }
     }
 }
@@ -292,6 +294,7 @@ impl std::fmt::Display for DecodeErrorKind {
         use self::DecodeErrorKind::*;
         match *self {
             Serde { ref cause } => cause.fmt(f),
+            TrailingContent => write!(f, "Unexpected content at end of response body"),
         }
     }
 }

@@ -37,15 +37,18 @@ impl<'a, P: IntoDatabasePath> DeleteDatabase<'a, P> {
 
 impl<'a, P: IntoDatabasePath> Action for DeleteDatabase<'a, P> {
     type Output = ();
+    type State = ();
 
-    fn make_request(self) -> Result<(Request), Error> {
+    fn make_request(self) -> Result<((Request), Self::State), Error> {
         let db_path = try!(self.path.into_database_path());
         let uri = db_path.into_uri(self.client_state.uri.clone());
         let request = Request::new(hyper::Delete, uri).set_accept_application_json();
-        Ok(request)
+        Ok((request, ()))
     }
 
-    fn take_response<R: Response>(mut response: R) -> Result<Self::Output, Error> {
+    fn take_response<R>(mut response: R, _state: Self::State) -> Result<Self::Output, Error>
+        where R: Response
+    {
         match response.status() {
             hyper::status::StatusCode::Ok => response.content_type_must_be_application_json(),
             hyper::status::StatusCode::BadRequest => Err(make_couchdb_error!(BadRequest, response)),
@@ -73,7 +76,7 @@ mod tests {
     fn make_request_default() {
         let client_state = ClientState::new("http://example.com:1234/").unwrap();
         let action = DeleteDatabase::new(&client_state, "/foo");
-        let request = action.make_request().unwrap();
+        let (request, _) = action.make_request().unwrap();
         expect_request_method!(request, hyper::method::Method::Delete);
         expect_request_uri!(request, "http://example.com:1234/foo");
         expect_request_accept_application_json!(request);
@@ -85,7 +88,7 @@ mod tests {
                          .insert("ok", true)
                          .unwrap();
         let response = JsonResponse::new(hyper::Ok, &source);
-        DeleteDatabase::<DatabasePath>::take_response(response).unwrap();
+        DeleteDatabase::<DatabasePath>::take_response(response, ()).unwrap();
     }
 
     #[test]
@@ -95,7 +98,7 @@ mod tests {
                          .insert("reason", "blah blah blah")
                          .unwrap();
         let response = JsonResponse::new(hyper::BadRequest, &source);
-        let got = DeleteDatabase::<DatabasePath>::take_response(response);
+        let got = DeleteDatabase::<DatabasePath>::take_response(response, ());
         expect_couchdb_error!(got, BadRequest);
     }
 
@@ -106,7 +109,7 @@ mod tests {
                          .insert("reason", "missing")
                          .unwrap();
         let response = JsonResponse::new(hyper::NotFound, &source);
-        let got = DeleteDatabase::<DatabasePath>::take_response(response);
+        let got = DeleteDatabase::<DatabasePath>::take_response(response, ());
         expect_couchdb_error!(got, NotFound);
     }
 
@@ -117,7 +120,7 @@ mod tests {
                          .insert("reason", "blah blah blah")
                          .unwrap();
         let response = JsonResponse::new(hyper::status::StatusCode::Unauthorized, &source);
-        let got = DeleteDatabase::<DatabasePath>::take_response(response);
+        let got = DeleteDatabase::<DatabasePath>::take_response(response, ());
         expect_couchdb_error!(got, Unauthorized);
     }
 }
