@@ -29,7 +29,7 @@
 //!
 //! The following program (1) constructs a `Client` with which to connect to the
 //! CouchDB server, (2) creates a database (via the `put_database` method), (3)
-//! creates a document within that database (via the `post_to_database` method),
+//! creates a document within that database (via the `post_database` method),
 //! and (4) reads the new document (via the `get_document` method).
 //!
 //! ```no_run
@@ -48,7 +48,7 @@
 //!                   .insert("name", "Babe Ruth")
 //!                   .insert("career_hr", 714)
 //!                   .unwrap();
-//! let (id, rev) = client.post_to_database("/baseball", &content)
+//! let (id, rev) = client.post_database("/baseball", &content)
 //!                       .run()
 //!                       .unwrap();
 //!
@@ -121,7 +121,7 @@
 //!
 //!   <tr>
 //!    <td>POST</td>
-//!    <td><code>post_to_database</code></td>
+//!    <td><code>post_database</code></td>
 //!    <td>Create a document.</td>
 //!   </tr>
 //!

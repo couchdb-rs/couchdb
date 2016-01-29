@@ -2,6 +2,13 @@
 
 ## v0.5.1 (unreleased)
 
+### Deprecated
+
+* Deprecated the method `Client::post_to_database`, replaced by
+  `Client::post_database` (issue [#41][issue_41]).
+* Deprecated the action type `PostToDatabase`, replaced by
+  `PostDatabase` (issue [#41][issue_41]).
+
 ### New
 
 * New action `GetChanges` for getting database changes—i.e., `GET
@@ -253,3 +260,4 @@ documents (HEAD, GET, PUT, and DELETE), and to execute views (GET).
 [issue_35]: https://github.com/couchdb-rs/couchdb/issues/35 "Issue #35"
 [issue_37]: https://github.com/couchdb-rs/couchdb/issues/37 "Issue #37"
 [issue_38]: https://github.com/couchdb-rs/couchdb/issues/38 "Issue #38"
+[issue_41]: https://github.com/couchdb-rs/couchdb/issues/41 "Issue #41"

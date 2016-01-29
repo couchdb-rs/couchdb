@@ -84,12 +84,21 @@ impl<'a> Client {
     }
 
     /// Builds an action to POST to a database.
+    pub fn post_database<P: IntoDatabasePath, T: serde::Serialize>
+        (&'a self,
+         path: P,
+         doc_content: &'a T)
+         -> action::PostDatabase<'a, P, T> {
+        action::PostDatabase::new(&self.state, path, doc_content)
+    }
+
+    #[doc(hidden)]
     pub fn post_to_database<P: IntoDatabasePath, T: serde::Serialize>
         (&'a self,
          path: P,
          doc_content: &'a T)
-         -> action::PostToDatabase<'a, P, T> {
-        action::PostToDatabase::new(&self.state, path, doc_content)
+         -> action::PostDatabase<'a, P, T> {
+        action::PostDatabase::new(&self.state, path, doc_content)
     }
 
     /// Builds an action to GET changes made to a database.

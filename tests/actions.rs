@@ -111,14 +111,14 @@ fn delete_database_nok_database_does_not_exist() {
 }
 
 #[test]
-fn post_to_database_ok() {
+fn post_database_ok() {
     let (_server, client) = make_server_and_client();
     client.put_database("/baseball").run().unwrap();
     let expected_content = serde_json::builder::ObjectBuilder::new()
                                .insert("name", "Babe Ruth")
                                .insert("career_hr", 714)
                                .unwrap();
-    let (doc_id, rev) = client.post_to_database("/baseball", &expected_content).run().unwrap();
+    let (doc_id, rev) = client.post_database("/baseball", &expected_content).run().unwrap();
     let doc = client.get_document(("/baseball", doc_id.clone()))
                     .run()
                     .unwrap()
@@ -129,13 +129,13 @@ fn post_to_database_ok() {
 }
 
 #[test]
-fn post_to_database_nok_database_does_not_exist() {
+fn post_database_nok_database_does_not_exist() {
     let (_server, client) = make_server_and_client();
     let source_content = serde_json::builder::ObjectBuilder::new()
                              .insert("name", "Babe Ruth")
                              .insert("career_hr", 714)
                              .unwrap();
-    let got = client.post_to_database("/baseball", &source_content).run();
+    let got = client.post_database("/baseball", &source_content).run();
     expect_couchdb_error!(got, couchdb::Error::NotFound(Some(..)));
 }
 
@@ -156,14 +156,14 @@ fn get_changes_ok_with_changes() {
                              .insert("name", "Babe Ruth")
                              .insert("career_hr", 714)
                              .unwrap();
-    let (babe_ruth_id, babe_ruth_rev) = client.post_to_database("/baseball", &source_content)
+    let (babe_ruth_id, babe_ruth_rev) = client.post_database("/baseball", &source_content)
                                               .run()
                                               .unwrap();
     let source_content = serde_json::builder::ObjectBuilder::new()
                              .insert("name", "Hank Aaron")
                              .insert("career_hr", 755)
                              .unwrap();
-    let (hank_aaron_id, hank_aaron_rev) = client.post_to_database("/baseball", &source_content)
+    let (hank_aaron_id, hank_aaron_rev) = client.post_database("/baseball", &source_content)
                                                 .run()
                                                 .unwrap();
     let expected = couchdb::ChangesBuilder::new(2)
@@ -182,14 +182,14 @@ fn get_changes_ok_longpoll() {
                              .insert("name", "Babe Ruth")
                              .insert("career_hr", 714)
                              .unwrap();
-    let (babe_ruth_id, babe_ruth_rev) = client.post_to_database("/baseball", &source_content)
+    let (babe_ruth_id, babe_ruth_rev) = client.post_database("/baseball", &source_content)
                                               .run()
                                               .unwrap();
     let source_content = serde_json::builder::ObjectBuilder::new()
                              .insert("name", "Hank Aaron")
                              .insert("career_hr", 755)
                              .unwrap();
-    let (hank_aaron_id, hank_aaron_rev) = client.post_to_database("/baseball", &source_content)
+    let (hank_aaron_id, hank_aaron_rev) = client.post_database("/baseball", &source_content)
                                                 .run()
                                                 .unwrap();
     let expected = couchdb::ChangesBuilder::new(2)
@@ -208,14 +208,14 @@ fn get_changes_ok_continuous() {
                              .insert("name", "Babe Ruth")
                              .insert("career_hr", 714)
                              .unwrap();
-    let (babe_ruth_id, babe_ruth_rev) = client.post_to_database("/baseball", &source_content)
+    let (babe_ruth_id, babe_ruth_rev) = client.post_database("/baseball", &source_content)
                                               .run()
                                               .unwrap();
     let source_content = serde_json::builder::ObjectBuilder::new()
                              .insert("name", "Hank Aaron")
                              .insert("career_hr", 755)
                              .unwrap();
-    let (hank_aaron_id, hank_aaron_rev) = client.post_to_database("/baseball", &source_content)
+    let (hank_aaron_id, hank_aaron_rev) = client.post_database("/baseball", &source_content)
                                                 .run()
                                                 .unwrap();
     let change_results = std::sync::Mutex::new(Vec::new());
@@ -245,7 +245,7 @@ fn head_document_ok_without_revision() {
                              .insert("name", "Babe Ruth")
                              .insert("career_hr", 714)
                              .unwrap();
-    let (doc_id, _rev) = client.post_to_database("/baseball", &source_content).run().unwrap();
+    let (doc_id, _rev) = client.post_database("/baseball", &source_content).run().unwrap();
     let got = client.head_document(("/baseball", doc_id)).run().unwrap();
     assert!(got.is_some());
 }
@@ -258,7 +258,7 @@ fn head_document_ok_fresh_revision() {
                              .insert("name", "Babe Ruth")
                              .insert("career_hr", 714)
                              .unwrap();
-    let (doc_id, rev) = client.post_to_database("/baseball", &source_content).run().unwrap();
+    let (doc_id, rev) = client.post_database("/baseball", &source_content).run().unwrap();
     let got = client.head_document(("/baseball", doc_id)).if_none_match(&rev).run().unwrap();
     assert!(got.is_none());
 }
@@ -271,7 +271,7 @@ fn head_document_ok_stale_revision() {
                              .insert("name", "Babe Ruth")
                              .insert("career_hr", 714)
                              .unwrap();
-    let (doc_id, rev1) = client.post_to_database("/baseball", &source_content).run().unwrap();
+    let (doc_id, rev1) = client.post_database("/baseball", &source_content).run().unwrap();
     let _rev2 = client.put_document(("/baseball", doc_id.clone()), &source_content)
                       .if_match(&rev1)
                       .run()
@@ -296,7 +296,7 @@ fn get_document_ok_without_revision() {
                                .insert("name", "Babe Ruth")
                                .insert("career_hr", 714)
                                .unwrap();
-    let (doc_id, rev) = client.post_to_database("/baseball", &expected_content).run().unwrap();
+    let (doc_id, rev) = client.post_database("/baseball", &expected_content).run().unwrap();
     let got = client.get_document(("/baseball", doc_id.clone()))
                     .run()
                     .unwrap()
@@ -314,7 +314,7 @@ fn get_document_ok_if_none_match_fresh() {
                              .insert("name", "Babe Ruth")
                              .insert("career_hr", 714)
                              .unwrap();
-    let (doc_id, rev) = client.post_to_database("/baseball", &source_content).run().unwrap();
+    let (doc_id, rev) = client.post_database("/baseball", &source_content).run().unwrap();
     let got = client.get_document(("/baseball", doc_id.clone()))
                     .if_none_match(&rev)
                     .run()
@@ -330,7 +330,7 @@ fn get_document_ok_if_none_match_stale() {
                                .insert("name", "Babe Ruth")
                                .insert("career_hr", 714)
                                .unwrap();
-    let (doc_id, rev1) = client.post_to_database("/baseball", &expected_content).run().unwrap();
+    let (doc_id, rev1) = client.post_database("/baseball", &expected_content).run().unwrap();
     let rev2 = client.put_document(("/baseball", doc_id.clone()), &expected_content)
                      .if_match(&rev1)
                      .run()
@@ -353,7 +353,7 @@ fn get_document_ok_by_revision() {
                                .insert("name", "Babe Ruth")
                                .insert("career_hr", 714)
                                .unwrap();
-    let (doc_id, rev1) = client.post_to_database("/baseball", &expected_content).run().unwrap();
+    let (doc_id, rev1) = client.post_database("/baseball", &expected_content).run().unwrap();
     let fresh_content = serde_json::builder::ObjectBuilder::new()
                             .insert("name", "Babe Ruth")
                             .insert("career_hr", 714)
@@ -381,7 +381,7 @@ fn get_document_ok_deleted() {
                              .insert("name", "Babe Ruth")
                              .insert("career_hr", 714)
                              .unwrap();
-    let (doc_id, rev1) = client.post_to_database("/baseball", &source_content).run().unwrap();
+    let (doc_id, rev1) = client.post_database("/baseball", &source_content).run().unwrap();
     let rev2 = client.delete_document(("/baseball", doc_id.clone()), &rev1).run().unwrap();
     let expected_content = serde_json::builder::ObjectBuilder::new().unwrap();
     let got = client.get_document(("/baseball", doc_id.clone()))
@@ -429,7 +429,7 @@ fn put_document_ok_update_document() {
                              .insert("name", "Babe Ruth")
                              .insert("career_hr", 714)
                              .unwrap();
-    let (doc_id, rev1) = client.post_to_database("/baseball", &source_content).run().unwrap();
+    let (doc_id, rev1) = client.post_database("/baseball", &source_content).run().unwrap();
     let expected_content = serde_json::builder::ObjectBuilder::new()
                                .insert("name", "Babe Ruth")
                                .insert("career_hr", 714)
@@ -456,7 +456,7 @@ fn put_document_nok_stale_revision() {
                              .insert("name", "Babe Ruth")
                              .insert("career_hr", 714)
                              .unwrap();
-    let (doc_id, rev1) = client.post_to_database("/baseball", &source_content).run().unwrap();
+    let (doc_id, rev1) = client.post_database("/baseball", &source_content).run().unwrap();
     let source_content = serde_json::builder::ObjectBuilder::new()
                              .insert("name", "Babe Ruth")
                              .insert("career_hr", 714)
@@ -491,7 +491,7 @@ fn delete_document_ok() {
                              .insert("name", "Babe Ruth")
                              .insert("career_hr", 714)
                              .unwrap();
-    let (doc_id, rev1) = client.post_to_database("/baseball", &source_content).run().unwrap();
+    let (doc_id, rev1) = client.post_database("/baseball", &source_content).run().unwrap();
     let rev2 = client.delete_document(("/baseball", doc_id.clone()), &rev1).run().unwrap();
     assert_eq!(rev1.update_number() + 1, rev2.update_number());
     let got = client.head_document(("/baseball", doc_id)).run();
@@ -506,7 +506,7 @@ fn delete_document_nok_stale_revision() {
                              .insert("name", "Babe Ruth")
                              .insert("career_hr", 714)
                              .unwrap();
-    let (doc_id, rev1) = client.post_to_database("/baseball", &source_content).run().unwrap();
+    let (doc_id, rev1) = client.post_database("/baseball", &source_content).run().unwrap();
     let _rev2 = client.put_document(("/baseball", doc_id.clone()), &source_content)
                       .if_match(&rev1)
                       .run()
@@ -546,12 +546,12 @@ fn get_view_nonempty_result() {
                              .insert("name", "Babe Ruth")
                              .insert("career_hr", 714)
                              .unwrap();
-    let (babe_ruth_id, _) = client.post_to_database("/baseball", &source_content).run().unwrap();
+    let (babe_ruth_id, _) = client.post_database("/baseball", &source_content).run().unwrap();
     let source_content = serde_json::builder::ObjectBuilder::new()
                              .insert("name", "Hank Aaron")
                              .insert("career_hr", 755)
                              .unwrap();
-    let (hank_aaron_id, _) = client.post_to_database("/baseball", &source_content).run().unwrap();
+    let (hank_aaron_id, _) = client.post_database("/baseball", &source_content).run().unwrap();
     let design = couchdb::DesignBuilder::new()
                      .build_view("by_career_hr",
                                  "function(doc) { emit(doc.name, doc.career_hr); }",
@@ -586,12 +586,12 @@ fn get_view_with_endkey() {
                              .insert("name", "Babe Ruth")
                              .insert("career_hr", 714)
                              .unwrap();
-    let (babe_ruth_id, _) = client.post_to_database("/baseball", &source_content).run().unwrap();
+    let (babe_ruth_id, _) = client.post_database("/baseball", &source_content).run().unwrap();
     let source_content = serde_json::builder::ObjectBuilder::new()
                              .insert("name", "Hank Aaron")
                              .insert("career_hr", 755)
                              .unwrap();
-    let (_, _) = client.post_to_database("/baseball", &source_content).run().unwrap();
+    let (_, _) = client.post_database("/baseball", &source_content).run().unwrap();
     let design = couchdb::DesignBuilder::new()
                      .build_view("by_career_hr",
                                  "function(doc) { emit(doc.name, doc.career_hr); }",
@@ -621,12 +621,12 @@ fn get_view_with_startkey() {
                              .insert("name", "Babe Ruth")
                              .insert("career_hr", 714)
                              .unwrap();
-    let (_, _) = client.post_to_database("/baseball", &source_content).run().unwrap();
+    let (_, _) = client.post_database("/baseball", &source_content).run().unwrap();
     let source_content = serde_json::builder::ObjectBuilder::new()
                              .insert("name", "Hank Aaron")
                              .insert("career_hr", 755)
                              .unwrap();
-    let (hank_aaron_id, _) = client.post_to_database("/baseball", &source_content).run().unwrap();
+    let (hank_aaron_id, _) = client.post_database("/baseball", &source_content).run().unwrap();
     let design = couchdb::DesignBuilder::new()
                      .build_view("by_career_hr",
                                  "function(doc) { emit(doc.name, doc.career_hr); }",
@@ -656,12 +656,12 @@ fn get_view_reduced() {
                              .insert("name", "Babe Ruth")
                              .insert("career_hr", 714)
                              .unwrap();
-    client.post_to_database("/baseball", &source_content).run().unwrap();
+    client.post_database("/baseball", &source_content).run().unwrap();
     let source_content = serde_json::builder::ObjectBuilder::new()
                              .insert("name", "Hank Aaron")
                              .insert("career_hr", 755)
                              .unwrap();
-    client.post_to_database("/baseball", &source_content).run().unwrap();
+    client.post_database("/baseball", &source_content).run().unwrap();
     let design = couchdb::DesignBuilder::new()
                      .build_view("by_career_hr",
                                  "function(doc) { emit(doc.name, doc.career_hr); }",

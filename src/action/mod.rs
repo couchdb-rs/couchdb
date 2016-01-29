@@ -2,7 +2,7 @@
 //!
 //! Applications should construct actions (e.g., `PutDatabase`, `GetDocument`,
 //! etc.) by calling the appropriate `Client` method. For example, the method
-//! `Client::post_to_database` constructs a `PostToDatabase` action.
+//! `Client::post_database` constructs a `PostDatabase` action.
 
 macro_rules! impl_action_public_methods {
     ($action_output:ty) => {
@@ -31,7 +31,7 @@ mod get_document;
 mod get_view;
 mod head_database;
 mod head_document;
-mod post_to_database;
+mod post_database;
 mod put_database;
 mod put_document;
 
@@ -44,7 +44,7 @@ pub use self::get_document::GetDocument;
 pub use self::get_view::GetView;
 pub use self::head_database::HeadDatabase;
 pub use self::head_document::HeadDocument;
-pub use self::post_to_database::PostToDatabase;
+pub use self::post_database::{PostDatabase, PostToDatabase};
 pub use self::put_database::PutDatabase;
 pub use self::put_document::PutDocument;
 

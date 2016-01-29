@@ -47,5 +47,5 @@ pub use self::view_function::{ViewFunction, ViewFunctionBuilder, ViewFunctionMap
 pub use self::view_name::ViewName;
 pub use self::view_result::ViewResult;
 pub use self::view_row::ViewRow;
-pub use self::write_document_response::{DeleteDocumentResponse, PostToDatabaseResponse,
+pub use self::write_document_response::{DeleteDocumentResponse, PostDatabaseResponse,
                                         PutDocumentResponse};
