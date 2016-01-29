@@ -13,13 +13,13 @@ use dbtype::ChangeLine;
 
 /// Handler that receives a single change result when using the action's
 /// continuous feed.
-pub trait GetChangesEvent {
+pub trait ChangesEvent {
 
     /// Method that's called exactly once for each change result.
     fn change_event(&self, ChangeResult);
 }
 
-impl<T> GetChangesEvent for T where T: Fn(ChangeResult)
+impl<T> ChangesEvent for T where T: Fn(ChangeResult)
 {
     fn change_event(&self, result: ChangeResult) {
         self(result);
@@ -29,7 +29,7 @@ impl<T> GetChangesEvent for T where T: Fn(ChangeResult)
 enum Feed<'a> {
     Normal,
     Longpoll,
-    Continuous(Box<GetChangesEvent + 'a>),
+    Continuous(Box<ChangesEvent + 'a>),
 }
 
 impl<'a> std::fmt::Display for Feed<'a> {
@@ -137,7 +137,7 @@ impl<'a, P: IntoDatabasePath> GetChanges<'a, P> {
     /// the change results are instead returned via the `handler` argument,
     /// which is called exactly once for each change result.
     ///
-    pub fn continuous<H: 'a + GetChangesEvent>(mut self, handler: H) -> Self {
+    pub fn continuous<H: 'a + ChangesEvent>(mut self, handler: H) -> Self {
         self.query.feed = Some(Feed::Continuous(Box::new(handler)));
         self
     }
