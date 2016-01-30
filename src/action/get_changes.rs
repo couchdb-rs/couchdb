@@ -45,6 +45,7 @@ impl<'a> std::fmt::Display for Feed<'a> {
 enum QueryIterator<'a> {
     Feed(&'a QueryParams<'a>),
     Timeout(&'a QueryParams<'a>),
+    Since(&'a QueryParams<'a>),
     Done,
 }
 
@@ -61,9 +62,15 @@ impl<'a> Iterator for QueryIterator<'a> {
                     }
                 }
                 &mut QueryIterator::Timeout(params) => {
-                    *self = QueryIterator::Done;
+                    *self = QueryIterator::Since(params);
                     if let Some(ref timeout) = params.timeout {
                         return Some(("timeout".to_string(), timeout.to_string()));
+                    }
+                }
+                &mut QueryIterator::Since(params) => {
+                    *self = QueryIterator::Done;
+                    if let Some(ref seq) = params.since {
+                        return Some(("since".to_string(), seq.to_string()));
                     }
                 }
                 &mut QueryIterator::Done => {
@@ -74,15 +81,53 @@ impl<'a> Iterator for QueryIterator<'a> {
     }
 }
 
+/// Type for the `since` query parameter when getting database changes.
+///
+/// # Examples
+///
+/// Applications may construct a `ChangesSince` directly from a number, or
+/// convert a `ChangesSince` to a string.
+///
+/// ```
+/// use couchdb::action::ChangesSince;
+/// let x: ChangesSince = 42.into();
+/// assert_eq!("42", x.to_string());
+/// ```
+///
+#[derive(Debug, Eq, PartialEq)]
+pub enum ChangesSince {
+    /// A literal sequence number.
+    SequenceNumber(u64),
+
+    /// The `now` value.
+    Now,
+}
+
+impl std::fmt::Display for ChangesSince {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> Result<(), std::fmt::Error> {
+        match self {
+            &ChangesSince::SequenceNumber(x) => x.fmt(f),
+            &ChangesSince::Now => write!(f, "now"),
+        }
+    }
+}
+
+impl From<u64> for ChangesSince {
+    fn from(seq: u64) -> Self {
+        ChangesSince::SequenceNumber(seq)
+    }
+}
+
 #[derive(Default)]
 struct QueryParams<'a> {
     feed: Option<Feed<'a>>,
     timeout: Option<u64>,
+    since: Option<ChangesSince>,
 }
 
 impl<'a> QueryParams<'a> {
     fn is_default(&self) -> bool {
-        self.feed.is_none() && self.timeout.is_none()
+        self.feed.is_none() && self.timeout.is_none() && self.since.is_none()
     }
 
     fn iter(&self) -> QueryIterator {
@@ -149,6 +194,16 @@ impl<'a, P: IntoDatabasePath> GetChanges<'a, P> {
         self
     }
 
+    /// Sets the `since` query parameter.
+    ///
+    /// The `since` query parameter causes the action to return change results
+    /// starting after the given sequence number.
+    ///
+    pub fn since<S: Into<ChangesSince>>(mut self, seq: S) -> Self {
+        self.query.since = Some(seq.into());
+        self
+    }
+
     impl_action_public_methods!(Changes);
 }
 
@@ -208,14 +263,46 @@ mod tests {
     use DatabasePath;
     use action::{Action, JsonResponse};
     use client::ClientState;
-    use super::{Feed, GetChanges, QueryParams};
+    use super::{ChangesSince, Feed, GetChanges, QueryParams};
 
     #[test]
     fn feed_display() {
-        assert_eq!(format!("{}", Feed::Normal), "normal");
-        assert_eq!(format!("{}", Feed::Longpoll), "longpoll");
-        assert_eq!(format!("{}", Feed::Continuous(Box::new(|_| {}))),
-                   "continuous");
+        assert_eq!("normal", format!("{}", Feed::Normal));
+        assert_eq!("longpoll", format!("{}", Feed::Longpoll));
+        assert_eq!("continuous",
+                   format!("{}", Feed::Continuous(Box::new(|_| {}))));
+    }
+
+    #[test]
+    fn changes_since_display() {
+        assert_eq!("42", format!("{}", ChangesSince::SequenceNumber(42)));
+        assert_eq!("now", format!("{}", ChangesSince::Now));
+    }
+
+    #[test]
+    fn changes_since_eq() {
+        let a = ChangesSince::SequenceNumber(42);
+        let b = ChangesSince::SequenceNumber(42);
+        assert!(a == b);
+
+        let a = ChangesSince::SequenceNumber(17);
+        let b = ChangesSince::SequenceNumber(42);
+        assert!(a != b);
+
+        let a = ChangesSince::Now;
+        let b = ChangesSince::SequenceNumber(42);
+        assert!(a != b);
+
+        let a = ChangesSince::Now;
+        let b = ChangesSince::Now;
+        assert!(a == b);
+    }
+
+    #[test]
+    fn changes_since_from_number() {
+        let expected = ChangesSince::SequenceNumber(42);
+        let got = ChangesSince::from(42);
+        assert_eq!(expected, got);
     }
 
     #[test]
@@ -223,9 +310,11 @@ mod tests {
         let query = QueryParams {
             feed: Some(Feed::Longpoll),
             timeout: Some(42),
+            since: Some(17.into()),
         };
         let expected = vec![("feed".to_string(), "longpoll".to_string()),
-                            ("timeout".to_string(), "42".to_string())];
+                            ("timeout".to_string(), "42".to_string()),
+                            ("since".to_string(), "17".to_string())];
         let got = query.iter().collect::<Vec<_>>();
         assert_eq!(expected, got);
     }
@@ -269,6 +358,16 @@ mod tests {
         let (request, _) = action.make_request().unwrap();
         expect_request_method!(request, hyper::Get);
         expect_request_uri!(request, "http://example.com:1234/db/_changes?timeout=12034");
+        expect_request_accept_application_json!(request);
+    }
+
+    #[test]
+    fn make_request_since() {
+        let client_state = ClientState::new("http://example.com:1234/").unwrap();
+        let action = GetChanges::new(&client_state, "/db").since(42);
+        let (request, _) = action.make_request().unwrap();
+        expect_request_method!(request, hyper::Get);
+        expect_request_uri!(request, "http://example.com:1234/db/_changes?since=42");
         expect_request_accept_application_json!(request);
     }
 

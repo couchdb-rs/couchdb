@@ -175,6 +175,31 @@ fn get_changes_ok_with_changes() {
 }
 
 #[test]
+fn get_changes_ok_since() {
+    let (_server, client) = make_server_and_client();
+    client.put_database("/baseball").run().unwrap();
+    let source_content = serde_json::builder::ObjectBuilder::new()
+                             .insert("name", "Babe Ruth")
+                             .insert("career_hr", 714)
+                             .unwrap();
+    client.post_database("/baseball", &source_content)
+          .run()
+          .unwrap();
+    let source_content = serde_json::builder::ObjectBuilder::new()
+                             .insert("name", "Hank Aaron")
+                             .insert("career_hr", 755)
+                             .unwrap();
+    let (hank_aaron_id, hank_aaron_rev) = client.post_database("/baseball", &source_content)
+                                                .run()
+                                                .unwrap();
+    let expected = couchdb::ChangesBuilder::new(2)
+                       .build_result(2, hank_aaron_id, |x| x.build_change(hank_aaron_rev, |x| x))
+                       .unwrap();
+    let got = client.get_changes("/baseball").since(1).run().unwrap();
+    assert_eq!(expected, got);
+}
+
+#[test]
 fn get_changes_ok_longpoll() {
     let (_server, client) = make_server_and_client();
     client.put_database("/baseball").run().unwrap();
