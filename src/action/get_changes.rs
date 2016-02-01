@@ -42,41 +42,22 @@ impl<'a> std::fmt::Display for Feed<'a> {
     }
 }
 
-enum QueryIterator<'a> {
-    Feed(&'a QueryParams<'a>),
-    Timeout(&'a QueryParams<'a>),
-    Since(&'a QueryParams<'a>),
-    Done,
+#[derive(Debug, Eq, PartialEq)]
+enum Heartbeat {
+    Duration(std::time::Duration),
+    Default,
 }
 
-impl<'a> Iterator for QueryIterator<'a> {
-    type Item = (String, String);
-
-    fn next(&mut self) -> Option<Self::Item> {
-        loop {
-            match self {
-                &mut QueryIterator::Feed(params) => {
-                    *self = QueryIterator::Timeout(params);
-                    if let Some(ref feed) = params.feed {
-                        return Some(("feed".to_string(), feed.to_string()));
-                    }
-                }
-                &mut QueryIterator::Timeout(params) => {
-                    *self = QueryIterator::Since(params);
-                    if let Some(ref timeout) = params.timeout {
-                        return Some(("timeout".to_string(), timeout.to_string()));
-                    }
-                }
-                &mut QueryIterator::Since(params) => {
-                    *self = QueryIterator::Done;
-                    if let Some(ref seq) = params.since {
-                        return Some(("since".to_string(), seq.to_string()));
-                    }
-                }
-                &mut QueryIterator::Done => {
-                    return None;
-                }
+impl std::fmt::Display for Heartbeat {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> Result<(), std::fmt::Error> {
+        match self {
+            &Heartbeat::Duration(duration) => {
+                let sec = duration.as_secs();
+                let nsec = duration.subsec_nanos() as u64;
+                let ms = 1000 * sec + nsec / 1_000_000;
+                ms.fmt(f)
             }
+            &Heartbeat::Default => write!(f, "true"),
         }
     }
 }
@@ -118,16 +99,64 @@ impl From<u64> for ChangesSince {
     }
 }
 
+enum QueryIterator<'a> {
+    Feed(&'a QueryParams<'a>),
+    Heartbeat(&'a QueryParams<'a>),
+    Since(&'a QueryParams<'a>),
+    Timeout(&'a QueryParams<'a>),
+    Done,
+}
+
+impl<'a> Iterator for QueryIterator<'a> {
+    type Item = (String, String);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        loop {
+            match self {
+                &mut QueryIterator::Feed(params) => {
+                    *self = QueryIterator::Heartbeat(params);
+                    if let Some(ref feed) = params.feed {
+                        return Some(("feed".to_string(), feed.to_string()));
+                    }
+                }
+                &mut QueryIterator::Heartbeat(params) => {
+                    *self = QueryIterator::Since(params);
+                    if let Some(ref heartbeat) = params.heartbeat {
+                        return Some(("heartbeat".to_string(), heartbeat.to_string()));
+                    }
+                }
+                &mut QueryIterator::Since(params) => {
+                    *self = QueryIterator::Timeout(params);
+                    if let Some(ref seq) = params.since {
+                        return Some(("since".to_string(), seq.to_string()));
+                    }
+                }
+                &mut QueryIterator::Timeout(params) => {
+                    *self = QueryIterator::Done;
+                    if let Some(ref timeout) = params.timeout {
+                        return Some(("timeout".to_string(), timeout.to_string()));
+                    }
+                }
+                &mut QueryIterator::Done => {
+                    return None;
+                }
+            }
+        }
+    }
+}
+
 #[derive(Default)]
 struct QueryParams<'a> {
     feed: Option<Feed<'a>>,
-    timeout: Option<u64>,
+    heartbeat: Option<Heartbeat>,
     since: Option<ChangesSince>,
+    timeout: Option<u64>,
 }
 
 impl<'a> QueryParams<'a> {
     fn is_default(&self) -> bool {
-        self.feed.is_none() && self.timeout.is_none() && self.since.is_none()
+        self.feed.is_none() && self.heartbeat.is_none() && self.since.is_none() &&
+        self.timeout.is_none()
     }
 
     fn iter(&self) -> QueryIterator {
@@ -187,10 +216,25 @@ impl<'a, P: IntoDatabasePath> GetChanges<'a, P> {
         self
     }
 
-    /// Sets the `timeout` query parameter.
-    pub fn timeout(mut self, timeout: std::time::Duration) -> Self {
-        let milliseconds = 1000 * timeout.as_secs() + timeout.subsec_nanos() as u64 / 1_000_000;
-        self.query.timeout = Some(milliseconds);
+    /// Sets the `heartbeat` query parameter to `true`.
+    ///
+    /// The `heartbeat` query parameter overrides any timeout, causing the feed
+    /// to remain alive indefinitely. A heartbeat is applicable only for
+    /// long-poll and continuous feeds.
+    ///
+    pub fn default_heartbeat(mut self) -> Self {
+        self.query.heartbeat = Some(Heartbeat::Default);
+        self
+    }
+
+    /// Sets the `heartbeat` query parameter to the given time period.
+    ///
+    /// The `heartbeat` query parameter overrides any timeout, causing the feed
+    /// to remain alive indefinitely. A heartbeat is applicable only for
+    /// long-poll and continuous feeds.
+    ///
+    pub fn heartbeat(mut self, heartbeat: std::time::Duration) -> Self {
+        self.query.heartbeat = Some(Heartbeat::Duration(heartbeat));
         self
     }
 
@@ -201,6 +245,13 @@ impl<'a, P: IntoDatabasePath> GetChanges<'a, P> {
     ///
     pub fn since<S: Into<ChangesSince>>(mut self, seq: S) -> Self {
         self.query.since = Some(seq.into());
+        self
+    }
+
+    /// Sets the `timeout` query parameter.
+    pub fn timeout(mut self, timeout: std::time::Duration) -> Self {
+        let milliseconds = 1000 * timeout.as_secs() + timeout.subsec_nanos() as u64 / 1_000_000;
+        self.query.timeout = Some(milliseconds);
         self
     }
 
@@ -257,13 +308,14 @@ mod tests {
 
     use hyper;
     use serde_json;
+    use std;
 
     use ChangeResultBuilder;
     use ChangesBuilder;
     use DatabasePath;
     use action::{Action, JsonResponse};
     use client::ClientState;
-    use super::{ChangesSince, Feed, GetChanges, QueryParams};
+    use super::{ChangesSince, Feed, GetChanges, Heartbeat, QueryParams};
 
     #[test]
     fn feed_display() {
@@ -271,6 +323,16 @@ mod tests {
         assert_eq!("longpoll", format!("{}", Feed::Longpoll));
         assert_eq!("continuous",
                    format!("{}", Feed::Continuous(Box::new(|_| {}))));
+    }
+
+    #[test]
+    fn heartbeat_display() {
+        assert_eq!("true", format!("{}", Heartbeat::Default));
+        assert_eq!("0",
+                   format!("{}", Heartbeat::Duration(std::time::Duration::new(0, 0))));
+        assert_eq!("12345",
+                   format!("{}",
+                           Heartbeat::Duration(std::time::Duration::from_millis(12345))));
     }
 
     #[test]
@@ -307,15 +369,20 @@ mod tests {
 
     #[test]
     fn query_iterator() {
+        use std::collections::BTreeMap;
         let query = QueryParams {
             feed: Some(Feed::Longpoll),
-            timeout: Some(42),
+            heartbeat: Some(Heartbeat::Default),
             since: Some(17.into()),
+            timeout: Some(42),
         };
         let expected = vec![("feed".to_string(), "longpoll".to_string()),
-                            ("timeout".to_string(), "42".to_string()),
-                            ("since".to_string(), "17".to_string())];
-        let got = query.iter().collect::<Vec<_>>();
+                            ("since".to_string(), "17".to_string()),
+                            ("heartbeat".to_string(), "true".to_string()),
+                            ("timeout".to_string(), "42".to_string())]
+                           .into_iter()
+                           .collect::<BTreeMap<_, _>>();
+        let got = query.iter().collect();
         assert_eq!(expected, got);
     }
 
@@ -347,6 +414,29 @@ mod tests {
         expect_request_method!(request, hyper::Get);
         expect_request_uri!(request,
                             "http://example.com:1234/db/_changes?feed=continuous");
+        expect_request_accept_application_json!(request);
+    }
+
+    #[test]
+    fn make_request_heartbeat_default() {
+        let client_state = ClientState::new("http://example.com:1234/").unwrap();
+        let action = GetChanges::new(&client_state, "/db").default_heartbeat();
+        let (request, _) = action.make_request().unwrap();
+        expect_request_method!(request, hyper::Get);
+        expect_request_uri!(request,
+                            "http://example.com:1234/db/_changes?heartbeat=true");
+        expect_request_accept_application_json!(request);
+    }
+
+    #[test]
+    fn make_request_heartbeat_duration() {
+        let client_state = ClientState::new("http://example.com:1234/").unwrap();
+        let heartbeat = std::time::Duration::from_millis(12345);
+        let action = GetChanges::new(&client_state, "/db").heartbeat(heartbeat);
+        let (request, _) = action.make_request().unwrap();
+        expect_request_method!(request, hyper::Get);
+        expect_request_uri!(request,
+                            "http://example.com:1234/db/_changes?heartbeat=12345");
         expect_request_accept_application_json!(request);
     }
 
