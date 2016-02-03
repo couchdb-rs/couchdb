@@ -11,6 +11,54 @@ use client::ClientState;
 use action::{self, Action, Request, Response};
 use error::EncodeErrorKind;
 
+struct QueryParams<K>
+    where K: serde::Serialize
+{
+    endkey: Option<K>,
+    reduce: Option<bool>,
+    startkey: Option<K>,
+}
+
+impl<K> Default for QueryParams<K> where K: serde::Serialize
+{
+    fn default() -> Self {
+        QueryParams {
+            endkey: Default::default(),
+            reduce: Default::default(),
+            startkey: Default::default(),
+        }
+    }
+}
+
+impl<K> QueryParams<K> where K: serde::Serialize
+{
+    fn is_default(&self) -> bool {
+        self.endkey.is_none() && self.reduce.is_none() && self.startkey.is_none()
+    }
+
+    fn into_iter(self) -> Result<std::vec::IntoIter<(String, String)>, Error> {
+
+        // It's possible to construct an iterator that doesn't use a vector or
+        // other container, but it requires a lot more code and is less clear.
+
+        let mut v = Vec::new();
+        if let Some(x) = self.endkey {
+            let s = try!(serde_json::to_string(&x)
+                             .map_err(|e| Error::Encode(EncodeErrorKind::Serde { cause: e })));
+            v.push(("endkey".to_string(), s));
+        }
+        if let Some(x) = self.reduce {
+            v.push(("reduce".to_string(), x.to_string()));
+        }
+        if let Some(x) = self.startkey {
+            let s = try!(serde_json::to_string(&x)
+                             .map_err(|e| Error::Encode(EncodeErrorKind::Serde { cause: e })));
+            v.push(("startkey".to_string(), s));
+        }
+        Ok(v.into_iter())
+    }
+}
+
 /// Action to execute a view.
 ///
 /// # Errors
@@ -24,16 +72,12 @@ use error::EncodeErrorKind;
 ///
 pub struct GetView<'a, P, K, V>
     where P: IntoViewPath,
-          K: serde::Deserialize, // serialize needed for endkey and startkey
+          K: serde::Deserialize + serde::Serialize,
           V: serde::Deserialize
 {
     client_state: &'a ClientState,
     path: P,
-
-    reduce: Option<bool>,
-    endkey: Option<K>,
-    startkey: Option<K>,
-
+    query: QueryParams<K>,
     _phantom_key: std::marker::PhantomData<K>,
     _phantom_value: std::marker::PhantomData<V>,
 }
@@ -48,29 +92,27 @@ impl<'a, P, K, V> GetView<'a, P, K, V>
         GetView {
             client_state: client_state,
             path: path,
-            reduce: None,
-            endkey: None,
-            startkey: None,
+            query: Default::default(),
             _phantom_key: std::marker::PhantomData,
             _phantom_value: std::marker::PhantomData,
         }
     }
 
-    /// Sets whether to run the `reduce` view function.
-    pub fn reduce(mut self, v: bool) -> Self {
-        self.reduce = Some(v);
+    /// Sets the minimum key for rows contained within the result.
+    pub fn endkey(mut self, key: K) -> Self {
+        self.query.endkey = Some(key);
         self
     }
 
-    /// Sets the minimum key for rows contained within the result.
-    pub fn endkey(mut self, key: K) -> Self {
-        self.endkey = Some(key);
+    /// Sets whether to run the `reduce` view function.
+    pub fn reduce(mut self, v: bool) -> Self {
+        self.query.reduce = Some(v);
         self
     }
 
     /// Sets the maximum key for rows contained within the result.
     pub fn startkey(mut self, key: K) -> Self {
-        self.startkey = Some(key);
+        self.query.startkey = Some(key);
         self
     }
 
@@ -86,43 +128,13 @@ impl<'a, P, K, V> Action for GetView<'a, P, K, V>
     type State = ();
 
     fn make_request(self) -> Result<(Request, Self::State), Error> {
-
         let uri = {
-
             let mut uri = try!(self.path.into_view_path()).into_uri(self.client_state.uri.clone());
-
-            {
-                let mut query_pairs = Vec::<(&'static str, String)>::new();
-                if self.reduce.is_some() {
-                    match self.reduce.unwrap() {
-                        true => query_pairs.push(("reduce", "true".to_string())),
-                        false => query_pairs.push(("reduce", "false".to_string())),
-                    };
-                }
-                if self.startkey.is_some() {
-                    let x = try!(serde_json::to_string(&self.startkey.unwrap()).or_else(|e| {
-                        Err(Error::Encode(EncodeErrorKind::Serde { cause: e }))
-                    }));
-                    query_pairs.push(("startkey", x));
-                }
-                if self.endkey.is_some() {
-                    let x = try!(serde_json::to_string(&self.endkey.unwrap()).or_else(|e| {
-                        Err(Error::Encode(EncodeErrorKind::Serde { cause: e }))
-                    }));
-                    query_pairs.push(("endkey", x));
-                }
-                if !query_pairs.is_empty() {
-                    uri.set_query_from_pairs(query_pairs.iter()
-                                                        .map(|&(k, ref v)| {
-                                                            let x: (&str, &str) = (k, v);
-                                                            x
-                                                        }));
-                }
+            if !self.query.is_default() {
+                uri.set_query_from_pairs(try!(self.query.into_iter()));
             }
-
             uri
         };
-
         let request = Request::new(hyper::Get, uri).set_accept_application_json();
         Ok((request, ()))
     }
@@ -154,13 +166,32 @@ mod tests {
 
     use hyper;
     use serde_json;
+    use std;
 
     use DocumentId;
     use ViewPath;
     use ViewRow;
     use client::ClientState;
     use action::{Action, JsonResponse};
-    use super::GetView;
+    use super::{GetView, QueryParams};
+
+    #[test]
+    fn query_iterator() {
+        let query = QueryParams {
+            endkey: Some("foo"),
+            reduce: Some(true),
+            startkey: Some("bar"),
+        };
+        let expected = vec![
+            ("endkey".to_string(), "\"foo\"".to_string()),
+            ("reduce".to_string(), "true".to_string()),
+            ("startkey".to_string(), "\"bar\"".to_string()),
+        ]
+                           .into_iter()
+                           .collect::<std::collections::BTreeMap<_, _>>();
+        let got = query.into_iter().unwrap().collect();
+        assert_eq!(expected, got);
+    }
 
     #[test]
     fn make_request_default() {
