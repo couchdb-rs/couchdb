@@ -3,78 +3,10 @@ use std;
 
 use Error;
 
-fn nibble_to_hex(x: u8) -> char {
-    match x {
-        0 => '0',
-        1 => '1',
-        2 => '2',
-        3 => '3',
-        4 => '4',
-        5 => '5',
-        6 => '6',
-        7 => '7',
-        8 => '8',
-        9 => '9',
-        10 => 'a',
-        11 => 'b',
-        12 => 'c',
-        13 => 'd',
-        14 => 'e',
-        15 => 'f',
-        x @ _ => {
-            panic!("Invalid nibble value {}", x);
-        }
-    }
-}
-
 #[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct Md5Hash([u8; 16]);
 
-impl std::fmt::Display for Md5Hash {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-
-        // TODO: Refactor this function to eliminate heap memory allocation.
-
-        let mut o = String::new();
-        o.reserve(32);
-        let Md5Hash(ref hash) = *self;
-        for i in 0..16 {
-            o.push(nibble_to_hex(hash[i] >> 4));
-            o.push(nibble_to_hex(hash[i] & 0xf));
-        }
-        o.fmt(f)
-    }
-}
-
-impl std::str::FromStr for Md5Hash {
-    type Err = Error;
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-
-        if s.len() != 32 {
-            return Err(Error::BadMd5Hash);
-        }
-
-        let mut h = [0 as u8; 32];
-        let mut i = 0;
-        for c in s.chars() {
-            h[i] = try!(c.to_digit(16).ok_or(Error::BadMd5Hash)) as u8;
-            i += 1;
-        }
-
-        let mut o = [0 as u8; 16];
-        for i in 0..16 {
-            o[i] = (h[2 * i] << 4) + h[2 * i + 1];
-        }
-
-        Ok(Md5Hash(o))
-    }
-}
-
-impl From<Md5Hash> for String {
-    fn from(hash: Md5Hash) -> Self {
-        format!("{}", hash)
-    }
-}
+impl_hex16_base_type!(Md5Hash, hash, BadMd5Hash);
 
 /// Revision of a document.
 ///
@@ -184,26 +116,6 @@ mod tests {
 
     use Error;
     use super::{Md5Hash, Revision};
-
-    #[test]
-    fn nibble_to_hex() {
-        assert_eq!('0', super::nibble_to_hex(0));
-        assert_eq!('1', super::nibble_to_hex(1));
-        assert_eq!('2', super::nibble_to_hex(2));
-        assert_eq!('3', super::nibble_to_hex(3));
-        assert_eq!('4', super::nibble_to_hex(4));
-        assert_eq!('5', super::nibble_to_hex(5));
-        assert_eq!('6', super::nibble_to_hex(6));
-        assert_eq!('7', super::nibble_to_hex(7));
-        assert_eq!('8', super::nibble_to_hex(8));
-        assert_eq!('9', super::nibble_to_hex(9));
-        assert_eq!('a', super::nibble_to_hex(10));
-        assert_eq!('b', super::nibble_to_hex(11));
-        assert_eq!('c', super::nibble_to_hex(12));
-        assert_eq!('d', super::nibble_to_hex(13));
-        assert_eq!('e', super::nibble_to_hex(14));
-        assert_eq!('f', super::nibble_to_hex(15));
-    }
 
     #[test]
     fn md5_hash_display() {
@@ -320,7 +232,7 @@ mod tests {
                     Ok(_) => { panic!("Got unexpected OK result"); },
                     Err(e) => match e {
                         Error::BadRevision => (),
-                        _ => { panic!("Got unexpected error result: {}", e); }
+                        _ => { panic!("Got unexpected error variant: {}", e); }
                     }
                 }
             }

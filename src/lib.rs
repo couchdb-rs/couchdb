@@ -85,6 +85,15 @@
 //!  <tbody>
 //!   <tr>
 //!    <td>
+//!     <ul><li><code>/</code></li></ul>
+//!    </td>
+//!    <td>GET</td>
+//!    <td><code>get_root</code></td>
+//!    <td>Get server version and other meta-information.</td>
+//!   </tr>
+//!
+//!   <tr>
+//!    <td>
 //!     <ul><li><code>/_all_dbs</code></li></ul>
 //!    </td>
 //!    <td>GET</td>
@@ -184,6 +193,7 @@ extern crate hyper;
 extern crate regex;
 extern crate serde;
 extern crate serde_json;
+extern crate semver;
 extern crate tempdir;
 extern crate url;
 
@@ -198,8 +208,8 @@ mod path;
 pub use client::{Client, IntoUrl};
 pub use dbtype::{Database, ChangeItem, ChangeItemBuilder, ChangeResult, ChangeResultBuilder,
                  Changes, ChangesBuilder, DatabaseName, Design, DesignBuilder, DesignDocumentName,
-                 Document, DocumentId, DocumentName, ErrorResponse, ViewName, Revision,
-                 ViewFunction, ViewFunctionBuilder, ViewFunctionMap, ViewResult, ViewRow};
+                 Document, DocumentId, DocumentName, ErrorResponse, Revision, Root, Uuid, Vendor,
+                 ViewFunction, ViewFunctionBuilder, ViewFunctionMap, ViewName, ViewResult, ViewRow};
 pub use path::{IntoDatabasePath, IntoDesignDocumentPath, IntoDocumentPath, IntoViewPath,
                DatabasePath, DesignDocumentPath, DocumentPath, ViewPath};
 pub use error::Error;

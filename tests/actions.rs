@@ -28,6 +28,12 @@ fn make_server_and_client() -> (couchdb::testing::FakeServer, couchdb::Client) {
 }
 
 #[test]
+fn get_root_ok() {
+    let (_server, client) = make_server_and_client();
+    client.get_root().run().unwrap();
+}
+
+#[test]
 fn get_all_databases_ok() {
     let (_server, client) = make_server_and_client();
     let expected = vec!["_replicator", "_users"]

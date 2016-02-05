@@ -56,6 +56,11 @@ impl<'a> Client {
         &self.state.uri
     }
 
+    /// Builds an action to GET the server's root resource (i.e., `/`).
+    pub fn get_root(&'a self) -> action::GetRoot<'a> {
+        action::GetRoot::new(&self.state)
+    }
+
     /// Builds an action to GET all database names.
     pub fn get_all_databases(&'a self) -> action::GetAllDatabases<'a> {
         action::GetAllDatabases::new(&self.state)

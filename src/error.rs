@@ -37,6 +37,9 @@ pub enum Error {
     /// The revision is in an invalid format.
     BadRevision,
 
+    /// The UUID is in an invalid format.
+    BadUuid,
+
     /// The view path is in an invalid format.
     BadViewPath(BadPathKind),
 
@@ -136,6 +139,7 @@ impl std::error::Error for Error {
             BadMd5Hash => "The MD5 hash is in an invalid format",
             BadRequest(..) => "The client request is invalid",
             BadRevision => "The revision is in an invalid format",
+            BadUuid => "The UUID is in an invalid format",
             BadViewPath(..) => "The view path is in an invalid format",
             DatabaseExists(..) => "The database already exists",
             Decode(..) => "The client failed to decode a JSON response from the CouchDB server",
@@ -170,6 +174,7 @@ impl std::error::Error for Error {
             BadMd5Hash => None,
             BadRequest(..) => None,
             BadRevision => None,
+            BadUuid => None,
             BadViewPath(ref kind) => kind.cause(),
             DatabaseExists(..) => None,
             Decode(ref kind) => kind.cause(),
@@ -205,6 +210,7 @@ impl std::fmt::Display for Error {
             BadRequest(None) => write!(f, "{}", d),
             BadRequest(Some(ref response)) => write!(f, "{}: {}", d, response),
             BadRevision => write!(f, "{}", d),
+            BadUuid => write!(f, "{}", d),
             BadViewPath(ref kind) => write!(f, "{}: {}", d, kind),
             DatabaseExists(None) => write!(f, "{}", d),
             DatabaseExists(Some(ref response)) => write!(f, "{}: {}", d, response),

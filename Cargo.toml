@@ -11,6 +11,7 @@ keywords = ["couch", "couchdb", "database", "nosql"]
 [dependencies]
 hyper = "0.7"
 regex = "0.1"
+semver = "0.2.2"
 serde = "0.6"
 serde_json = "0.6"
 tempdir = "0.3"
