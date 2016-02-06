@@ -21,6 +21,8 @@
   [#29][issue_29]).
 * New field `deleted` in the `Document` type for signifying whether the
   document has been deleted (issue [#30][issue_30]).
+* New feature table in the `action` module showing, in detail, this
+  crate's coverage of the CouchDB API (issue [#39][issue_39]).
 
 ## v0.5.0 (2016-01-17)
 

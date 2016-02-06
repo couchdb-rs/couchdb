@@ -1,8 +1,804 @@
-//! Actions and their related types.
+//! The `action` module defines action types.
 //!
-//! Applications should construct actions (e.g., `PutDatabase`, `GetDocument`,
-//! etc.) by calling the appropriate `Client` method. For example, the method
-//! `Client::post_database` constructs a `PostDatabase` action.
+//! An action is an HTTP method paired with a CouchDB server resource—e.g., `GET
+//! /db` and `PUT /db/doc`.
+//!
+//! Each action has a corresponding type—e.g.,
+//! [`GetDatabase`](struct.GetDatabase.html) and
+//! [`PutDocument`](struct.PutDocument.html)—used for performing that action.
+//!
+//! Applications construct actions by calling the appropriate `Client`
+//! method—e.g., [`get_database`](../struct.Client.html#method.get_database) and
+//! [`put_document`](../struct.Client.html#method.put_document).
+//!
+//! ## CouchDB API coverage
+//!
+//! This table shows in detail what parts of the CouchDB API this crate
+//! supports.
+//!
+//! <table>
+//!
+//!  <thead>
+//!   <tr>
+//!    <th>URI path</th>
+//!    <th>Method</th>
+//!    <th>Action type</th>
+//!    <th>Header or query parameter</th>
+//!    <th align="center">Supported?</th>
+//!   </tr>
+//!  </thead>
+//!
+//!  <tbody>
+//!   <tr>
+//!    <td><code>/</code></td>
+//!    <td>GET</td>
+//!    <td><a href="struct.GetRoot.html"><code>GetRoot</code></a></td>
+//!    <td/>
+//!    <td align="center" style="color:green;">✓</td>
+//!   </tr>
+//!
+//!   <tr>
+//!    <td><code>/_active_tasks</td>
+//!    <td>GET</td>
+//!    <td/>
+//!    <td/>
+//!    <td align="center" style="color:darkred;">❌</td>
+//!   </tr>
+//!
+//!   <tr>
+//!    <td><code>/_all_dbs</code></td>
+//!    <td>GET</td>
+//!    <td><a href="struct.GetAllDatabases.html"><code>GetAllDatabases</code></a></td>
+//!    <td/>
+//!    <td align="center" style="color:green;">✓</td>
+//!   </tr>
+//!
+//!   <tr>
+//!    <td><code>/_db_updates</td>
+//!    <td>GET</td>
+//!    <td/>
+//!    <td/>
+//!    <td align="center" style="color:darkred;">❌</td>
+//!   </tr>
+//!
+//!   <tr>
+//!    <td><code>/_log</td>
+//!    <td>GET</td>
+//!    <td/>
+//!    <td/>
+//!    <td align="center" style="color:darkred;">❌</td>
+//!   </tr>
+//!
+//!   <tr>
+//!    <td><code>/_replicate</td>
+//!    <td>POST</td>
+//!    <td/>
+//!    <td/>
+//!    <td align="center" style="color:darkred;">❌</td>
+//!   </tr>
+//!
+//!   <tr>
+//!    <td><code>/_restart</td>
+//!    <td>POST</td>
+//!    <td/>
+//!    <td/>
+//!    <td align="center" style="color:darkred;">❌</td>
+//!   </tr>
+//!
+//!   <tr>
+//!    <td><code>/_stats</td>
+//!    <td>GET</td>
+//!    <td/>
+//!    <td/>
+//!    <td align="center" style="color:darkred;">❌</td>
+//!   </tr>
+//!
+//!   <tr>
+//!    <td><code>/_utils/</td>
+//!    <td>GET</td>
+//!    <td/>
+//!    <td/>
+//!    <td align="center" style="color:darkred;">❌</td>
+//!   </tr>
+//!
+//!   <tr>
+//!    <td><code>/_uuids/</td>
+//!    <td>GET</td>
+//!    <td/>
+//!    <td/>
+//!    <td align="center" style="color:darkred;">❌</td>
+//!   </tr>
+//!
+//!   <tr>
+//!    <td><code>/favicon.ico/</td>
+//!    <td>GET</td>
+//!    <td/>
+//!    <td/>
+//!    <td align="center" style="color:darkred;">❌</td>
+//!   </tr>
+//!
+//!   <tr>
+//!    <td colspan="4">Basic Authentication</td>
+//!    <td align="center" style="color:darkred;">❌</td>
+//!   </tr>
+//!
+//!   <tr>
+//!    <td rowspan="3"><code>/_session</code></td>
+//!    <td>POST</td>
+//!    <td/>
+//!    <td/>
+//!    <td align="center" style="color:darkred;">❌</td>
+//!   </tr>
+//!
+//!   <tr>
+//!    <td>GET</td>
+//!    <td/>
+//!    <td/>
+//!    <td align="center" style="color:darkred;">❌</td>
+//!   </tr>
+//!
+//!   <tr>
+//!    <td>DELETE</td>
+//!    <td/>
+//!    <td/>
+//!    <td align="center" style="color:darkred;">❌</td>
+//!   </tr>
+//!
+//!   <tr>
+//!    <td><code>/_config</code></td>
+//!    <td>GET</td>
+//!    <td/>
+//!    <td/>
+//!    <td align="center" style="color:darkred;">❌</td>
+//!   </tr>
+//!
+//!   <tr>
+//!    <td><code>/_config/section</code></td>
+//!    <td>GET</td>
+//!    <td/>
+//!    <td/>
+//!    <td align="center" style="color:darkred;">❌</td>
+//!   </tr>
+//!
+//!   <tr>
+//!    <td rowspan="3"><code>/_config/section/key</code></td>
+//!    <td>GET</td>
+//!    <td/>
+//!    <td/>
+//!    <td align="center" style="color:darkred;">❌</td>
+//!   </tr>
+//!
+//!   <tr>
+//!    <td>PUT</td>
+//!    <td/>
+//!    <td/>
+//!    <td align="center" style="color:darkred;">❌</td>
+//!   </tr>
+//!
+//!   <tr>
+//!    <td>DELETE</td>
+//!    <td/>
+//!    <td/>
+//!    <td align="center" style="color:darkred;">❌</td>
+//!   </tr>
+//!
+//!   <tr>
+//!    <td rowspan="7"><code>/db</code></td>
+//!    <td>HEAD</td>
+//!    <td><a href="struct.HeadDatabase.html"><code>HeadDatabase</code></a></td>
+//!    <td/>
+//!    <td align="center" style="color:green;">✓</td>
+//!   </tr>
+//!
+//!   <tr>
+//!    <td>GET</td>
+//!    <td><a href="struct.GetDatabase.html"><code>GetDatabase</code></a></td>
+//!    <td/>
+//!    <td align="center" style="color:green;">✓</td>
+//!   </tr>
+//!
+//!   <tr>
+//!    <td>PUT</td>
+//!    <td><a href="struct.PutDatabase.html"><code>PutDatabase</code></a></td>
+//!    <td/>
+//!    <td align="center" style="color:green;">✓</td>
+//!   </tr>
+//!
+//!   <tr>
+//!    <td>DELETE</td>
+//!    <td><a href="struct.DeleteDatabase.html"><code>DeleteDatabase</code></a></td>
+//!    <td/>
+//!    <td align="center" style="color:green;">✓</td>
+//!   </tr>
+//!
+//!   <tr>
+//!    <td rowspan="3">POST</td>
+//!    <td rowspan="3"><a href="struct.PostDatabase.html"><code>PostDatabase</code></a></td>
+//!    <td/>
+//!    <td align="center" style="color:green;">✓</td>
+//!   </tr>
+//!
+//!   <tr>
+//!    <td><code>X-Couch-Full-Commit</code></td>
+//!    <td align="center" style="color:darkred;">❌</td>
+//!   </tr>
+//!
+//!   <tr>
+//!    <td><code>?batch</code></td>
+//!    <td align="center" style="color:darkred;">❌</td>
+//!   </tr>
+//!
+//!   <tr>
+//!    <td rowspan="2"><code>/db/_all_docs</code></td>
+//!    <td>GET</td>
+//!    <td/>
+//!    <td/>
+//!    <td align="center" style="color:darkred;">❌</td>
+//!   </tr>
+//!
+//!   <tr>
+//!    <td>POST</td>
+//!    <td/>
+//!    <td/>
+//!    <td align="center" style="color:darkred;">❌</td>
+//!   </tr>
+//!
+//!   <tr>
+//!    <td><code>/db/_bulk_docs</code></td>
+//!    <td>POST</td>
+//!    <td/>
+//!    <td/>
+//!    <td align="center" style="color:darkred;">❌</td>
+//!   </tr>
+//!
+//!   <tr>
+//!    <td rowspan="18"><code>/db/_changes</code></td>
+//!    <td rowspan="18">GET</td>
+//!    <td rowspan="18"><a href="struct.GetChanges.html"><code>GetChanges</code></a></td>
+//!    <td/>
+//!    <td align="center" style="color:green;">✓</td>
+//!   <tr>
+//!
+//!   <tr>
+//!    <td><code>Last-Event-Id</code></td>
+//!    <td align="center" style="color:darkred;">❌</td>
+//!   </tr>
+//!   <tr>
+//!    <td><code>?doc_ids</code></td>
+//!    <td align="center" style="color:darkred;">❌</td>
+//!   </tr>
+//!   <tr>
+//!    <td><code>?conflicts</code></td>
+//!    <td align="center" style="color:darkred;">❌</td>
+//!   </tr>
+//!   <tr>
+//!    <td><code>?descending</code></td>
+//!    <td align="center" style="color:darkred;">❌</td>
+//!   </tr>
+//!   <tr>
+//!    <td><code>?feed</code></td>
+//!    <td align="center" style="color:green;">✓</td>
+//!   </tr>
+//!   <tr>
+//!    <td><code>?filter</code></td>
+//!    <td align="center" style="color:darkred;">❌</td>
+//!   </tr>
+//!   <tr>
+//!    <td><code>?heartbeat</code></td>
+//!    <td align="center" style="color:green;">✓</td>
+//!   </tr>
+//!   <tr>
+//!    <td><code>?include_docs</code></td>
+//!    <td align="center" style="color:darkred;">❌</td>
+//!   </tr>
+//!   <tr>
+//!    <td><code>?attachments</code></td>
+//!    <td align="center" style="color:darkred;">❌</td>
+//!   </tr>
+//!   <tr>
+//!    <td><code>?att_encoding_info</code></td>
+//!    <td align="center" style="color:darkred;">❌</td>
+//!   </tr>
+//!   <tr>
+//!    <td><code>?last-event-id</code></td>
+//!    <td align="center" style="color:darkred;">❌</td>
+//!   </tr>
+//!   <tr>
+//!    <td><code>?limit</code></td>
+//!    <td align="center" style="color:darkred;">❌</td>
+//!   </tr>
+//!   <tr>
+//!    <td><code>?since</code></td>
+//!    <td align="center" style="color:green;">✓</td>
+//!   </tr>
+//!   <tr>
+//!    <td><code>?style</code></td>
+//!    <td align="center" style="color:darkred;">❌</td>
+//!   </tr>
+//!   <tr>
+//!    <td><code>?timeout</code></td>
+//!    <td align="center" style="color:green;">✓</td>
+//!   </tr>
+//!   <tr>
+//!    <td><code>?view</code></td>
+//!    <td align="center" style="color:darkred;">❌</td>
+//!   </tr>
+//!
+//!   <tr>
+//!    <td><code>/db/_compact</code></td>
+//!    <td>POST</td>
+//!    <td/>
+//!    <td/>
+//!    <td align="center" style="color:darkred;">❌</td>
+//!   </tr>
+//!
+//!   <tr>
+//!    <td><code>/db/_compact/design-doc</code></td>
+//!    <td>POST</td>
+//!    <td/>
+//!    <td/>
+//!    <td align="center" style="color:darkred;">❌</td>
+//!   </tr>
+//!
+//!   <tr>
+//!    <td><code>/db/_ensure_full_commit</code></td>
+//!    <td>POST</td>
+//!    <td/>
+//!    <td/>
+//!    <td align="center" style="color:darkred;">❌</td>
+//!   </tr>
+//!
+//!   <tr>
+//!    <td><code>/db/_view_cleanup</code></td>
+//!    <td>POST</td>
+//!    <td/>
+//!    <td/>
+//!    <td align="center" style="color:darkred;">❌</td>
+//!   </tr>
+//!
+//!   <tr>
+//!    <td rowspan="2"><code>/db/_security</code></td>
+//!    <td>GET</td>
+//!    <td/>
+//!    <td/>
+//!    <td align="center" style="color:darkred;">❌</td>
+//!   </tr>
+//!
+//!   <tr>
+//!    <td>PUT</td>
+//!    <td/>
+//!    <td/>
+//!    <td align="center" style="color:darkred;">❌</td>
+//!   </tr>
+//!
+//!   <tr>
+//!    <td><code>/db/_temp_view</code></td>
+//!    <td>POST</td>
+//!    <td/>
+//!    <td/>
+//!    <td align="center" style="color:darkred;">❌</td>
+//!   </tr>
+//!
+//!   <tr>
+//!    <td><code>/db/_purge</code></td>
+//!    <td>POST</td>
+//!    <td/>
+//!    <td/>
+//!    <td align="center" style="color:darkred;">❌</td>
+//!   </tr>
+//!
+//!   <tr>
+//!    <td><code>/db/_missing_revs</code></td>
+//!    <td>POST</td>
+//!    <td/>
+//!    <td/>
+//!    <td align="center" style="color:darkred;">❌</td>
+//!   </tr>
+//!
+//!   <tr>
+//!    <td><code>/db/_revs_diff</code></td>
+//!    <td>POST</td>
+//!    <td/>
+//!    <td/>
+//!    <td align="center" style="color:darkred;">❌</td>
+//!   </tr>
+//!
+//!   <tr>
+//!    <td rowspan="2"><code>/db/_revs_limit</code></td>
+//!    <td>GET</td>
+//!    <td/>
+//!    <td/>
+//!    <td align="center" style="color:darkred;">❌</td>
+//!   </tr>
+//!
+//!   <tr>
+//!    <td>PUT</td>
+//!    <td/>
+//!    <td/>
+//!    <td align="center" style="color:darkred;">❌</td>
+//!   </tr>
+//!
+//!   <tr>
+//!    <td rowspan="26">
+//!     <ul>
+//!      <li><code>/db/doc</code></li>
+//!      <li><code>/db/_design/design-doc</code></li>
+//!      <li><code>/db/_local/id</code></li>
+//!     </ul>
+//!    </td>
+//!    <td rowspan="2">HEAD</td>
+//!    <td rowspan="2"><a href="struct.HeadDocument.html"><code>HeadDocument</code></a></td>
+//!    <td/>
+//!    <td align="center" style="color:green;">✓</td>
+//!   </tr>
+//!
+//!   <tr>
+//!    <td><code>If-None-Match</code></td>
+//!    <td align="center" style="color:green;">✓</td>
+//!   </tr>
+//!
+//!   <tr>
+//!    <td rowspan="14">GET</td>
+//!    <td rowspan="14"><a href="struct.GetDocument.html"><code>GetDocument</code></a></td>
+//!    <td/>
+//!    <td align="center" style="color:green;">✓</td>
+//!   </tr>
+//!
+//!   <tr>
+//!    <td><code>If-None-Match</code></td>
+//!    <td align="center" style="color:green;">✓</td>
+//!   </tr>
+//!
+//!   <tr>
+//!    <td><code>?attachments</code></td>
+//!    <td align="center" style="color:darkred;">❌</td>
+//!   </tr>
+//!
+//!   <tr>
+//!    <td><code>?att_encoding_info</code></td>
+//!    <td align="center" style="color:darkred;">❌</td>
+//!   </tr>
+//!
+//!   <tr>
+//!    <td><code>?atts_since</code></td>
+//!    <td align="center" style="color:darkred;">❌</td>
+//!   </tr>
+//!
+//!   <tr>
+//!    <td><code>?conflicts</code></td>
+//!    <td align="center" style="color:darkred;">❌</td>
+//!   </tr>
+//!
+//!   <tr>
+//!    <td><code>?deleted_conflicts</code></td>
+//!    <td align="center" style="color:darkred;">❌</td>
+//!   </tr>
+//!
+//!   <tr>
+//!    <td><code>?latest</code></td>
+//!    <td align="center" style="color:darkred;">❌</td>
+//!   </tr>
+//!
+//!   <tr>
+//!    <td><code>?local_seq</code></td>
+//!    <td align="center" style="color:darkred;">❌</td>
+//!   </tr>
+//!
+//!   <tr>
+//!    <td><code>?meta</code></td>
+//!    <td align="center" style="color:darkred;">❌</td>
+//!   </tr>
+//!
+//!   <tr>
+//!    <td><code>?open_revs</code></td>
+//!    <td align="center" style="color:darkred;">❌</td>
+//!   </tr>
+//!
+//!   <tr>
+//!    <td><code>?rev</code></td>
+//!    <td align="center" style="color:green;">✓</td>
+//!   </tr>
+//!
+//!   <tr>
+//!    <td><code>?revs</code></td>
+//!    <td align="center" style="color:darkred;">❌</td>
+//!   </tr>
+//!
+//!   <tr>
+//!    <td><code>?revs_info</code></td>
+//!    <td align="center" style="color:darkred;">❌</td>
+//!   </tr>
+//!
+//!   <tr>
+//!    <td rowspan="4">PUT</td>
+//!    <td rowspan="4"><a href="struct.PutDocument.html"><code>PutDocument</code></a></td>
+//!    <td/>
+//!    <td align="center" style="color:green;">✓</td>
+//!   </tr>
+//!
+//!   <tr>
+//!    <td><code>If-Match</code></td>
+//!    <td align="center" style="color:green;">✓</td>
+//!   </tr>
+//!
+//!   <tr>
+//!    <td><code>X-Couch-Full-Commit</code></td>
+//!    <td align="center" style="color:darkred;">❌</td>
+//!   </tr>
+//!
+//!   <tr>
+//!    <td><code>?batch</code></td>
+//!    <td align="center" style="color:darkred;">❌</td>
+//!   </tr>
+//!
+//!   <tr>
+//!    <td rowspan="5">DELETE</td>
+//!    <td rowspan="5"><a href="struct.DeleteDocument.html"><code>DeleteDocument</code></a></td>
+//!    <td/>
+//!    <td align="center" style="color:green;">✓</td>
+//!   </tr>
+//!
+//!   <tr>
+//!    <td><code>If-Match</code></td>
+//!    <td align="center" style="color:green;">✓</td>
+//!   </tr>
+//!
+//!   <tr>
+//!    <td><code>X-Couch-Full-Commit</code></td>
+//!    <td align="center" style="color:darkred;">❌</td>
+//!   </tr>
+//!
+//!   <tr>
+//!    <td><code>?rev</code></td>
+//!    <td align="center" style="color:green;">✓</td>
+//!   </tr>
+//!
+//!   <tr>
+//!    <td><code>?batch</code></td>
+//!    <td align="center" style="color:darkred;">❌</td>
+//!   </tr>
+//!
+//!   <tr>
+//!    <td>COPY</td>
+//!    <td/>
+//!    <td/>
+//!    <td align="center" style="color:darkred;">❌</td>
+//!   </tr>
+//!
+//!   <tr>
+//!    <td rowspan="4">
+//!     <ul>
+//!      <li><code>/db/doc/attachment</code></li>
+//!      <li><code>/db/doc/_design/design-doc/attachment</code></li>
+//!     </ul>
+//!    </td>
+//!    <td>HEAD</td>
+//!    <td/>
+//!    <td/>
+//!    <td align="center" style="color:darkred;">❌</td>
+//!   </tr>
+//!
+//!   <tr>
+//!    <td>GET</td>
+//!    <td/>
+//!    <td/>
+//!    <td align="center" style="color:darkred;">❌</td>
+//!   </tr>
+//!
+//!   <tr>
+//!    <td>PUT</td>
+//!    <td/>
+//!    <td/>
+//!    <td align="center" style="color:darkred;">❌</td>
+//!   </tr>
+//!
+//!   <tr>
+//!    <td>DELETE</td>
+//!    <td/>
+//!    <td/>
+//!    <td align="center" style="color:darkred;">❌</td>
+//!   </tr>
+//!
+//!   <tr>
+//!    <td><code>/db/_design/design-doc/_info</code></td>
+//!    <td>GET</td>
+//!    <td/>
+//!    <td/>
+//!    <td align="center" style="color:darkred;">❌</td>
+//!   </tr>
+//!
+//!   <tr>
+//!    <td rowspan="20"><code>/db/_design/design-doc/_view/view-name</code></td>
+//!    <td rowspan="19">GET</td>
+//!    <td rowspan="19"><a href="struct.GetView.html"><code>GetView</code></a></td>
+//!    <td/>
+//!    <td align="center" style="color:green;">✓</td>
+//!   </tr>
+//!
+//!   <tr>
+//!    <td><code>?conflicts</code></td>
+//!    <td align="center" style="color:darkred;">❌</td>
+//!   </tr>
+//!
+//!   <tr>
+//!    <td><code>?descending</code></td>
+//!    <td align="center" style="color:darkred;">❌</td>
+//!   </tr>
+//!
+//!   <tr>
+//!    <td><code>?endkey</code></td>
+//!    <td align="center" style="color:green;">✓</td>
+//!   </tr>
+//!
+//!   <tr>
+//!    <td><code>?endkey_doc</code></td>
+//!    <td align="center" style="color:darkred;">❌</td>
+//!   </tr>
+//!
+//!   <tr>
+//!    <td><code>?group</code></td>
+//!    <td align="center" style="color:darkred;">❌</td>
+//!   </tr>
+//!
+//!   <tr>
+//!    <td><code>?group_level</code></td>
+//!    <td align="center" style="color:darkred;">❌</td>
+//!   </tr>
+//!
+//!   <tr>
+//!    <td><code>?include_docs</code></td>
+//!    <td align="center" style="color:darkred;">❌</td>
+//!   </tr>
+//!
+//!   <tr>
+//!    <td><code>?attachments</code></td>
+//!    <td align="center" style="color:darkred;">❌</td>
+//!   </tr>
+//!
+//!   <tr>
+//!    <td><code>?att_encoding_info</code></td>
+//!    <td align="center" style="color:darkred;">❌</td>
+//!   </tr>
+//!
+//!   <tr>
+//!    <td><code>?inclusive_end</code></td>
+//!    <td align="center" style="color:darkred;">❌</td>
+//!   </tr>
+//!
+//!   <tr>
+//!    <td><code>?key</code></td>
+//!    <td align="center" style="color:darkred;">❌</td>
+//!   </tr>
+//!
+//!   <tr>
+//!    <td><code>?limit</code></td>
+//!    <td align="center" style="color:darkred;">❌</td>
+//!   </tr>
+//!
+//!   <tr>
+//!    <td><code>?reduce</code></td>
+//!    <td align="center" style="color:green;">✓</td>
+//!   </tr>
+//!
+//!   <tr>
+//!    <td><code>?skip</code></td>
+//!    <td align="center" style="color:darkred;">❌</td>
+//!   </tr>
+//!
+//!   <tr>
+//!    <td><code>?stale</code></td>
+//!    <td align="center" style="color:darkred;">❌</td>
+//!   </tr>
+//!
+//!   <tr>
+//!    <td><code>?startkey</code></td>
+//!    <td align="center" style="color:green;">✓</td>
+//!   </tr>
+//!
+//!   <tr>
+//!    <td><code>?startkey_docid</code></td>
+//!    <td align="center" style="color:darkred;">❌</td>
+//!   </tr>
+//!
+//!   <tr>
+//!    <td><code>?update_seq</code></td>
+//!    <td align="center" style="color:darkred;">❌</td>
+//!   </tr>
+//!
+//!   <tr>
+//!    <td>PUT</td>
+//!    <td/>
+//!    <td/>
+//!    <td align="center" style="color:darkred;">❌</td>
+//!   </tr>
+//!
+//!   <tr>
+//!    <td rowspan="2"><code>/db/_design/design-doc/_show/show-name</code></td>
+//!    <td>GET</td>
+//!    <td/>
+//!    <td/>
+//!    <td align="center" style="color:darkred;">❌</td>
+//!   </tr>
+//!
+//!   <tr>
+//!    <td>PUT</td>
+//!    <td/>
+//!    <td/>
+//!    <td align="center" style="color:darkred;">❌</td>
+//!   </tr>
+//!
+//!   <tr>
+//!    <td rowspan="2"><code>/db/_design/design-doc/_show/show-name/doc-id</code></td>
+//!    <td>GET</td>
+//!    <td/>
+//!    <td/>
+//!    <td align="center" style="color:darkred;">❌</td>
+//!   </tr>
+//!
+//!   <tr>
+//!    <td>PUT</td>
+//!    <td/>
+//!    <td/>
+//!    <td align="center" style="color:darkred;">❌</td>
+//!   </tr>
+//!
+//!   <tr>
+//!    <td rowspan="2"><code>/db/_design/design-doc/_list/list-name/view-name</code></td>
+//!    <td>GET</td>
+//!    <td/>
+//!    <td/>
+//!    <td align="center" style="color:darkred;">❌</td>
+//!   </tr>
+//!
+//!   <tr>
+//!    <td>PUT</td>
+//!    <td/>
+//!    <td/>
+//!    <td align="center" style="color:darkred;">❌</td>
+//!   </tr>
+//!
+//!   <tr>
+//!    <td
+//!    rowspan="2"><code>/db/_design/design-doc/_list/list-name/other-ddoc/view-name</code></td>
+//!    <td>GET</td>
+//!    <td/>
+//!    <td/>
+//!    <td align="center" style="color:darkred;">❌</td>
+//!   </tr>
+//!
+//!   <tr>
+//!    <td>PUT</td>
+//!    <td/>
+//!    <td/>
+//!    <td align="center" style="color:darkred;">❌</td>
+//!   </tr>
+//!
+//!   <tr>
+//!    <td><code>/db/_design/design-doc/_update/update-name</code></td>
+//!    <td>POST</td>
+//!    <td/>
+//!    <td/>
+//!    <td align="center" style="color:darkred;">❌</td>
+//!   </tr>
+//!
+//!   <tr>
+//!    <td><code>/db/_design/design-doc/_update/update-name/doc-id</code></td>
+//!    <td>PUT</td>
+//!    <td/>
+//!    <td/>
+//!    <td align="center" style="color:darkred;">❌</td>
+//!   </tr>
+//!
+//!   <tr>
+//!    <td><code>/db/_design/design-doc/_rewrite/path</code></td>
+//!    <td>ANY</td>
+//!    <td/>
+//!    <td/>
+//!    <td align="center" style="color:darkred;">❌</td>
+//!   </tr>
+//!
+//!  </tbody>
+//! </table>
 
 macro_rules! impl_action_public_methods {
     ($action_output:ty) => {

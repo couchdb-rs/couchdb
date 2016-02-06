@@ -10,7 +10,7 @@
 //! documentation as needed to fill in remaining details. Most names in the
 //! crate API are identical to the names used in the CouchDB API so as to make
 //! this mapping straightforward. There's also a table, below, that [shows the
-//! mapping at a high level](#couchdb-api-coverage).
+//! mapping at a high level](#couchdb-api-overview).
 //!
 //! One key difference between the couchdb crate's API and the CouchDB API is
 //! the crate provides stronger type-safety beyond working with raw strings. For
@@ -62,21 +62,21 @@
 //! assert_eq!(content, doc.into_content().unwrap());
 //! ```
 //!
-//! ## CouchDB API coverage
+//! ## CouchDB API overview
+//!
+//! This table shows the mapping from each CouchDB API action to the `Client`
+//! method that performs that action.
 //!
 //! In the couchdb crate, the `Client` type is the principal type for
 //! communicating with a CouchDB server. All HTTP requests to the CouchDB server
 //! go through a `Client` instance.
 //!
-//! This table maps each CouchDB API resource to the `Client` method that accesses
-//! that resource.
-//!
 //! <table>
 //!
 //!  <thead>
 //!   <tr>
-//!    <th>CouchDB URI</th>
-//!    <th>HTTP method</th>
+//!    <th>URI path</th>
+//!    <th>Method</th>
 //!    <th><code>Client</code> method</th>
 //!    <th>Description</th>
 //!   </tr>
