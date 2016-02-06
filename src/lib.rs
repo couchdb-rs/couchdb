@@ -88,7 +88,7 @@
 //!     <ul><li><code>/</code></li></ul>
 //!    </td>
 //!    <td>GET</td>
-//!    <td><code>get_root</code></td>
+//!    <td><a href="struct.Client.html#method.get_root"><code>get_root</code></a></td>
 //!    <td>Get server version and other meta-information.</td>
 //!   </tr>
 //!
@@ -97,7 +97,7 @@
 //!     <ul><li><code>/_all_dbs</code></li></ul>
 //!    </td>
 //!    <td>GET</td>
-//!    <td><code>get_all_databases</code></td>
+//!    <td><a href="struct.Client.html#method.get_all_databases"><code>get_all_databases</code></a></td>
 //!    <td>Get list of all databases.</td>
 //!   </tr>
 //!
@@ -106,31 +106,31 @@
 //!     <ul><li><code>/db</code></li></ul>
 //!    </td>
 //!    <td>HEAD</td>
-//!    <td><code>head_database</code></td>
+//!    <td><a href="struct.Client.html#method.head_database"><code>head_database</code></a></td>
 //!    <td>Test whether a database exists.</td>
 //!   </tr>
 //!
 //!   <tr>
 //!    <td>GET</td>
-//!    <td><code>get_database</code></td>
+//!    <td><a href="struct.Client.html#method.get_database"><code>get_database</code></a></td>
 //!    <td>Get meta-information about a database.</td>
 //!   </tr>
 //!
 //!   <tr>
 //!    <td>PUT</td>
-//!    <td><code>put_database</code></td>
+//!    <td><a href="struct.Client.html#method.put_database"><code>put_database</code></a></td>
 //!    <td>Create a database.</td>
 //!   </tr>
 //!
 //!   <tr>
 //!    <td>DELETE</td>
-//!    <td><code>delete_database</code></td>
+//!    <td><a href="struct.Client.html#method.delete_database"><code>delete_database</code></a></td>
 //!    <td>Delete a database.</td>
 //!   </tr>
 //!
 //!   <tr>
 //!    <td>POST</td>
-//!    <td><code>post_database</code></td>
+//!    <td><a href="struct.Client.html#method.post_database"><code>post_database</code></a></td>
 //!    <td>Create a document.</td>
 //!   </tr>
 //!
@@ -141,7 +141,7 @@
 //!     </ul>
 //!    </td>
 //!    <td>GET</td>
-//!    <td><code>get_changes</code></td>
+//!    <td><a href="struct.Client.html#method.get_changes"><code>get_changes</code></a></td>
 //!    <td>Get changes made to documents in a database.</td>
 //!   </tr>
 //!
@@ -154,26 +154,26 @@
 //!     </ul>
 //!    </td>
 //!    <td>HEAD</td>
-//!    <td><code>head_document</code></td>
+//!    <td><a href="struct.Client.html#method.head_document"><code>head_document</code></a></td>
 //!    <td>Test whether a document exists.</td>
 //!   </tr>
 //!
 //!   <tr>
 //!    <td>GET</td>
-//!    <td><code>get_document</code></td>
+//!    <td><a href="struct.Client.html#method.get_document"><code>get_document</code></a></td>
 //!    <td>Get meta-information and application-defined content for a
 //!    document.</td>
 //!   </tr>
 //!
 //!   <tr>
 //!    <td>PUT</td>
-//!    <td><code>put_document</code></td>
+//!    <td><a href="struct.Client.html#method.put_document"><code>put_document</code></a></td>
 //!    <td>Create or update a document.</td>
 //!   </tr>
 //!
 //!   <tr>
 //!    <td>DELETE</td>
-//!    <td><code>delete_document</code></td>
+//!    <td><a href="struct.Client.html#method.delete_document"><code>delete_document</code></a></td>
 //!    <td>Delete a document.</td>
 //!   </tr>
 //!
@@ -182,7 +182,7 @@
 //!     <ul><li><code>/db/_design/design-doc/_view/view</code></li></ul>
 //!    </td>
 //!    <td>GET</td>
-//!    <td><code>get_view</code></td>
+//!    <td><a href="struct.Client.html#method.get_view"><code>get_view</code></a></td>
 //!    <td>Execute a view.</td>
 //!   </tr>
 //!
