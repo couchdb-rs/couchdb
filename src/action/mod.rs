@@ -451,7 +451,7 @@
 //!
 //!   <tr>
 //!    <td><code>?attachments</code></td>
-//!    <td align="center" style="color:darkred;">❌</td>
+//!    <td align="center" style="color:green;">✓</td>
 //!   </tr>
 //!
 //!   <tr>

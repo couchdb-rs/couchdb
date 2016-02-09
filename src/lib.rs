@@ -189,7 +189,9 @@
 //!  </tbody>
 //! </table>
 
+extern crate base64;
 extern crate hyper;
+extern crate mime;
 extern crate regex;
 extern crate serde;
 extern crate serde_json;
@@ -206,9 +208,10 @@ mod error;
 mod path;
 
 pub use client::{Client, IntoUrl};
-pub use dbtype::{Database, ChangeItem, ChangeItemBuilder, ChangeResult, ChangeResultBuilder,
-                 Changes, ChangesBuilder, DatabaseName, Design, DesignBuilder, DesignDocumentName,
-                 Document, DocumentId, DocumentName, ErrorResponse, Revision, Root, Uuid, Vendor,
+pub use dbtype::{ChangeItem, ChangeItemBuilder, ChangeResult, ChangeResultBuilder, Changes,
+                 ChangesBuilder, Database, DatabaseName, Design, DesignBuilder,
+                 DesignDocumentName, Document, DocumentId, DocumentName, EmbeddedAttachment,
+                 EmbeddedAttachmentBuilder, ErrorResponse, Revision, Root, Uuid, Vendor,
                  ViewFunction, ViewFunctionBuilder, ViewFunctionMap, ViewName, ViewResult, ViewRow};
 pub use path::{IntoDatabasePath, IntoDesignDocumentPath, IntoDocumentPath, IntoViewPath,
                DatabasePath, DesignDocumentPath, DocumentPath, ViewPath};

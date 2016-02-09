@@ -19,6 +19,8 @@
 * New support for getting documents at a specific revision via the `rev`
   query parameter—i.e., `GET /db/doc?rev=<revision>` (issue
   [#29][issue_29]).
+* New support for getting embedded attachments via the `GetDocument`
+  action (issue [#6][issue_6]).
 * New field `deleted` in the `Document` type for signifying whether the
   document has been deleted (issue [#30][issue_30]).
 * New feature table in the `action` module showing, in detail, this
@@ -244,6 +246,7 @@ This is the first release. It provides support for client commands to
 manipulate databases (HEAD, GET, PUT, and DELETE), to manipulate
 documents (HEAD, GET, PUT, and DELETE), and to execute views (GET).
 
+[issue_6]: https://github.com/couchdb-rs/couchdb/issues/6 "Issue #6"
 [issue_12]: https://github.com/couchdb-rs/couchdb/issues/12 "Issue #12"
 [issue_18]: https://github.com/couchdb-rs/couchdb/issues/18 "Issue #18"
 [issue_19]: https://github.com/couchdb-rs/couchdb/issues/19 "Issue #19"

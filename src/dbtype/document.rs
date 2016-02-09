@@ -1,7 +1,9 @@
 use serde;
 use serde_json;
+use std::collections::HashMap;
 
 use DocumentId;
+use EmbeddedAttachment;
 use Error;
 use Revision;
 use error::DecodeErrorKind;
@@ -19,8 +21,11 @@ pub struct Document {
     /// Revision of this document.
     pub rev: Revision,
 
-    /// Whether the document has been deleted.
+    /// Whether this document has been deleted.
     pub deleted: bool,
+
+    /// Attachments to this document.
+    pub attachments: HashMap<String, EmbeddedAttachment>,
 
     content: serde_json::Value,
 }
@@ -38,8 +43,8 @@ impl serde::Deserialize for Document {
         where D: serde::Deserializer
     {
         enum Field {
+            Attachments,
             Content(String),
-            Ignored,
             Deleted,
             Id,
             Rev,
@@ -61,7 +66,7 @@ impl serde::Deserialize for Document {
                             "_deleted" => Ok(Field::Deleted),
                             "_id" => Ok(Field::Id),
                             "_rev" => Ok(Field::Rev),
-                            "_attachments" => Ok(Field::Ignored),
+                            "_attachments" => Ok(Field::Attachments),
                             _ => Ok(Field::Content(value.to_string())),
                         }
                     }
@@ -79,6 +84,7 @@ impl serde::Deserialize for Document {
             fn visit_map<V>(&mut self, mut visitor: V) -> Result<Self::Value, V::Error>
                 where V: serde::de::MapVisitor
             {
+                let mut attachments = None;
                 let mut deleted = None;
                 let mut id = None;
                 let mut rev = None;
@@ -86,12 +92,12 @@ impl serde::Deserialize for Document {
 
                 loop {
                     match try!(visitor.visit_key()) {
+                        Some(Field::Attachments) => {
+                            attachments = Some(try!(visitor.visit_value()));
+                        }
                         Some(Field::Content(name)) => {
                             let value = Some(try!(visitor.visit_value::<serde_json::Value>()));
                             content_builder = content_builder.insert(name, value);
-                        }
-                        Some(Field::Ignored) => {
-                            try!(visitor.visit_value::<serde_json::Value>());
                         }
                         Some(Field::Deleted) => {
                             deleted = Some(try!(visitor.visit_value()));
@@ -110,6 +116,7 @@ impl serde::Deserialize for Document {
 
                 try!(visitor.end());
 
+                let attachments = attachments.unwrap_or(HashMap::new());
                 let deleted = deleted.unwrap_or(false);
 
                 let id = match id {
@@ -124,6 +131,7 @@ impl serde::Deserialize for Document {
 
 
                 Ok(Document {
+                    attachments: attachments,
                     deleted: deleted,
                     id: id,
                     rev: rev,
@@ -141,83 +149,82 @@ impl serde::Deserialize for Document {
 mod tests {
 
     use serde_json;
+    use std::collections::HashMap;
 
     use Document;
     use DocumentId;
     use Revision;
+    use dbtype::EmbeddedAttachmentBuilder;
 
     #[test]
-    fn deserialization_ok_with_all_fields() {
+    fn decode_json_ok_with_attachments() {
+
         let expected = Document {
-            id: DocumentId::Normal("foo".into()),
-            rev: Revision::parse("42-1234567890abcdef1234567890abcdef").unwrap(),
-            deleted: true,
+            attachments: {
+                let mut m = HashMap::new();
+                m.insert("bar".to_owned(),
+                         EmbeddedAttachmentBuilder::new("text/plain".parse().unwrap(),
+                                                        "md5-iMaiC8wqiFlD2NjLTemvCQ==".to_owned(),
+                                                        11)
+                             .length(5)
+                             .unwrap());
+                m
+            },
             content: serde_json::builder::ObjectBuilder::new().unwrap(),
-        };
-        let source = serde_json::builder::ObjectBuilder::new()
-                         .insert("_id", "foo")
-                         .insert("_rev", "42-1234567890abcdef1234567890abcdef")
-                         .insert("_deleted", true)
-                         .unwrap();
-        let s = serde_json::to_string(&source).unwrap();
-        let got = serde_json::from_str(&s).unwrap();
-        assert_eq!(expected, got);
-    }
-
-    #[test]
-    fn deserialization_ok_with_no_deleted_field() {
-        let expected = Document {
-            id: DocumentId::Normal("foo".into()),
-            rev: Revision::parse("42-1234567890abcdef1234567890abcdef").unwrap(),
             deleted: false,
-            content: serde_json::builder::ObjectBuilder::new().unwrap(),
-        };
-        let source = serde_json::builder::ObjectBuilder::new()
-                         .insert("_id", "foo")
-                         .insert("_rev", "42-1234567890abcdef1234567890abcdef")
-                         .unwrap();
-        let s = serde_json::to_string(&source).unwrap();
-        let got = serde_json::from_str(&s).unwrap();
-        assert_eq!(expected, got);
-    }
-
-    #[test]
-    fn deserialization_ok_with_attachments_field() {
-        let expected = Document {
             id: DocumentId::Normal("foo".into()),
             rev: Revision::parse("42-1234567890abcdef1234567890abcdef").unwrap(),
-            deleted: false,
-            content: serde_json::builder::ObjectBuilder::new().unwrap(),
         };
+
         let source = serde_json::builder::ObjectBuilder::new()
                          .insert("_id", "foo")
                          .insert("_rev", "42-1234567890abcdef1234567890abcdef")
                          .insert_object("_attachments", |x| {
                              x.insert_object("bar", |x| {
                                  x.insert("content_type", "text/plain")
-                                  .insert("revpos", 3)
-                                  .insert("digest", "md5-ABCDEFGHIJKLMNOPQRSTUV==")
-                                  .insert("length", 17)
+                                  .insert("digest", "md5-iMaiC8wqiFlD2NjLTemvCQ==")
+                                  .insert("revpos", 11)
+                                  .insert("length", 5)
                                   .insert("stub", true)
                              })
                          })
                          .unwrap();
-        let s = serde_json::to_string(&source).unwrap();
-        println!("I: {}", s);
-        let got = serde_json::from_str(&s).unwrap();
+
+        let source = serde_json::to_string(&source).unwrap();
+        let got = serde_json::from_str(&source).unwrap();
         assert_eq!(expected, got);
     }
 
     #[test]
-    fn deserialization_ok_with_content() {
+    fn decode_json_ok_as_deleted() {
         let expected = Document {
+            attachments: HashMap::new(),
+            content: serde_json::builder::ObjectBuilder::new().unwrap(),
+            deleted: true,
             id: DocumentId::Normal("foo".into()),
             rev: Revision::parse("42-1234567890abcdef1234567890abcdef").unwrap(),
-            deleted: false,
+        };
+        let source = serde_json::builder::ObjectBuilder::new()
+                         .insert("_id", "foo")
+                         .insert("_rev", "42-1234567890abcdef1234567890abcdef")
+                         .insert("_deleted", true)
+                         .unwrap();
+        let source = serde_json::to_string(&source).unwrap();
+        let got = serde_json::from_str(&source).unwrap();
+        assert_eq!(expected, got);
+    }
+
+    #[test]
+    fn decode_json_ok_with_content() {
+        let expected = Document {
+            attachments: HashMap::new(),
             content: serde_json::builder::ObjectBuilder::new()
                          .insert("bar", 17)
                          .insert("qux", "ipsum lorem")
                          .unwrap(),
+            deleted: false,
+            id: DocumentId::Normal("foo".into()),
+            rev: Revision::parse("42-1234567890abcdef1234567890abcdef").unwrap(),
         };
         let source = serde_json::builder::ObjectBuilder::new()
                          .insert("_id", "foo")
@@ -225,28 +232,28 @@ mod tests {
                          .insert("bar", 17)
                          .insert("qux", "ipsum lorem")
                          .unwrap();
-        let s = serde_json::to_string(&source).unwrap();
-        let got = serde_json::from_str(&s).unwrap();
+        let source = serde_json::to_string(&source).unwrap();
+        let got = serde_json::from_str(&source).unwrap();
         assert_eq!(expected, got);
     }
 
     #[test]
-    fn deserialization_nok_with_no_id_field() {
+    fn decode_json_nok_with_no_id_field() {
         let source = serde_json::builder::ObjectBuilder::new()
                          .insert("_rev", "42-1234567890abcdef1234567890abcdef")
                          .unwrap();
-        let s = serde_json::to_string(&source).unwrap();
-        let got = serde_json::from_str::<Document>(&s);
+        let source = serde_json::to_string(&source).unwrap();
+        let got = serde_json::from_str::<Document>(&source);
         expect_json_error_missing_field!(got, "_id");
     }
 
     #[test]
-    fn deserialization_nok_with_no_rev_field() {
+    fn decode_json_nok_with_no_rev_field() {
         let source = serde_json::builder::ObjectBuilder::new()
                          .insert("_id", "foo")
                          .unwrap();
-        let s = serde_json::to_string(&source).unwrap();
-        let got = serde_json::from_str::<Document>(&s);
+        let source = serde_json::to_string(&source).unwrap();
+        let got = serde_json::from_str::<Document>(&source);
         expect_json_error_missing_field!(got, "_rev");
     }
 }

@@ -9,7 +9,9 @@ documentation = "https://couchdb-rs.github.io/couchdb/doc/v0.5.0/couchdb/"
 keywords = ["couch", "couchdb", "database", "nosql"]
 
 [dependencies]
+base64 = "0.1.1"
 hyper = "0.7"
+mime = "0.1.1"
 regex = "0.1"
 semver = "0.2.2"
 serde = "0.6"

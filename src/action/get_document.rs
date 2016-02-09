@@ -9,6 +9,8 @@ use client::ClientState;
 use action::{self, Action, Request, Response};
 
 enum QueryIterator<'a> {
+    Attachments(&'a QueryParams<'a>),
+    AttEncodingInfo(&'a QueryParams<'a>),
     Rev(&'a QueryParams<'a>),
     Done,
 }
@@ -19,10 +21,22 @@ impl<'a> Iterator for QueryIterator<'a> {
     fn next(&mut self) -> Option<Self::Item> {
         loop {
             match self {
+                &mut QueryIterator::Attachments(params) => {
+                    *self = QueryIterator::AttEncodingInfo(params);
+                    if let Some(ref x) = params.attachments {
+                        return Some(("attachments".to_owned(), x.to_string()));
+                    }
+                }
+                &mut QueryIterator::AttEncodingInfo(params) => {
+                    *self = QueryIterator::Rev(params);
+                    if let Some(ref x) = params.att_encoding_info {
+                        return Some(("att_encoding_info".to_owned(), x.to_string()));
+                    }
+                }
                 &mut QueryIterator::Rev(params) => {
                     *self = QueryIterator::Done;
-                    if let Some(ref rev) = params.rev {
-                        return Some(("rev".to_string(), rev.to_string()));
+                    if let Some(ref x) = params.rev {
+                        return Some(("rev".to_owned(), x.to_string()));
                     }
                 }
                 &mut QueryIterator::Done => {
@@ -37,16 +51,18 @@ impl<'a> Iterator for QueryIterator<'a> {
 // which is useful when constructing the URI query string.
 #[derive(Default)]
 struct QueryParams<'a> {
+    attachments: Option<bool>,
+    att_encoding_info: Option<bool>,
     rev: Option<&'a Revision>,
 }
 
 impl<'a> QueryParams<'a> {
     fn is_default(&self) -> bool {
-        self.rev.is_none()
+        self.attachments.is_none() && self.att_encoding_info.is_none() && self.rev.is_none()
     }
 
     fn iter(&self) -> QueryIterator {
-        QueryIterator::Rev(self)
+        QueryIterator::Attachments(self)
     }
 }
 
@@ -88,6 +104,18 @@ impl<'a, P: IntoDocumentPath> GetDocument<'a, P> {
         }
     }
 
+    /// The `attachments` method sets the action's `attachments` query parameter
+    /// to the given value.
+    ///
+    /// If the `attachments` query value is `true` then the action's result will
+    /// include the bodies of all attachments to the document. The default value
+    /// is `false`.
+    ///
+    pub fn attachments(mut self, value: bool) -> Self {
+        self.query.attachments = Some(value);
+        self
+    }
+
     /// Sets the If-None-Match header.
     pub fn if_none_match(mut self, rev: &'a Revision) -> Self {
         self.if_none_match = Some(rev);
@@ -98,6 +126,15 @@ impl<'a, P: IntoDocumentPath> GetDocument<'a, P> {
     /// revision.
     pub fn rev(mut self, rev: &'a Revision) -> Self {
         self.query.rev = Some(rev);
+        self
+    }
+
+    // The att_encoding_info method is not ready for the public API because the
+    // encoding info fields in the `EmbeddedAttachment` struct are not public.
+
+    #[doc(hidden)]
+    pub fn att_encoding_info(mut self, x: bool) -> Self {
+        self.query.att_encoding_info = Some(x);
         self
     }
 
@@ -148,6 +185,7 @@ mod tests {
 
     use hyper;
     use serde_json;
+    use std::collections::HashMap;
 
     use DocumentPath;
     use Revision;
@@ -157,10 +195,21 @@ mod tests {
 
     #[test]
     fn query_iterator() {
+
         let rev = Revision::parse("42-1234567890abcdef1234567890abcdef").unwrap();
-        let query = QueryParams { rev: Some(&rev) };
-        let expected = vec![("rev".to_string(), rev.to_string())];
-        let got = query.iter().collect::<Vec<_>>();
+        let query = QueryParams {
+            attachments: Some(true),
+            att_encoding_info: Some(true),
+            rev: Some(&rev),
+        };
+
+        let expected = vec![("attachments".to_owned(), "true".to_owned()),
+                            ("att_encoding_info".to_owned(), "true".to_owned()),
+                            ("rev".to_owned(), rev.to_string())]
+                           .into_iter()
+                           .collect::<HashMap<_, _>>();
+
+        let got = query.iter().collect();
         assert_eq!(expected, got);
     }
 
@@ -184,6 +233,27 @@ mod tests {
         expect_request_uri!(request, "http://example.com:1234/foo/bar");
         expect_request_accept_application_json!(request);
         expect_request_if_none_match_revision!(request, "42-1234567890abcdef1234567890abcdef");
+    }
+
+    #[test]
+    fn make_request_attachments() {
+        let client_state = ClientState::new("http://example.com:1234/").unwrap();
+        let action = GetDocument::new(&client_state, "/foo/bar").attachments(true);
+        let (request, ()) = action.make_request().unwrap();
+        expect_request_method!(request, hyper::Get);
+        expect_request_uri!(request, "http://example.com:1234/foo/bar?attachments=true");
+        expect_request_accept_application_json!(request);
+    }
+
+    #[test]
+    fn make_request_att_encoding_info() {
+        let client_state = ClientState::new("http://example.com:1234/").unwrap();
+        let action = GetDocument::new(&client_state, "/foo/bar").att_encoding_info(true);
+        let (request, ()) = action.make_request().unwrap();
+        expect_request_method!(request, hyper::Get);
+        expect_request_uri!(request,
+                            "http://example.com:1234/foo/bar?att_encoding_info=true");
+        expect_request_accept_application_json!(request);
     }
 
     #[test]

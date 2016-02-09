@@ -1,4 +1,5 @@
 extern crate couchdb;
+extern crate mime;
 extern crate serde_json;
 
 use std::collections::HashSet;
@@ -450,6 +451,95 @@ fn get_document_ok_deleted() {
     assert_eq!(doc_id, got.id);
     assert_eq!(rev2, got.rev);
     assert!(got.deleted);
+    assert_eq!(expected_content, got.into_content().unwrap());
+}
+
+#[test]
+fn get_document_ok_with_attachment_stub() {
+
+    // TODO: Refactor this test to use the attachment API instead of embedding
+    // the attachment info in the document content.
+
+    let (_server, client) = make_server_and_client();
+    client.put_database("/baseball").run().unwrap();
+
+    let source_content = serde_json::builder::ObjectBuilder::new()
+                             .insert("name", "Babe Ruth")
+                             .insert("career_hr", 714)
+                             .insert_object("_attachments", |x| {
+                                 x.insert_object("foo", |x| {
+                                     x.insert("content_type", "text/plain")
+                                      .insert("data", "aGVsbG8=")
+                                 })
+                             })
+                             .unwrap();
+
+    let (doc_id, rev) = client.post_database("/baseball", &source_content).run().unwrap();
+
+    let got = client.get_document(("/baseball", doc_id.clone()))
+                    .run()
+                    .unwrap()
+                    .unwrap();
+    assert_eq!(doc_id, got.id);
+    assert_eq!(rev, got.rev);
+    {
+        let foo_attachment = got.attachments.get("foo").unwrap();
+        assert_eq!("text/plain".parse::<mime::Mime>().unwrap(),
+                   foo_attachment.content_type);
+        assert_eq!(1, foo_attachment.revpos);
+    }
+
+    let expected_content = serde_json::builder::ObjectBuilder::new()
+                               .insert("name", "Babe Ruth")
+                               .insert("career_hr", 714)
+                               .unwrap();
+
+    assert_eq!(expected_content, got.into_content().unwrap());
+}
+
+#[test]
+fn get_document_ok_with_attachment_with_data() {
+
+    // TODO: Refactor this test to use the attachment API instead of embedding
+    // the attachment info in the document content.
+
+    let (_server, client) = make_server_and_client();
+    client.put_database("/baseball").run().unwrap();
+
+    let source_content = serde_json::builder::ObjectBuilder::new()
+                             .insert("name", "Babe Ruth")
+                             .insert("career_hr", 714)
+                             .insert_object("_attachments", |x| {
+                                 x.insert_object("foo", |x| {
+                                     x.insert("content_type", "text/plain")
+                                      .insert("data", "aGVsbG8=")
+                                 })
+                             })
+                             .unwrap();
+
+    let (doc_id, rev) = client.post_database("/baseball", &source_content).run().unwrap();
+
+    let got = client.get_document(("/baseball", doc_id.clone()))
+                    .attachments(true)
+                    .run()
+                    .unwrap()
+                    .unwrap();
+    assert_eq!(doc_id, got.id);
+    assert_eq!(rev, got.rev);
+    {
+        let foo_attachment = got.attachments.get("foo").unwrap();
+        assert_eq!("text/plain".parse::<mime::Mime>().unwrap(),
+                   foo_attachment.content_type);
+        assert_eq!("hello".to_owned().into_bytes(),
+                   *foo_attachment.data.as_ref().unwrap());
+        assert_eq!(1, foo_attachment.revpos);
+    }
+
+    let expected_content = serde_json::builder::ObjectBuilder::new()
+                               .insert("name", "Babe Ruth")
+                               .insert("career_hr", 714)
+                               .unwrap();
+
     assert_eq!(expected_content, got.into_content().unwrap());
 }
 
