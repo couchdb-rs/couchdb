@@ -7,6 +7,7 @@ use ChangesBuilder;
 use Error;
 use ErrorResponse;
 use IntoDatabasePath;
+use Since;
 use action::{self, Action, Request, Response};
 use client::ClientState;
 use dbtype::ChangeLine;
@@ -62,43 +63,6 @@ impl std::fmt::Display for Heartbeat {
     }
 }
 
-/// Type for the `since` query parameter when getting database changes.
-///
-/// # Examples
-///
-/// Applications may construct a `ChangesSince` directly from a number, or
-/// convert a `ChangesSince` to a string.
-///
-/// ```
-/// use couchdb::action::ChangesSince;
-/// let x: ChangesSince = 42.into();
-/// assert_eq!("42", x.to_string());
-/// ```
-///
-#[derive(Debug, Eq, PartialEq)]
-pub enum ChangesSince {
-    /// A literal sequence number.
-    SequenceNumber(u64),
-
-    /// The `now` value.
-    Now,
-}
-
-impl std::fmt::Display for ChangesSince {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> Result<(), std::fmt::Error> {
-        match self {
-            &ChangesSince::SequenceNumber(x) => x.fmt(f),
-            &ChangesSince::Now => write!(f, "now"),
-        }
-    }
-}
-
-impl From<u64> for ChangesSince {
-    fn from(seq: u64) -> Self {
-        ChangesSince::SequenceNumber(seq)
-    }
-}
-
 enum QueryIterator<'a> {
     Feed(&'a QueryParams<'a>),
     Heartbeat(&'a QueryParams<'a>),
@@ -149,7 +113,7 @@ impl<'a> Iterator for QueryIterator<'a> {
 struct QueryParams<'a> {
     feed: Option<Feed<'a>>,
     heartbeat: Option<Heartbeat>,
-    since: Option<ChangesSince>,
+    since: Option<Since>,
     timeout: Option<u64>,
 }
 
@@ -243,7 +207,7 @@ impl<'a, P: IntoDatabasePath> GetChanges<'a, P> {
     /// The `since` query parameter causes the action to return change results
     /// starting after the given sequence number.
     ///
-    pub fn since<S: Into<ChangesSince>>(mut self, seq: S) -> Self {
+    pub fn since<S: Into<Since>>(mut self, seq: S) -> Self {
         self.query.since = Some(seq.into());
         self
     }
@@ -315,7 +279,7 @@ mod tests {
     use DatabasePath;
     use action::{Action, JsonResponse};
     use client::ClientState;
-    use super::{ChangesSince, Feed, GetChanges, Heartbeat, QueryParams};
+    use super::{Feed, GetChanges, Heartbeat, QueryParams};
 
     #[test]
     fn feed_display() {
@@ -333,38 +297,6 @@ mod tests {
         assert_eq!("12345",
                    format!("{}",
                            Heartbeat::Duration(std::time::Duration::from_millis(12345))));
-    }
-
-    #[test]
-    fn changes_since_display() {
-        assert_eq!("42", format!("{}", ChangesSince::SequenceNumber(42)));
-        assert_eq!("now", format!("{}", ChangesSince::Now));
-    }
-
-    #[test]
-    fn changes_since_eq() {
-        let a = ChangesSince::SequenceNumber(42);
-        let b = ChangesSince::SequenceNumber(42);
-        assert!(a == b);
-
-        let a = ChangesSince::SequenceNumber(17);
-        let b = ChangesSince::SequenceNumber(42);
-        assert!(a != b);
-
-        let a = ChangesSince::Now;
-        let b = ChangesSince::SequenceNumber(42);
-        assert!(a != b);
-
-        let a = ChangesSince::Now;
-        let b = ChangesSince::Now;
-        assert!(a == b);
-    }
-
-    #[test]
-    fn changes_since_from_number() {
-        let expected = ChangesSince::SequenceNumber(42);
-        let got = ChangesSince::from(42);
-        assert_eq!(expected, got);
     }
 
     #[test]

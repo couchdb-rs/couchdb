@@ -31,6 +31,7 @@ mod embedded_attachment;
 mod error_response;
 mod revision;
 mod root;
+mod since;
 mod uuid;
 mod view_function;
 mod view_name;
@@ -55,6 +56,7 @@ pub use self::embedded_attachment::{EmbeddedAttachment, EmbeddedAttachmentBuilde
 pub use self::error_response::ErrorResponse;
 pub use self::revision::Revision;
 pub use self::root::{Root, RootBuilder, Vendor};
+pub use self::since::Since;
 pub use self::uuid::Uuid;
 pub use self::view_function::{ViewFunction, ViewFunctionBuilder, ViewFunctionMap};
 pub use self::view_name::ViewName;
