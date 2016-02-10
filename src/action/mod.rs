@@ -835,7 +835,7 @@ mod put_document;
 pub use self::delete_database::DeleteDatabase;
 pub use self::delete_document::DeleteDocument;
 pub use self::get_all_databases::GetAllDatabases;
-pub use self::get_changes::{GetChanges, ChangesEvent};
+pub use self::get_changes::{ChangeHandler, GetChanges};
 pub use self::get_database::GetDatabase;
 pub use self::get_document::GetDocument;
 pub use self::get_root::GetRoot;

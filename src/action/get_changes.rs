@@ -12,17 +12,21 @@ use action::{self, Action, Request, Response};
 use client::ClientState;
 use dbtype::ChangeLine;
 
-/// Handler that receives a single change result when using the action's
+/// A change handler receives a single change result.
+///
+/// Applications use a change handler when retrieving database changes via a
 /// continuous feed.
-pub trait ChangesEvent {
+///
+pub trait ChangeHandler {
 
-    /// Method that's called exactly once for each change result.
-    fn change_event(&self, ChangeResult);
+    /// The library calls this method exactly once for each change result that
+    /// has been retrieved.
+    fn handle_change(&self, ChangeResult);
 }
 
-impl<T> ChangesEvent for T where T: Fn(ChangeResult)
+impl<T> ChangeHandler for T where T: Fn(ChangeResult)
 {
-    fn change_event(&self, result: ChangeResult) {
+    fn handle_change(&self, result: ChangeResult) {
         self(result);
     }
 }
@@ -30,7 +34,7 @@ impl<T> ChangesEvent for T where T: Fn(ChangeResult)
 enum Feed<'a> {
     Normal,
     Longpoll,
-    Continuous(Box<ChangesEvent + 'a>),
+    Continuous(Box<ChangeHandler + 'a>),
 }
 
 impl<'a> std::fmt::Display for Feed<'a> {
@@ -175,7 +179,7 @@ impl<'a, P: IntoDatabasePath> GetChanges<'a, P> {
     /// the change results are instead returned via the `handler` argument,
     /// which is called exactly once for each change result.
     ///
-    pub fn continuous<H: 'a + ChangesEvent>(mut self, handler: H) -> Self {
+    pub fn continuous<H: 'a + ChangeHandler>(mut self, handler: H) -> Self {
         self.query.feed = Some(Feed::Continuous(Box::new(handler)));
         self
     }
@@ -250,7 +254,7 @@ impl<'a, P: IntoDatabasePath> Action for GetChanges<'a, P> {
                 if let Feed::Continuous(handler) = feed {
                     loop {
                         match try!(response.decode_json_line::<ChangeLine>()) {
-                            ChangeLine::Event(result) => handler.change_event(result),
+                            ChangeLine::Event(result) => handler.handle_change(result),
                             ChangeLine::End { last_seq } => {
                                 try!(response.no_more_content());
                                 return Ok(ChangesBuilder::new(last_seq).unwrap());
