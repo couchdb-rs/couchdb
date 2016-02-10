@@ -1,8 +1,9 @@
 use semver;
 use serde;
 use std;
+use uuid;
 
-use Uuid;
+use dbtype;
 
 #[derive(Debug, PartialEq)]
 struct SerializableVersion(semver::Version);
@@ -134,7 +135,7 @@ pub struct Root {
     pub couchdb: String,
 
     /// Universally unique identifier for the CouchDB server.
-    pub uuid: Uuid,
+    pub uuid: uuid::Uuid,
 
     /// Vendor information for the CouchDB server.
     pub vendor: Vendor,
@@ -223,6 +224,7 @@ impl serde::Deserialize for Root {
                     Some(x) => x,
                     None => try!(visitor.missing_field("uuid")),
                 };
+                let dbtype::Uuid(uuid) = uuid;
 
                 let vendor = match vendor {
                     Some(x) => x,
@@ -286,8 +288,8 @@ mod tests {
     use semver;
     use serde_json;
     use std;
+    use uuid;
 
-    use Uuid;
     use super::{Root, RootBuilder, SerializableVersion, Vendor};
 
     #[test]
@@ -367,7 +369,7 @@ mod tests {
         let expected = Root {
             _dummy: std::marker::PhantomData,
             couchdb: "Welcome".to_string(),
-            uuid: Uuid::from_str("85fb71bf700c17267fef77535820e371").unwrap(),
+            uuid: uuid::Uuid::from_str("85fb71bf700c17267fef77535820e371").unwrap(),
             vendor: Vendor {
                 _dummy: std::marker::PhantomData,
                 name: "The Apache Software Foundation".to_string(),

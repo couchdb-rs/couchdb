@@ -198,6 +198,7 @@ extern crate serde_json;
 extern crate semver;
 extern crate tempdir;
 extern crate url;
+extern crate uuid;
 
 pub mod action;
 pub mod testing;
@@ -211,7 +212,7 @@ pub use client::{Client, IntoUrl};
 pub use dbtype::{ChangeItem, ChangeItemBuilder, ChangeResult, ChangeResultBuilder, Changes,
                  ChangesBuilder, Database, DatabaseName, Design, DesignBuilder,
                  DesignDocumentName, Document, DocumentId, DocumentName, EmbeddedAttachment,
-                 EmbeddedAttachmentBuilder, ErrorResponse, Heartbeat, Revision, Root, Since, Uuid,
+                 EmbeddedAttachmentBuilder, ErrorResponse, Heartbeat, Revision, Root, Since,
                  Vendor, ViewFunction, ViewFunctionBuilder, ViewFunctionMap, ViewName, ViewResult,
                  ViewRow};
 pub use path::{IntoDatabasePath, IntoDesignDocumentPath, IntoDocumentPath, IntoViewPath,
