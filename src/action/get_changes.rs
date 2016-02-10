@@ -6,6 +6,7 @@ use Changes;
 use ChangesBuilder;
 use Error;
 use ErrorResponse;
+use Heartbeat;
 use IntoDatabasePath;
 use Since;
 use action::{self, Action, Request, Response};
@@ -43,26 +44,6 @@ impl<'a> std::fmt::Display for Feed<'a> {
             Feed::Normal => write!(f, "normal"),
             Feed::Longpoll => write!(f, "longpoll"),
             Feed::Continuous(..) => write!(f, "continuous"),
-        }
-    }
-}
-
-#[derive(Debug, Eq, PartialEq)]
-enum Heartbeat {
-    Duration(std::time::Duration),
-    Default,
-}
-
-impl std::fmt::Display for Heartbeat {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> Result<(), std::fmt::Error> {
-        match self {
-            &Heartbeat::Duration(duration) => {
-                let sec = duration.as_secs();
-                let nsec = duration.subsec_nanos() as u64;
-                let ms = 1000 * sec + nsec / 1_000_000;
-                ms.fmt(f)
-            }
-            &Heartbeat::Default => write!(f, "true"),
         }
     }
 }
@@ -184,25 +165,15 @@ impl<'a, P: IntoDatabasePath> GetChanges<'a, P> {
         self
     }
 
-    /// Sets the `heartbeat` query parameter to `true`.
+    /// The heartbeat is the period after which the CouchDB server sends an
+    /// empty line.
     ///
-    /// The `heartbeat` query parameter overrides any timeout, causing the feed
-    /// to remain alive indefinitely. A heartbeat is applicable only for
-    /// long-poll and continuous feeds.
+    /// The heartbeat applies only for long-polling and continuous feeds. If
+    /// set, the heartbeat overrides the action's timeout, meaning the action
+    /// remains open indefinitely.
     ///
-    pub fn default_heartbeat(mut self) -> Self {
-        self.query.heartbeat = Some(Heartbeat::Default);
-        self
-    }
-
-    /// Sets the `heartbeat` query parameter to the given time period.
-    ///
-    /// The `heartbeat` query parameter overrides any timeout, causing the feed
-    /// to remain alive indefinitely. A heartbeat is applicable only for
-    /// long-poll and continuous feeds.
-    ///
-    pub fn heartbeat(mut self, heartbeat: std::time::Duration) -> Self {
-        self.query.heartbeat = Some(Heartbeat::Duration(heartbeat));
+    pub fn heartbeat<H: Into<Heartbeat>>(mut self, heartbeat: H) -> Self {
+        self.query.heartbeat = Some(heartbeat.into());
         self
     }
 
@@ -283,7 +254,7 @@ mod tests {
     use DatabasePath;
     use action::{Action, JsonResponse};
     use client::ClientState;
-    use super::{Feed, GetChanges, Heartbeat, QueryParams};
+    use super::{Feed, GetChanges, QueryParams};
 
     #[test]
     fn feed_display() {
@@ -294,21 +265,11 @@ mod tests {
     }
 
     #[test]
-    fn heartbeat_display() {
-        assert_eq!("true", format!("{}", Heartbeat::Default));
-        assert_eq!("0",
-                   format!("{}", Heartbeat::Duration(std::time::Duration::new(0, 0))));
-        assert_eq!("12345",
-                   format!("{}",
-                           Heartbeat::Duration(std::time::Duration::from_millis(12345))));
-    }
-
-    #[test]
     fn query_iterator() {
         use std::collections::BTreeMap;
         let query = QueryParams {
             feed: Some(Feed::Longpoll),
-            heartbeat: Some(Heartbeat::Default),
+            heartbeat: Some(Default::default()),
             since: Some(17.into()),
             timeout: Some(42),
         };
@@ -350,17 +311,6 @@ mod tests {
         expect_request_method!(request, hyper::Get);
         expect_request_uri!(request,
                             "http://example.com:1234/db/_changes?feed=continuous");
-        expect_request_accept_application_json!(request);
-    }
-
-    #[test]
-    fn make_request_heartbeat_default() {
-        let client_state = ClientState::new("http://example.com:1234/").unwrap();
-        let action = GetChanges::new(&client_state, "/db").default_heartbeat();
-        let (request, _) = action.make_request().unwrap();
-        expect_request_method!(request, hyper::Get);
-        expect_request_uri!(request,
-                            "http://example.com:1234/db/_changes?heartbeat=true");
         expect_request_accept_application_json!(request);
     }
 

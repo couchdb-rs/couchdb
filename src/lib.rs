@@ -211,8 +211,9 @@ pub use client::{Client, IntoUrl};
 pub use dbtype::{ChangeItem, ChangeItemBuilder, ChangeResult, ChangeResultBuilder, Changes,
                  ChangesBuilder, Database, DatabaseName, Design, DesignBuilder,
                  DesignDocumentName, Document, DocumentId, DocumentName, EmbeddedAttachment,
-                 EmbeddedAttachmentBuilder, ErrorResponse, Revision, Root, Since, Uuid, Vendor,
-                 ViewFunction, ViewFunctionBuilder, ViewFunctionMap, ViewName, ViewResult, ViewRow};
+                 EmbeddedAttachmentBuilder, ErrorResponse, Heartbeat, Revision, Root, Since, Uuid,
+                 Vendor, ViewFunction, ViewFunctionBuilder, ViewFunctionMap, ViewName, ViewResult,
+                 ViewRow};
 pub use path::{IntoDatabasePath, IntoDesignDocumentPath, IntoDocumentPath, IntoViewPath,
                DatabasePath, DesignDocumentPath, DocumentPath, ViewPath};
 pub use error::Error;
