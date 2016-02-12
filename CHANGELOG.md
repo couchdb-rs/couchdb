@@ -1,5 +1,9 @@
 # CouchDB-rs Change Log
 
+## v0.6.0 (unreleased)
+
+No changes yet!
+
 ## v0.5.1 (2016-02-12)
 
 This release extends the crate's coverage of the CouchDB API, deprecates
