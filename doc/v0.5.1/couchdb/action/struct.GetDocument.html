@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="generator" content="rustdoc">
+    <meta name="description" content="API documentation for the Rust `GetDocument` struct in crate `couchdb`.">
+    <meta name="keywords" content="rust, rustlang, rust-lang, GetDocument">
+
+    <title>couchdb::action::GetDocument - Rust</title>
+
+    <link rel="stylesheet" type="text/css" href="../../rustdoc.css">
+    <link rel="stylesheet" type="text/css" href="../../main.css">
+
+    
+    
+</head>
+<body class="rustdoc">
+    <!--[if lte IE 8]>
+    <div class="warning">
+        This old browser is unsupported and will most likely display funky
+        things.
+    </div>
+    <![endif]-->
+
+    
+
+    <nav class="sidebar">
+        
+        <p class='location'><a href='../index.html'>couchdb</a>::<wbr><a href='index.html'>action</a></p><script>window.sidebarCurrent = {name: 'GetDocument', ty: 'struct', relpath: ''};</script><script defer src="sidebar-items.js"></script>
+    </nav>
+
+    <nav class="sub">
+        <form class="search-form js-only">
+            <div class="search-container">
+                <input class="search-input" name="search"
+                       autocomplete="off"
+                       placeholder="Click or press ‘S’ to search, ‘?’ for more options…"
+                       type="search">
+            </div>
+        </form>
+    </nav>
+
+    <section id='main' class="content struct">
+<h1 class='fqn'><span class='in-band'>Struct <a href='../index.html'>couchdb</a>::<wbr><a href='index.html'>action</a>::<wbr><a class='struct' href=''>GetDocument</a></span><span class='out-of-band'><span id='render-detail'>
+            <a id="toggle-all-docs" href="javascript:void(0)" title="collapse all docs">
+                [<span class='inner'>&#x2212;</span>]
+            </a>
+        </span><a id='src-371' class='srclink' href='../../src/couchdb/action/get_document.rs.html#87-94' title='goto source code'>[src]</a></span></h1>
+<pre class='rust struct'>pub struct GetDocument&lt;'a, P&gt; <span class='where'>where P: <a class='trait' href='../../couchdb/trait.IntoDocumentPath.html' title='couchdb::IntoDocumentPath'>IntoDocumentPath</a></span> {
+    // some fields omitted
+}</pre><div class='docblock'><p>Action to get document meta-information and application-defined content.</p>
+
+<h1 id='return' class='section-header'><a href='#return'>Return</a></h1>
+<p>This action returns an <code>Option</code> type. The return value is <code>None</code> if the
+action specifies a revision and the document hasn&#39;t been modified since
+that revision. Otherwise, the return value is <code>Some</code> and contains the
+document meta-information and application-defined content.</p>
+
+<h1 id='errors' class='section-header'><a href='#errors'>Errors</a></h1>
+<p>The following are some of the errors that may occur as a result of executing
+this action:</p>
+
+<ul>
+<li><code>Error::NotFound</code>: The document does not exist.</li>
+<li><code>Error::Unauthorized</code>: The client is unauthorized.</li>
+</ul>
+</div><h2 id='methods'>Methods</h2><h3 class='impl'><code>impl&lt;'a, P: <a class='trait' href='../../couchdb/trait.IntoDocumentPath.html' title='couchdb::IntoDocumentPath'>IntoDocumentPath</a>&gt; <a class='struct' href='../../couchdb/action/struct.GetDocument.html' title='couchdb::action::GetDocument'>GetDocument</a>&lt;'a, P&gt;</code></h3><div class='impl-items'><h4 id='method.attachments' class='method'><code>fn <a href='#method.attachments' class='fnname'>attachments</a>(self, value: <a class='primitive' href='https://doc.rust-lang.org/nightly/std/primitive.bool.html'>bool</a>) -&gt; Self</code></h4>
+<div class='docblock'><p>The <code>attachments</code> method sets the action&#39;s <code>attachments</code> query parameter
+to the given value.</p>
+
+<p>If the <code>attachments</code> query value is <code>true</code> then the action&#39;s result will
+include the bodies of all attachments to the document. The default value
+is <code>false</code>.</p>
+</div><h4 id='method.if_none_match' class='method'><code>fn <a href='#method.if_none_match' class='fnname'>if_none_match</a>(self, rev: &amp;'a <a class='struct' href='../../couchdb/struct.Revision.html' title='couchdb::Revision'>Revision</a>) -&gt; Self</code></h4>
+<div class='docblock'><p>Sets the If-None-Match header.</p>
+</div><h4 id='method.rev' class='method'><code>fn <a href='#method.rev' class='fnname'>rev</a>(self, rev: &amp;'a <a class='struct' href='../../couchdb/struct.Revision.html' title='couchdb::Revision'>Revision</a>) -&gt; Self</code></h4>
+<div class='docblock'><p>Sets the <code>rev</code> query parameter to get the document at the given
+revision.</p>
+</div><h4 id='method.run' class='method'><code>fn <a href='#method.run' class='fnname'>run</a>(self) -&gt; <a class='enum' href='https://doc.rust-lang.org/nightly/core/result/enum.Result.html' title='core::result::Result'>Result</a>&lt;<a class='enum' href='https://doc.rust-lang.org/nightly/core/option/enum.Option.html' title='core::option::Option'>Option</a>&lt;<a class='struct' href='../../couchdb/struct.Document.html' title='couchdb::Document'>Document</a>&gt;, <a class='enum' href='../../couchdb/enum.Error.html' title='couchdb::Error'>Error</a>&gt;</code></h4>
+<div class='docblock'><p>Sends the action request and waits for the response.</p>
+</div></div></section>
+    <section id='search' class="content hidden"></section>
+
+    <section class="footer"></section>
+
+    <aside id="help" class="hidden">
+        <div>
+            <h1 class="hidden">Help</h1>
+
+            <div class="shortcuts">
+                <h2>Keyboard Shortcuts</h2>
+
+                <dl>
+                    <dt>?</dt>
+                    <dd>Show this help dialog</dd>
+                    <dt>S</dt>
+                    <dd>Focus the search field</dd>
+                    <dt>&larrb;</dt>
+                    <dd>Move up in search results</dd>
+                    <dt>&rarrb;</dt>
+                    <dd>Move down in search results</dd>
+                    <dt>&#9166;</dt>
+                    <dd>Go to active search result</dd>
+                </dl>
+            </div>
+
+            <div class="infos">
+                <h2>Search Tricks</h2>
+
+                <p>
+                    Prefix searches with a type followed by a colon (e.g.
+                    <code>fn:</code>) to restrict the search to a given type.
+                </p>
+
+                <p>
+                    Accepted types are: <code>fn</code>, <code>mod</code>,
+                    <code>struct</code>, <code>enum</code>,
+                    <code>trait</code>, <code>type</code>, <code>macro</code>,
+                    and <code>const</code>.
+                </p>
+
+                <p>
+                    Search functions by type signature (e.g.
+                    <code>vec -> usize</code>)
+                </p>
+            </div>
+        </div>
+    </aside>
+
+    
+
+    <script>
+        window.rootPath = "../../";
+        window.currentCrate = "couchdb";
+        window.playgroundUrl = "";
+    </script>
+    <script src="../../jquery.js"></script>
+    <script src="../../main.js"></script>
+    
+    <script defer src="../../search-index.js"></script>
+</body>
+</html>

@@ -1,0 +1,1 @@
+initSidebarItems({"struct":[["DeleteDocument","Action to delete a document."]]});

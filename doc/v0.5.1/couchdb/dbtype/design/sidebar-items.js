@@ -1,0 +1,1 @@
+initSidebarItems({"struct":[["Design","Content of a design document."],["DesignBuilder","Builder for constructing a design document."]]});

@@ -1,0 +1,1 @@
+initSidebarItems({"struct":[["GetDatabase","Action to get database meta-information."]]});

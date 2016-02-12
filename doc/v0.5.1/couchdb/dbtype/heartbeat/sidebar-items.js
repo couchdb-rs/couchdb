@@ -1,0 +1,1 @@
+initSidebarItems({"enum":[["Heartbeat","A heartbeat specifies a duration and is used to continue retrieving database changes indefinitely."]]});

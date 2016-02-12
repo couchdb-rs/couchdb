@@ -1,0 +1,1 @@
+initSidebarItems({"struct":[["ChangeResult","Single element as returned in a change list."],["ChangeResultBuilder","Builder for constructing a change result."]]});

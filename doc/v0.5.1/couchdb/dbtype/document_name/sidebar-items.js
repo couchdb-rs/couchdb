@@ -1,0 +1,1 @@
+initSidebarItems({"struct":[["DocumentName","Name of a document."]]});

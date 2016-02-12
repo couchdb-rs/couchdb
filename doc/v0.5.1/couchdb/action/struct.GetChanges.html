@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="generator" content="rustdoc">
+    <meta name="description" content="API documentation for the Rust `GetChanges` struct in crate `couchdb`.">
+    <meta name="keywords" content="rust, rustlang, rust-lang, GetChanges">
+
+    <title>couchdb::action::GetChanges - Rust</title>
+
+    <link rel="stylesheet" type="text/css" href="../../rustdoc.css">
+    <link rel="stylesheet" type="text/css" href="../../main.css">
+
+    
+    
+</head>
+<body class="rustdoc">
+    <!--[if lte IE 8]>
+    <div class="warning">
+        This old browser is unsupported and will most likely display funky
+        things.
+    </div>
+    <![endif]-->
+
+    
+
+    <nav class="sidebar">
+        
+        <p class='location'><a href='../index.html'>couchdb</a>::<wbr><a href='index.html'>action</a></p><script>window.sidebarCurrent = {name: 'GetChanges', ty: 'struct', relpath: ''};</script><script defer src="sidebar-items.js"></script>
+    </nav>
+
+    <nav class="sub">
+        <form class="search-form js-only">
+            <div class="search-container">
+                <input class="search-input" name="search"
+                       autocomplete="off"
+                       placeholder="Click or press ‘S’ to search, ‘?’ for more options…"
+                       type="search">
+            </div>
+        </form>
+    </nav>
+
+    <section id='main' class="content struct">
+<h1 class='fqn'><span class='in-band'>Struct <a href='../index.html'>couchdb</a>::<wbr><a href='index.html'>action</a>::<wbr><a class='struct' href=''>GetChanges</a></span><span class='out-of-band'><span id='render-detail'>
+            <a id="toggle-all-docs" href="javascript:void(0)" title="collapse all docs">
+                [<span class='inner'>&#x2212;</span>]
+            </a>
+        </span><a id='src-223' class='srclink' href='../../src/couchdb/action/get_changes.rs.html#132-138' title='goto source code'>[src]</a></span></h1>
+<pre class='rust struct'>pub struct GetChanges&lt;'a, P&gt; <span class='where'>where P: <a class='trait' href='../../couchdb/trait.IntoDatabasePath.html' title='couchdb::IntoDatabasePath'>IntoDatabasePath</a></span> {
+    // some fields omitted
+}</pre><div class='docblock'><p>Action to get changes made to documents in a database.</p>
+
+<h1 id='return' class='section-header'><a href='#return'>Return</a></h1>
+<p>This action returns a list of changes to documents that have occurred within
+the database. However, if using the continuous feed then the returned list
+is empty and the changes are instead returned via an event handler. See the
+<a href="#method.continuous"><code>continuous</code></a> method for more information.</p>
+
+<h1 id='errors' class='section-header'><a href='#errors'>Errors</a></h1>
+<p>The following are some of the errors that may occur as a result of executing
+this action:</p>
+
+<ul>
+<li><code>Error::BadRequest</code>: Bad request.</li>
+</ul>
+</div><h2 id='methods'>Methods</h2><h3 class='impl'><code>impl&lt;'a, P: <a class='trait' href='../../couchdb/trait.IntoDatabasePath.html' title='couchdb::IntoDatabasePath'>IntoDatabasePath</a>&gt; <a class='struct' href='../../couchdb/action/struct.GetChanges.html' title='couchdb::action::GetChanges'>GetChanges</a>&lt;'a, P&gt;</code></h3><div class='impl-items'><h4 id='method.longpoll' class='method'><code>fn <a href='#method.longpoll' class='fnname'>longpoll</a>(self) -&gt; Self</code></h4>
+<div class='docblock'><p>Sets the <code>feed</code> query parameter to do long-polling.</p>
+</div><h4 id='method.continuous' class='method'><code>fn <a href='#method.continuous' class='fnname'>continuous</a>&lt;H: 'a + <a class='trait' href='../../couchdb/action/trait.ChangeHandler.html' title='couchdb::action::ChangeHandler'>ChangeHandler</a>&gt;(self, handler: H) -&gt; Self</code></h4>
+<div class='docblock'><p>Sets the <code>feed</code> query parameter to receive a continuous feed.</p>
+
+<p>The continuous feed behaves differently from other feeds. When using the
+continuous feed, the action returns an empty list of change results and
+the change results are instead returned via the <code>handler</code> argument,
+which is called exactly once for each change result.</p>
+</div><h4 id='method.heartbeat' class='method'><code>fn <a href='#method.heartbeat' class='fnname'>heartbeat</a>&lt;H: <a class='trait' href='https://doc.rust-lang.org/nightly/core/convert/trait.Into.html' title='core::convert::Into'>Into</a>&lt;<a class='enum' href='../../couchdb/enum.Heartbeat.html' title='couchdb::Heartbeat'>Heartbeat</a>&gt;&gt;(self, heartbeat: H) -&gt; Self</code></h4>
+<div class='docblock'><p>The heartbeat is the period after which the CouchDB server sends an
+empty line.</p>
+
+<p>The heartbeat applies only for long-polling and continuous feeds. If
+set, the heartbeat overrides the action&#39;s timeout, meaning the action
+remains open indefinitely.</p>
+</div><h4 id='method.since' class='method'><code>fn <a href='#method.since' class='fnname'>since</a>&lt;S: <a class='trait' href='https://doc.rust-lang.org/nightly/core/convert/trait.Into.html' title='core::convert::Into'>Into</a>&lt;<a class='enum' href='../../couchdb/enum.Since.html' title='couchdb::Since'>Since</a>&gt;&gt;(self, seq: S) -&gt; Self</code></h4>
+<div class='docblock'><p>Sets the <code>since</code> query parameter.</p>
+
+<p>The <code>since</code> query parameter causes the action to return change results
+starting after the given sequence number.</p>
+</div><h4 id='method.timeout' class='method'><code>fn <a href='#method.timeout' class='fnname'>timeout</a>(self, timeout: <a class='struct' href='https://doc.rust-lang.org/nightly/std/time/duration/struct.Duration.html' title='std::time::duration::Duration'>Duration</a>) -&gt; Self</code></h4>
+<div class='docblock'><p>Sets the <code>timeout</code> query parameter.</p>
+</div><h4 id='method.run' class='method'><code>fn <a href='#method.run' class='fnname'>run</a>(self) -&gt; <a class='enum' href='https://doc.rust-lang.org/nightly/core/result/enum.Result.html' title='core::result::Result'>Result</a>&lt;<a class='struct' href='../../couchdb/struct.Changes.html' title='couchdb::Changes'>Changes</a>, <a class='enum' href='../../couchdb/enum.Error.html' title='couchdb::Error'>Error</a>&gt;</code></h4>
+<div class='docblock'><p>Sends the action request and waits for the response.</p>
+</div></div></section>
+    <section id='search' class="content hidden"></section>
+
+    <section class="footer"></section>
+
+    <aside id="help" class="hidden">
+        <div>
+            <h1 class="hidden">Help</h1>
+
+            <div class="shortcuts">
+                <h2>Keyboard Shortcuts</h2>
+
+                <dl>
+                    <dt>?</dt>
+                    <dd>Show this help dialog</dd>
+                    <dt>S</dt>
+                    <dd>Focus the search field</dd>
+                    <dt>&larrb;</dt>
+                    <dd>Move up in search results</dd>
+                    <dt>&rarrb;</dt>
+                    <dd>Move down in search results</dd>
+                    <dt>&#9166;</dt>
+                    <dd>Go to active search result</dd>
+                </dl>
+            </div>
+
+            <div class="infos">
+                <h2>Search Tricks</h2>
+
+                <p>
+                    Prefix searches with a type followed by a colon (e.g.
+                    <code>fn:</code>) to restrict the search to a given type.
+                </p>
+
+                <p>
+                    Accepted types are: <code>fn</code>, <code>mod</code>,
+                    <code>struct</code>, <code>enum</code>,
+                    <code>trait</code>, <code>type</code>, <code>macro</code>,
+                    and <code>const</code>.
+                </p>
+
+                <p>
+                    Search functions by type signature (e.g.
+                    <code>vec -> usize</code>)
+                </p>
+            </div>
+        </div>
+    </aside>
+
+    
+
+    <script>
+        window.rootPath = "../../";
+        window.currentCrate = "couchdb";
+        window.playgroundUrl = "";
+    </script>
+    <script src="../../jquery.js"></script>
+    <script src="../../main.js"></script>
+    
+    <script defer src="../../search-index.js"></script>
+</body>
+</html>

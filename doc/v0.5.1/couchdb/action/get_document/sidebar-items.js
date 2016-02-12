@@ -1,0 +1,1 @@
+initSidebarItems({"struct":[["GetDocument","Action to get document meta-information and application-defined content."]]});

@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="generator" content="rustdoc">
+    <meta name="description" content="API documentation for the Rust `ChangeResultBuilder` struct in crate `couchdb`.">
+    <meta name="keywords" content="rust, rustlang, rust-lang, ChangeResultBuilder">
+
+    <title>couchdb::ChangeResultBuilder - Rust</title>
+
+    <link rel="stylesheet" type="text/css" href="../rustdoc.css">
+    <link rel="stylesheet" type="text/css" href="../main.css">
+
+    
+    
+</head>
+<body class="rustdoc">
+    <!--[if lte IE 8]>
+    <div class="warning">
+        This old browser is unsupported and will most likely display funky
+        things.
+    </div>
+    <![endif]-->
+
+    
+
+    <nav class="sidebar">
+        
+        <p class='location'><a href='index.html'>couchdb</a></p><script>window.sidebarCurrent = {name: 'ChangeResultBuilder', ty: 'struct', relpath: ''};</script><script defer src="sidebar-items.js"></script>
+    </nav>
+
+    <nav class="sub">
+        <form class="search-form js-only">
+            <div class="search-container">
+                <input class="search-input" name="search"
+                       autocomplete="off"
+                       placeholder="Click or press ‘S’ to search, ‘?’ for more options…"
+                       type="search">
+            </div>
+        </form>
+    </nav>
+
+    <section id='main' class="content struct">
+<h1 class='fqn'><span class='in-band'>Struct <a href='index.html'>couchdb</a>::<wbr><a class='struct' href=''>ChangeResultBuilder</a></span><span class='out-of-band'><span id='render-detail'>
+            <a id="toggle-all-docs" href="javascript:void(0)" title="collapse all docs">
+                [<span class='inner'>&#x2212;</span>]
+            </a>
+        </span><a id='src-1457' class='srclink' href='../src/couchdb/dbtype/change_result.rs.html#11-13' title='goto source code'>[src]</a></span></h1>
+<pre class='rust struct'>pub struct ChangeResultBuilder {
+    // some fields omitted
+}</pre><div class='docblock'><p>Builder for constructing a change result.</p>
+</div><h2 id='methods'>Methods</h2><h3 class='impl'><code>impl <a class='struct' href='../couchdb/struct.ChangeResultBuilder.html' title='couchdb::ChangeResultBuilder'>ChangeResultBuilder</a></code></h3><div class='impl-items'><h4 id='method.new' class='method'><code>fn <a href='#method.new' class='fnname'>new</a>&lt;I: <a class='trait' href='https://doc.rust-lang.org/nightly/core/convert/trait.Into.html' title='core::convert::Into'>Into</a>&lt;<a class='enum' href='../couchdb/enum.DocumentId.html' title='couchdb::DocumentId'>DocumentId</a>&gt;&gt;(seq: <a class='primitive' href='https://doc.rust-lang.org/nightly/std/primitive.u64.html'>u64</a>, doc_id: I) -&gt; Self</code></h4>
+<div class='docblock'><p>Constructs a new change result builder.</p>
+
+<p>The change result contained within the builder has the given sequence
+number and document id. The change result&#39;s <code>deleted</code> field is <code>false</code>,
+and the <code>changes</code> field is empty.</p>
+</div><h4 id='method.unwrap' class='method'><code>fn <a href='#method.unwrap' class='fnname'>unwrap</a>(self) -&gt; <a class='struct' href='../couchdb/struct.ChangeResult.html' title='couchdb::ChangeResult'>ChangeResult</a></code></h4>
+<div class='docblock'><p>Returns the change result contained within the builder.</p>
+</div><h4 id='method.deleted' class='method'><code>fn <a href='#method.deleted' class='fnname'>deleted</a>(self, deleted: <a class='primitive' href='https://doc.rust-lang.org/nightly/std/primitive.bool.html'>bool</a>) -&gt; Self</code></h4>
+<div class='docblock'><p>Sets the <code>deleted</code> field of the change result contained within the
+builder.</p>
+</div><h4 id='method.push_change' class='method'><code>fn <a href='#method.push_change' class='fnname'>push_change</a>(self, change: <a class='struct' href='../couchdb/struct.ChangeItem.html' title='couchdb::ChangeItem'>ChangeItem</a>) -&gt; Self</code></h4>
+<div class='docblock'><p>Adds a change item to the change result contained within the builder.</p>
+</div><h4 id='method.build_change' class='method'><code>fn <a href='#method.build_change' class='fnname'>build_change</a>&lt;F&gt;(self, rev: <a class='struct' href='../couchdb/struct.Revision.html' title='couchdb::Revision'>Revision</a>, f: F) -&gt; Self <span class='where'>where F: <a class='trait' href='https://doc.rust-lang.org/nightly/core/ops/trait.FnOnce.html' title='core::ops::FnOnce'>FnOnce</a>(<a class='struct' href='../couchdb/struct.ChangeItemBuilder.html' title='couchdb::ChangeItemBuilder'>ChangeItemBuilder</a>) -&gt; <a class='struct' href='../couchdb/struct.ChangeItemBuilder.html' title='couchdb::ChangeItemBuilder'>ChangeItemBuilder</a></span></code></h4>
+<div class='docblock'><p>Constructs and adds a change item to the change result contained within
+the builder.</p>
+</div><h4 id='method.build_change_from_rev_str' class='method'><code>fn <a href='#method.build_change_from_rev_str' class='fnname'>build_change_from_rev_str</a>&lt;R, F&gt;(self, rev: R, f: F) -&gt; Self <span class='where'>where R: <a class='trait' href='https://doc.rust-lang.org/nightly/core/convert/trait.AsRef.html' title='core::convert::AsRef'>AsRef</a>&lt;<a class='primitive' href='https://doc.rust-lang.org/nightly/std/primitive.str.html'>str</a>&gt;, F: <a class='trait' href='https://doc.rust-lang.org/nightly/core/ops/trait.FnOnce.html' title='core::ops::FnOnce'>FnOnce</a>(<a class='struct' href='../couchdb/struct.ChangeItemBuilder.html' title='couchdb::ChangeItemBuilder'>ChangeItemBuilder</a>) -&gt; <a class='struct' href='../couchdb/struct.ChangeItemBuilder.html' title='couchdb::ChangeItemBuilder'>ChangeItemBuilder</a></span></code></h4>
+<div class='docblock'><p>Constructs and adds a change item to the change result contained within
+the builder.</p>
+
+<h1 id='panics' class='section-header'><a href='#panics'>Panics</a></h1>
+<p>Panics if the revision string is invalid.</p>
+</div></div><h2 id='implementations'>Trait Implementations</h2><h3 id='derived_implementations'>Derived Implementations </h3><h3 class='impl'><code>impl <a class='trait' href='https://doc.rust-lang.org/nightly/core/fmt/trait.Debug.html' title='core::fmt::Debug'>Debug</a> for <a class='struct' href='../couchdb/struct.ChangeResultBuilder.html' title='couchdb::ChangeResultBuilder'>ChangeResultBuilder</a></code></h3><div class='impl-items'><h4 id='method.fmt' class='method'><code>fn <a href='https://doc.rust-lang.org/nightly/core/fmt/trait.Debug.html#method.fmt' class='fnname'>fmt</a>(&amp;self, __arg_0: &amp;mut <a class='struct' href='https://doc.rust-lang.org/nightly/core/fmt/struct.Formatter.html' title='core::fmt::Formatter'>Formatter</a>) -&gt; <a class='type' href='https://doc.rust-lang.org/nightly/core/fmt/type.Result.html' title='core::fmt::Result'>Result</a></code></h4>
+</div></section>
+    <section id='search' class="content hidden"></section>
+
+    <section class="footer"></section>
+
+    <aside id="help" class="hidden">
+        <div>
+            <h1 class="hidden">Help</h1>
+
+            <div class="shortcuts">
+                <h2>Keyboard Shortcuts</h2>
+
+                <dl>
+                    <dt>?</dt>
+                    <dd>Show this help dialog</dd>
+                    <dt>S</dt>
+                    <dd>Focus the search field</dd>
+                    <dt>&larrb;</dt>
+                    <dd>Move up in search results</dd>
+                    <dt>&rarrb;</dt>
+                    <dd>Move down in search results</dd>
+                    <dt>&#9166;</dt>
+                    <dd>Go to active search result</dd>
+                </dl>
+            </div>
+
+            <div class="infos">
+                <h2>Search Tricks</h2>
+
+                <p>
+                    Prefix searches with a type followed by a colon (e.g.
+                    <code>fn:</code>) to restrict the search to a given type.
+                </p>
+
+                <p>
+                    Accepted types are: <code>fn</code>, <code>mod</code>,
+                    <code>struct</code>, <code>enum</code>,
+                    <code>trait</code>, <code>type</code>, <code>macro</code>,
+                    and <code>const</code>.
+                </p>
+
+                <p>
+                    Search functions by type signature (e.g.
+                    <code>vec -> usize</code>)
+                </p>
+            </div>
+        </div>
+    </aside>
+
+    
+
+    <script>
+        window.rootPath = "../";
+        window.currentCrate = "couchdb";
+        window.playgroundUrl = "";
+    </script>
+    <script src="../jquery.js"></script>
+    <script src="../main.js"></script>
+    
+    <script defer src="../search-index.js"></script>
+</body>
+</html>

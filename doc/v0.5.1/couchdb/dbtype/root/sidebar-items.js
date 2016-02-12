@@ -1,0 +1,1 @@
+initSidebarItems({"struct":[["Root","CouchDB server information."],["Vendor","CouchDB server vendor information."]]});

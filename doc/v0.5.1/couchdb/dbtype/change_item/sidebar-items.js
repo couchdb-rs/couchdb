@@ -1,0 +1,1 @@
+initSidebarItems({"struct":[["ChangeItem","Document leaf as returned in a change result."],["ChangeItemBuilder","Builder for constructing a change item."]]});

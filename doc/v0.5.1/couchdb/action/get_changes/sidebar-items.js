@@ -1,0 +1,1 @@
+initSidebarItems({"struct":[["GetChanges","Action to get changes made to documents in a database."]],"trait":[["ChangeHandler","A change handler receives a single change result."]]});

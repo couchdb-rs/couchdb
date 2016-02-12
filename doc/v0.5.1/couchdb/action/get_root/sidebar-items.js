@@ -1,0 +1,1 @@
+initSidebarItems({"struct":[["GetRoot","Action to get meta-information about the CouchDB server."]]});

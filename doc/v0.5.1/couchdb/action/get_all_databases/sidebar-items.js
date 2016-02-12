@@ -1,0 +1,1 @@
+initSidebarItems({"struct":[["GetAllDatabases","Action to get all database names."]]});

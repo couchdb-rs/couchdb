@@ -1,0 +1,1 @@
+initSidebarItems({"struct":[["EmbeddedAttachment","An embedded attachment is an attachment contained within a document."]]});
