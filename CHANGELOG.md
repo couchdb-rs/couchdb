@@ -1,28 +1,31 @@
 # CouchDB-rs Change Log
 
-## v0.5.1 (unreleased)
+## v0.5.1 (2016-02-12)
+
+This release extends the crate's coverage of the CouchDB API, deprecates
+a few poorly named things, and improves documentation.
 
 ### Deprecated
 
-* Deprecated the method `Client::post_to_database`, replaced by
-  `Client::post_database`.
-* Deprecated the action type `PostToDatabase`, replaced by
-  `PostDatabase`.
+* The method `Client::post_to_database` is deprecated. Use
+  `Client::post_database` instead.
+* The type `PostToDatabase` is deprecated. Use `PostDatabase` instead.
 
 ### New
 
-* New action `GetChanges` for getting database changes—i.e., `GET
-  /db/_changes`.
-* New action `GetRoot` for getting the CouchDB server's root resource
-  (`/`)—e.g., for getting the server's version.
-* New support for getting documents at a specific revision via the `rev`
-  query parameter—i.e., `GET /db/doc?rev=<revision>`.
-* New support for getting embedded attachments via the `GetDocument`
-  action.
-* New field `deleted` in the `Document` type for signifying whether the
-  document has been deleted.
-* New feature table in the `action` module showing, in detail, this
-  crate's coverage of the CouchDB API.
+* The `GetChanges` action type is new and allows applications to
+  get database changes via the `/db/_changes` resource.
+* The `GetRoot` action type is new and allows applications to get the
+  CouchDB root resource (`/`), which includes the server's version
+  information.
+* There's now support for getting documents at a specific revision via
+  the `?rev` query parameter—i.e., `GET /db/doc?rev=<revision>`.
+* This release adds limited support for getting embedded attachments via
+  the `GetDocument` action.
+* The `Document` type now contains a `deleted` field for signifying
+  whether the document has been deleted.
+* The `action` module's documentation now contains a feature table
+  showing, in detail, the crate's coverage of the CouchDB API.
 
 ## v0.5.0 (2016-01-17)
 

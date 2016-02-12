@@ -1,11 +1,11 @@
 [package]
 name = "couchdb"
-version = "0.5.1+master"
+version = "0.5.1"
 authors = ["Craig M. Brandenburg <c.m.brandenburg@gmail.com>"]
 license = "MIT/Apache-2.0"
 description = "CouchDB client library"
 repository = "https://github.com/couchdb-rs/couchdb"
-documentation = "https://couchdb-rs.github.io/couchdb/doc/v0.5.0/couchdb/"
+documentation = "https://couchdb-rs.github.io/couchdb/doc/v0.5.1/couchdb/"
 keywords = ["couch", "couchdb", "database", "nosql"]
 
 [dependencies]
