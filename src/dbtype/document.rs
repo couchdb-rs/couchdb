@@ -72,7 +72,7 @@ impl serde::Deserialize for Document {
                     }
                 }
 
-                d.visit(Visitor)
+                d.deserialize(Visitor)
             }
         }
 
@@ -141,7 +141,7 @@ impl serde::Deserialize for Document {
         }
 
         static FIELDS: &'static [&'static str] = &["_id", "_rev"];
-        d.visit_struct("Document", FIELDS, Visitor)
+        d.deserialize_struct("Document", FIELDS, Visitor)
     }
 }
 

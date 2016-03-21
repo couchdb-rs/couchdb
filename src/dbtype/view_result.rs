@@ -99,7 +99,7 @@ impl<K, V> serde::Deserialize for ViewResult<K, V>
                     }
                 }
 
-                d.visit(Visitor)
+                d.deserialize(Visitor)
             }
         }
 
@@ -157,7 +157,7 @@ impl<K, V> serde::Deserialize for ViewResult<K, V>
         }
 
         static FIELDS: &'static [&'static str] = &["total_rows", "offset", "rows"];
-        d.visit_struct("ViewResult",
+        d.deserialize_struct("ViewResult",
                        FIELDS,
                        Visitor::<K, V> {
                            _phantom_key: std::marker::PhantomData,

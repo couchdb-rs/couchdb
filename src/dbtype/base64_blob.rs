@@ -23,7 +23,7 @@ impl serde::Deserialize for Base64Blob {
             }
         }
 
-        deserializer.visit(Visitor)
+        deserializer.deserialize(Visitor)
     }
 }
 

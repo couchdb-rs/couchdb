@@ -1054,7 +1054,7 @@ mod json {
         let reader = reader.by_ref();
         serde_json::from_reader(reader).map_err(|e| {
             match e {
-                serde_json::Error::IoError(e) => Error::Transport(TransportKind::Io(e)),
+                serde_json::Error::Io(e) => Error::Transport(TransportKind::Io(e)),
                 _ => Error::Decode(DecodeErrorKind::Serde { cause: e }),
             }
         })

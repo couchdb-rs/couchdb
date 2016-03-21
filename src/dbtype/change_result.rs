@@ -142,7 +142,7 @@ impl serde::Deserialize for ChangeResult {
                     }
                 }
 
-                d.visit(Visitor)
+                d.deserialize(Visitor)
             }
         }
 
@@ -208,7 +208,7 @@ impl serde::Deserialize for ChangeResult {
         }
 
         static FIELDS: &'static [&'static str] = &["changes", "deleted", "id", "seq"];
-        d.visit_struct("ChangeResult", FIELDS, Visitor)
+        d.deserialize_struct("ChangeResult", FIELDS, Visitor)
     }
 }
 

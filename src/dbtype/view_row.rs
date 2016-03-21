@@ -90,7 +90,7 @@ impl<K, V> serde::Deserialize for ViewRow<K, V>
                     }
                 }
 
-                d.visit(Visitor)
+                d.deserialize(Visitor)
             }
         }
 
@@ -148,7 +148,7 @@ impl<K, V> serde::Deserialize for ViewRow<K, V>
         }
 
         static FIELDS: &'static [&'static str] = &["id", "key", "value"];
-        d.visit_struct("ViewRow",
+        d.deserialize_struct("ViewRow",
                        FIELDS,
                        Visitor::<K, V> {
                            _phantom_key: std::marker::PhantomData,

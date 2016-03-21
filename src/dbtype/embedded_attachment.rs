@@ -137,7 +137,7 @@ impl serde::Deserialize for EmbeddedAttachment {
                     }
                 }
 
-                deserializer.visit(Visitor)
+                deserializer.deserialize(Visitor)
             }
         }
 
@@ -230,7 +230,7 @@ impl serde::Deserialize for EmbeddedAttachment {
                                                    "length",
                                                    "revpos",
                                                    "stub"];
-        deserializer.visit_struct("EmbeddedAttachment", FIELDS, Visitor)
+        deserializer.deserialize_struct("EmbeddedAttachment", FIELDS, Visitor)
     }
 }
 

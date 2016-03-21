@@ -47,7 +47,7 @@ impl serde::Deserialize for ChangeLine {
                     }
                 }
 
-                d.visit(Visitor)
+                d.deserialize(Visitor)
             }
         }
 
@@ -158,7 +158,7 @@ impl serde::Deserialize for ChangeLine {
         }
 
         static FIELDS: &'static [&'static str] = &["changes", "deleted", "id", "last_seq", "seq"];
-        d.visit_struct("ChangeLine", FIELDS, Visitor)
+        d.deserialize_struct("ChangeLine", FIELDS, Visitor)
     }
 }
 

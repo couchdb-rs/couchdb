@@ -27,7 +27,7 @@ impl serde::Deserialize for SerializableVersion {
             }
         }
 
-        deserializer.visit(Visitor)
+        deserializer.deserialize(Visitor)
     }
 }
 
@@ -72,7 +72,7 @@ impl serde::Deserialize for Vendor {
                     }
                 }
 
-                d.visit(Visitor)
+                d.deserialize(Visitor)
             }
         }
 
@@ -122,7 +122,7 @@ impl serde::Deserialize for Vendor {
         }
 
         static FIELDS: &'static [&'static str] = &["name", "version"];
-        deserializer.visit_struct("Vendor", FIELDS, Visitor)
+        deserializer.deserialize_struct("Vendor", FIELDS, Visitor)
     }
 }
 
@@ -177,7 +177,7 @@ impl serde::Deserialize for Root {
                     }
                 }
 
-                d.visit(Visitor)
+                d.deserialize(Visitor)
             }
         }
 
@@ -248,7 +248,7 @@ impl serde::Deserialize for Root {
         }
 
         static FIELDS: &'static [&'static str] = &["couchdb", "uuid", "vendor", "version"];
-        deserializer.visit_struct("Root", FIELDS, Visitor)
+        deserializer.deserialize_struct("Root", FIELDS, Visitor)
     }
 }
 
