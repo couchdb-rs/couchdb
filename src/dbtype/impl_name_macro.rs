@@ -45,7 +45,7 @@ macro_rules! impl_name_type {
                 where S: serde::Serializer
             {
                 let $x(ref name) = *self;
-                serializer.visit_str(name)
+                serializer.serialize_str(name)
             }
         }
 
@@ -71,7 +71,7 @@ macro_rules! impl_name_type {
                     }
                 }
 
-                deserializer.visit(Visitor)
+                deserializer.deserialize(Visitor)
             }
         }
     }

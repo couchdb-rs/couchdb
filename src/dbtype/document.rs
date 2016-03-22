@@ -72,7 +72,7 @@ impl serde::Deserialize for Document {
                     }
                 }
 
-                d.visit(Visitor)
+                d.deserialize(Visitor)
             }
         }
 
@@ -121,12 +121,12 @@ impl serde::Deserialize for Document {
 
                 let id = match id {
                     Some(x) => x,
-                    None => try!(visitor.missing_field("id")),
+                    None => try!(visitor.missing_field("_id")),
                 };
 
                 let rev = match rev {
                     Some(x) => x,
-                    None => try!(visitor.missing_field("rev")),
+                    None => try!(visitor.missing_field("_rev")),
                 };
 
 
@@ -141,7 +141,7 @@ impl serde::Deserialize for Document {
         }
 
         static FIELDS: &'static [&'static str] = &["_id", "_rev"];
-        d.visit_struct("Document", FIELDS, Visitor)
+        d.deserialize_struct("Document", FIELDS, Visitor)
     }
 }
 

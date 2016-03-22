@@ -104,7 +104,7 @@ impl serde::Deserialize for Database {
                     }
                 }
 
-                d.visit(Visitor)
+                d.deserialize(Visitor)
             }
         }
 
@@ -259,7 +259,7 @@ impl serde::Deserialize for Database {
                                                    "instance_start_time",
                                                    "purge_seq",
                                                    "update_seq"];
-        d.visit_struct("Database", FIELDS, Visitor)
+        d.deserialize_struct("Database", FIELDS, Visitor)
     }
 }
 

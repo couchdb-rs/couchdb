@@ -85,16 +85,16 @@ impl serde::Serialize for ViewFunction {
             {
                 let Visitor(view_func) = *self;
 
-                try!(s.visit_struct_elt("map", &view_func.map));
+                try!(s.serialize_struct_elt("map", &view_func.map));
                 for v in view_func.reduce.iter() {
-                    try!(s.visit_struct_elt("reduce", v));
+                    try!(s.serialize_struct_elt("reduce", v));
                 }
 
                 Ok(None)
             }
         }
 
-        s.visit_struct("ViewFunction", Visitor(self))
+        s.serialize_struct("ViewFunction", Visitor(self))
     }
 }
 
@@ -127,7 +127,7 @@ impl serde::Deserialize for ViewFunction {
                     }
                 }
 
-                d.visit(Visitor)
+                d.deserialize(Visitor)
             }
         }
 
@@ -173,7 +173,7 @@ impl serde::Deserialize for ViewFunction {
         }
 
         static FIELDS: &'static [&'static str] = &["map", "reduce"];
-        d.visit_struct("ViewFunction", FIELDS, Visitor)
+        d.deserialize_struct("ViewFunction", FIELDS, Visitor)
     }
 }
 
@@ -254,6 +254,6 @@ mod tests {
                          .unwrap();
         let s = serde_json::to_string(&source).unwrap();
         let got = serde_json::from_str::<ViewFunction>(&s);
-        expect_json_error_missing_field!(got, "value");
+        expect_json_error_missing_field!(got, "map");
     }
 }

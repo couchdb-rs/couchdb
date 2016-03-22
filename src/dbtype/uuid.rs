@@ -22,7 +22,7 @@ impl serde::Deserialize for Uuid {
             }
         }
 
-        deserializer.visit(Visitor)
+        deserializer.deserialize(Visitor)
     }
 }
 

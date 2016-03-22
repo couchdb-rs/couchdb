@@ -27,7 +27,7 @@ impl serde::Deserialize for SerializableVersion {
             }
         }
 
-        deserializer.visit(Visitor)
+        deserializer.deserialize(Visitor)
     }
 }
 
@@ -72,7 +72,7 @@ impl serde::Deserialize for Vendor {
                     }
                 }
 
-                d.visit(Visitor)
+                d.deserialize(Visitor)
             }
         }
 
@@ -122,7 +122,7 @@ impl serde::Deserialize for Vendor {
         }
 
         static FIELDS: &'static [&'static str] = &["name", "version"];
-        deserializer.visit_struct("Vendor", FIELDS, Visitor)
+        deserializer.deserialize_struct("Vendor", FIELDS, Visitor)
     }
 }
 
@@ -177,7 +177,7 @@ impl serde::Deserialize for Root {
                     }
                 }
 
-                d.visit(Visitor)
+                d.deserialize(Visitor)
             }
         }
 
@@ -248,7 +248,7 @@ impl serde::Deserialize for Root {
         }
 
         static FIELDS: &'static [&'static str] = &["couchdb", "uuid", "vendor", "version"];
-        deserializer.visit_struct("Root", FIELDS, Visitor)
+        deserializer.deserialize_struct("Root", FIELDS, Visitor)
     }
 }
 
@@ -403,7 +403,7 @@ mod tests {
                          .unwrap();
         let s = serde_json::to_string(&source).unwrap();
         let got = serde_json::from_str::<Root>(&s);
-        expect_json_error_missing_field!(got, "rev");
+        expect_json_error_missing_field!(got, "couchdb");
     }
 
     #[test]
@@ -418,7 +418,7 @@ mod tests {
                          .unwrap();
         let s = serde_json::to_string(&source).unwrap();
         let got = serde_json::from_str::<Root>(&s);
-        expect_json_error_missing_field!(got, "rev");
+        expect_json_error_missing_field!(got, "uuid");
     }
 
     #[test]
@@ -430,7 +430,7 @@ mod tests {
                          .unwrap();
         let s = serde_json::to_string(&source).unwrap();
         let got = serde_json::from_str::<Root>(&s);
-        expect_json_error_missing_field!(got, "rev");
+        expect_json_error_missing_field!(got, "vendor");
     }
 
     #[test]
@@ -445,7 +445,7 @@ mod tests {
                          .unwrap();
         let s = serde_json::to_string(&source).unwrap();
         let got = serde_json::from_str::<Root>(&s);
-        expect_json_error_missing_field!(got, "rev");
+        expect_json_error_missing_field!(got, "version");
     }
 
     #[test]

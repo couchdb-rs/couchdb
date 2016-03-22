@@ -8,7 +8,7 @@ pub type PostDatabaseResponse = WriteDocumentResponse;
 pub type PutDocumentResponse = WriteDocumentResponse;
 
 #[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
-struct WriteDocumentResponse {
+pub struct WriteDocumentResponse {
     pub id: DocumentId,
     pub ok: bool,
     pub rev: Revision,
@@ -45,7 +45,7 @@ impl serde::Deserialize for WriteDocumentResponse {
                     }
                 }
 
-                d.visit(Visitor)
+                d.deserialize(Visitor)
             }
         }
 
@@ -99,7 +99,7 @@ impl serde::Deserialize for WriteDocumentResponse {
         }
 
         static FIELDS: &'static [&'static str] = &["id", "ok", "rev"];
-        d.visit_struct("WriteDocumentResponse", FIELDS, Visitor)
+        d.deserialize_struct("WriteDocumentResponse", FIELDS, Visitor)
     }
 }
 

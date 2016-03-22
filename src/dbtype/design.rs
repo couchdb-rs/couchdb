@@ -50,14 +50,14 @@ impl serde::Serialize for Design {
                 let Visitor(design) = *self;
 
                 if !design.views.is_empty() {
-                    try!(s.visit_struct_elt("views", &design.views));
+                    try!(s.serialize_struct_elt("views", &design.views));
                 }
 
                 Ok(None)
             }
         }
 
-        s.visit_struct("Design", Visitor(self))
+        s.serialize_struct("Design", Visitor(self))
     }
 }
 
@@ -88,7 +88,7 @@ impl serde::Deserialize for Design {
                     }
                 }
 
-                d.visit(Visitor)
+                d.deserialize(Visitor)
             }
         }
 
@@ -129,7 +129,7 @@ impl serde::Deserialize for Design {
         }
 
         static FIELDS: &'static [&'static str] = &["views"];
-        d.visit_struct("Design", FIELDS, Visitor)
+        d.deserialize_struct("Design", FIELDS, Visitor)
     }
 }
 

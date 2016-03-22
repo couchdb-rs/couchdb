@@ -99,7 +99,7 @@ impl<K, V> serde::Deserialize for ViewResult<K, V>
                     }
                 }
 
-                d.visit(Visitor)
+                d.deserialize(Visitor)
             }
         }
 
@@ -157,7 +157,7 @@ impl<K, V> serde::Deserialize for ViewResult<K, V>
         }
 
         static FIELDS: &'static [&'static str] = &["total_rows", "offset", "rows"];
-        d.visit_struct("ViewResult",
+        d.deserialize_struct("ViewResult",
                        FIELDS,
                        Visitor::<K, V> {
                            _phantom_key: std::marker::PhantomData,
@@ -270,7 +270,7 @@ mod tests {
     fn view_result_deserialization_with_no_rows_field() {
         let source = serde_json::builder::ObjectBuilder::new().unwrap();
         let s = serde_json::to_string(&source).unwrap();
-        let got = serde_json::from_str::<ViewRow<String, i32>>(&s);
+        let got = serde_json::from_str::<ViewResult<String, i32>>(&s);
         expect_json_error_missing_field!(got, "rows");
     }
 }

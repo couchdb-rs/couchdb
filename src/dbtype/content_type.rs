@@ -21,7 +21,7 @@ impl serde::Deserialize for ContentType {
             }
         }
 
-        deserializer.visit(Visitor)
+        deserializer.deserialize(Visitor)
     }
 }
 

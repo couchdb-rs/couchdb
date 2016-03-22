@@ -84,7 +84,7 @@ impl serde::Serialize for Revision {
         where S: serde::Serializer
     {
         let s = format!("{}", self);
-        serializer.visit_str(&s)
+        serializer.serialize_str(&s)
     }
 }
 
@@ -105,7 +105,7 @@ impl serde::Deserialize for Revision {
             }
         }
 
-        deserializer.visit(Visitor)
+        deserializer.deserialize(Visitor)
     }
 }
 
