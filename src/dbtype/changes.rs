@@ -269,7 +269,6 @@ mod tests {
     }
 
     #[test]
-    #[should_panic] // because serde_json issue #29 (https://github.com/serde-rs/json/issues/29)
     fn deserialization_nok_without_results_field() {
         let source = serde_json::builder::ObjectBuilder::new()
                          .insert("last_seq", 11)

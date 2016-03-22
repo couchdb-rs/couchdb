@@ -254,6 +254,6 @@ mod tests {
                          .unwrap();
         let s = serde_json::to_string(&source).unwrap();
         let got = serde_json::from_str::<ViewFunction>(&s);
-        expect_json_error_missing_field!(got, "value");
+        expect_json_error_missing_field!(got, "map");
     }
 }

@@ -403,7 +403,7 @@ mod tests {
                          .unwrap();
         let s = serde_json::to_string(&source).unwrap();
         let got = serde_json::from_str::<Root>(&s);
-        expect_json_error_missing_field!(got, "rev");
+        expect_json_error_missing_field!(got, "couchdb");
     }
 
     #[test]
@@ -418,7 +418,7 @@ mod tests {
                          .unwrap();
         let s = serde_json::to_string(&source).unwrap();
         let got = serde_json::from_str::<Root>(&s);
-        expect_json_error_missing_field!(got, "rev");
+        expect_json_error_missing_field!(got, "uuid");
     }
 
     #[test]
@@ -430,7 +430,7 @@ mod tests {
                          .unwrap();
         let s = serde_json::to_string(&source).unwrap();
         let got = serde_json::from_str::<Root>(&s);
-        expect_json_error_missing_field!(got, "rev");
+        expect_json_error_missing_field!(got, "vendor");
     }
 
     #[test]
@@ -445,7 +445,7 @@ mod tests {
                          .unwrap();
         let s = serde_json::to_string(&source).unwrap();
         let got = serde_json::from_str::<Root>(&s);
-        expect_json_error_missing_field!(got, "rev");
+        expect_json_error_missing_field!(got, "version");
     }
 
     #[test]

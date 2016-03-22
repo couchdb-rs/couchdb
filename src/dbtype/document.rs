@@ -121,12 +121,12 @@ impl serde::Deserialize for Document {
 
                 let id = match id {
                     Some(x) => x,
-                    None => try!(visitor.missing_field("id")),
+                    None => try!(visitor.missing_field("_id")),
                 };
 
                 let rev = match rev {
                     Some(x) => x,
-                    None => try!(visitor.missing_field("rev")),
+                    None => try!(visitor.missing_field("_rev")),
                 };
 
 

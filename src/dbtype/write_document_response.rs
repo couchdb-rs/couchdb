@@ -8,7 +8,7 @@ pub type PostDatabaseResponse = WriteDocumentResponse;
 pub type PutDocumentResponse = WriteDocumentResponse;
 
 #[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
-struct WriteDocumentResponse {
+pub struct WriteDocumentResponse {
     pub id: DocumentId,
     pub ok: bool,
     pub rev: Revision,
