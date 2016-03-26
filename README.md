@@ -2,6 +2,19 @@
 
 [![Build Status](https://travis-ci.org/couchdb-rs/couchdb.svg?branch=master)](https://travis-ci.org/couchdb-rs/couchdb)
 
+---
+
+**This project is deprecated.** A new crate, [Chill][chill-rs], is the
+way forward and will provide a safer and more useful abstraction, as
+well as eliminating some inefficiencies. You can read a little bit about
+the rationale [here][rethinking_couchdb_in_rust].
+
+At the time of writing this (2016-03-26), Chill has minimal coverage of
+the CouchDB API. I expect Chill to catch up to and surpass this crate in
+coverage by late spring of 2016.
+
+---
+
 This project provides a CouchDB client-side library for the Rust
 programming language.
 
@@ -19,14 +32,7 @@ The latest release is **v0.5.1**, which was released **2016-02-12**.
 * [v0.5.1 issues](https://github.com/couchdb-rs/couchdb/issues?q=milestone%3Av0.5.1).
 * [v0.5.1 crates.io page](https://crates.io/crates/couchdb/0.5.1).
 
-The next release will _probably_ be **v0.6.0** and is _loosely
-scheduled_ for **March 2016.** Its chief focus will be to improve the
-type-safety and ergonomics of the library's API.
-
-* [v0.6.0 issues](https://github.com/couchdb-rs/couchdb/issues?q=milestone%3Av0.6.0).
-
-Another place to peek at upcoming changes is the [master branch change
-log](CHANGELOG.md).
+**There is no plan to make another release.**
 
 ## License
 
@@ -41,3 +47,6 @@ CouchDB-rs is licensed under either of:
 
 Do you find this crate useful? Not useful? [Please send
 feedback!](mailto:c.m.brandenburg@gmail.com)
+
+[chill-rs]: https://github.com/chill-rs/chill
+[rethinking_couchdb_in_rust]: https://cmbrandenburg.github.io/post/2016-02-23-rethinking_couchdb_in_rust/
