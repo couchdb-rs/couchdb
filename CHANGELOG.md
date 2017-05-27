@@ -4,6 +4,11 @@
 
 No changes yet!
 
+## v0.5.2 (2017-05-26)
+
+This release fixes compiler warnings that are soon to become hard
+errors. See issue [#57][issue_57] for more information.
+
 ## v0.5.1 (2016-02-12)
 
 This release extends the crate's coverage of the CouchDB API, deprecates
@@ -247,3 +252,4 @@ documents (HEAD, GET, PUT, and DELETE), and to execute views (GET).
 [issue_28]: https://github.com/couchdb-rs/couchdb/issues/28 "Issue #28"
 [issue_31]: https://github.com/couchdb-rs/couchdb/issues/31 "Issue #31"
 [issue_32]: https://github.com/couchdb-rs/couchdb/issues/32 "Issue #32"
+[issue_57]: https://github.com/couchdb-rs/couchdb/issues/57 "Issue #57"

@@ -25,12 +25,12 @@ programmers to focus on their business logic.
 
 ## Project roadmap
 
-The latest release is **v0.5.1**, which was released **2016-02-12**.
+The latest release is **v0.5.2**, which was released **2017-05-26**.
 
-* [v0.5.1 change log](https://github.com/couchdb-rs/couchdb/blob/v0.5.1/CHANGELOG.md).
-* [v0.5.1 documentation](https://couchdb-rs.github.io/couchdb/doc/v0.5.1/couchdb/index.html).
-* [v0.5.1 issues](https://github.com/couchdb-rs/couchdb/issues?q=milestone%3Av0.5.1).
-* [v0.5.1 crates.io page](https://crates.io/crates/couchdb/0.5.1).
+* [v0.5.2 change log](https://github.com/couchdb-rs/couchdb/blob/v0.5.2/CHANGELOG.md).
+* [v0.5.2 documentation](https://couchdb-rs.github.io/couchdb/doc/v0.5.2/couchdb/index.html).
+* [v0.5.2 issues](https://github.com/couchdb-rs/couchdb/issues?q=milestone%3Av0.5.2).
+* [v0.5.2 crates.io page](https://crates.io/crates/couchdb/0.5.2).
 
 **There is no plan to make another release.**
 
