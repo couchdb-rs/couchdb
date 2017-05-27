@@ -59,20 +59,6 @@ mod tests {
     }
 
     #[test]
-    fn view_name_from_str_ref() {
-        let expected = ViewName("foo".to_string());
-        let got = ViewName::from("foo");
-        assert_eq!(expected, got);
-    }
-
-    #[test]
-    fn view_name_from_string() {
-        let expected = ViewName("foo".to_string());
-        let got = ViewName::from("foo".to_string());
-        assert_eq!(expected, got);
-    }
-
-    #[test]
     fn string_from_view_name() {
         let expected = "foo".to_string();
         let got = String::from(ViewName::from("foo"));

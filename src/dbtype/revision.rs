@@ -154,8 +154,6 @@ mod tests {
             }
         }
 
-        use std::str::FromStr;
-
         expect_error!("");
         expect_error!("bad_revision");
         expect_error!("12345678");

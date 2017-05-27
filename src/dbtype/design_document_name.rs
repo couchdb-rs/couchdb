@@ -62,20 +62,6 @@ mod tests {
     }
 
     #[test]
-    fn design_document_name_from_str_ref() {
-        let expected = DesignDocumentName("foo".to_string());
-        let got = DesignDocumentName::from("foo");
-        assert_eq!(expected, got);
-    }
-
-    #[test]
-    fn design_document_name_from_string() {
-        let expected = DesignDocumentName("foo".to_string());
-        let got = DesignDocumentName::from("foo".to_string());
-        assert_eq!(expected, got);
-    }
-
-    #[test]
     fn string_from_design_document_name() {
         let expected = "foo".to_string();
         let got = String::from(DesignDocumentName::from("foo"));

@@ -11,7 +11,7 @@ keywords = ["couch", "couchdb", "database", "nosql"]
 [dependencies]
 base64 = "0.1.1"
 hyper = "0.8"
-mime = { version = "0.2.0", features = [ "serde" ] }
+mime = { version = "0.2.0, <= 0.2.0", features = [ "serde" ] }
 regex = "0.1"
 semver = "0.2.3"
 serde = "0.7"

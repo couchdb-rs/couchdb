@@ -70,22 +70,8 @@ mod tests {
     }
 
     #[test]
-    fn document_name_from_str_ref() {
-        let expected = DocumentName("foo".to_string());
-        let got = DocumentName::from("foo");
-        assert_eq!(expected, got);
-    }
-
-    #[test]
-    fn document_name_from_string() {
-        let expected = DocumentName("foo".to_string());
-        let got = DocumentName::from("foo".to_string());
-        assert_eq!(expected, got);
-    }
-
-    #[test]
     fn document_name_from_design_document_name() {
-        let expected = DocumentName("foo".to_string());
+        let expected = DocumentName::from("foo".to_string());
         let got = DocumentName::from(DesignDocumentName::from("foo"));
         assert_eq!(expected, got);
     }

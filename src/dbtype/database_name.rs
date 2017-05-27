@@ -58,20 +58,6 @@ mod tests {
     }
 
     #[test]
-    fn database_name_from_str_ref() {
-        let expected = DatabaseName("foo".to_string());
-        let got = DatabaseName::from("foo");
-        assert_eq!(expected, got);
-    }
-
-    #[test]
-    fn database_name_from_string() {
-        let expected = DatabaseName("foo".to_string());
-        let got = DatabaseName::from("foo".to_string());
-        assert_eq!(expected, got);
-    }
-
-    #[test]
     fn string_from_database_name() {
         let expected = "foo".to_string();
         let got = String::from(DatabaseName::from("foo"));

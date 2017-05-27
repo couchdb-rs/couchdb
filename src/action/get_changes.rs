@@ -32,7 +32,7 @@ impl<T> ChangeHandler for T where T: Fn(ChangeResult)
     }
 }
 
-enum Feed<'a> {
+pub enum Feed<'a> {
     Normal,
     Longpoll,
     Continuous(Box<ChangeHandler + 'a>),
