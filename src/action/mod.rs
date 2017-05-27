@@ -883,7 +883,6 @@ pub use self::put_document::PutDocument;
 use hyper;
 use serde;
 use std;
-use std::io::prelude::*;
 
 #[cfg(test)]
 use serde_json;
