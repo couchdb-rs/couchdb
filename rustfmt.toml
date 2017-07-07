@@ -1,5 +1,6 @@
-max_width = 100
-ideal_width = 80
-report_todo = "Never"
-report_fixme = "Always"
-normalise_comments = false
+max_width = 120
+newline_style = "Unix"
+reorder_imports = true
+reorder_imported_names = true
+single_line_if_else_max_width = 80
+wrap_match_arms = false

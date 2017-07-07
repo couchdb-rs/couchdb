@@ -1,357 +1,218 @@
-use hyper;
-use serde_json;
 use std;
-use url;
+use transport::{Response, StatusCode};
 
-use ErrorResponse;
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub enum ServerResponseCategory {
+    DatabaseExists,
+    Unauthorized,
+}
 
-/// Principal error type.
-///
-/// An `Error` specifies an error originating from or propagated by the couchdb
-/// crate.
-///
-/// Error variants with a value of the type `Option<ErrorResponse>` signify
-/// error responses from the CouchDB server. The value for these variants is
-/// `None` if the request causing the error was a HEAD request, and `Some`
-/// otherwise. This reflects how the server returns no detailed error
-/// information for HEAD requests.
-///
+impl std::fmt::Display for ServerResponseCategory {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> Result<(), std::fmt::Error> {
+        match self {
+            &ServerResponseCategory::DatabaseExists => "The database already exists".fmt(f),
+            &ServerResponseCategory::Unauthorized => "CouchDB server administrator privileges required".fmt(f),
+        }
+    }
+}
+
+/// `Error` contains information about an error originating in the client
+/// or server.
 #[derive(Debug)]
-pub enum Error {
-    /// The database path is in an invalid format.
-    BadDatabasePath(BadPathKind),
+pub struct Error {
+    inner: ErrorInner,
+}
 
-    /// The design document path is in an invalid format.
-    BadDesignDocumentPath(BadPathKind),
-
-    /// The document path is in an invalid format.
-    BadDocumentPath(BadPathKind),
-
-    // The MD5 hash is in an invalid format.
-    #[doc(hidden)]
-    BadMd5Hash,
-
-    /// The client request is invalid.
-    BadRequest(Option<ErrorResponse>),
-
-    /// The revision is in an invalid format.
-    BadRevision,
-
-    /// The UUID is in an invalid format.
-    BadUuid,
-
-    /// The view path is in an invalid format.
-    BadViewPath(BadPathKind),
-
-    /// The database already exists.
-    DatabaseExists(Option<ErrorResponse>),
-
-    // JSON-decoding error.
-    #[doc(hidden)]
-    Decode(DecodeErrorKind),
-
-    /// The client request conflicts with an existing document.
-    DocumentConflict(Option<ErrorResponse>),
-
-    // JSON-encoding error.
-    #[doc(hidden)]
-    Encode(EncodeErrorKind),
-
-    /// An internal server error occurred.
-    InternalServerError(Option<ErrorResponse>),
-
-    // The string has an invalid percent-encoding.
-    #[doc(hidden)]
-    InvalidPercentEncoding {
-        encoding: String,
+#[derive(Debug)]
+enum ErrorInner {
+    ServerResponse {
+        category: Option<ServerResponseCategory>,
+        request_description: String,
+        status_code: StatusCode,
+        nok: Option<Nok>,
     },
-
-    // I/O error with a compile-time description.
-    #[doc(hidden)]
-    Io {
-        cause: std::io::Error,
-        description: &'static str,
-    },
-
-    // The CouchDB server responded without a Content-Type header.
-    #[doc(hidden)]
-    NoContentTypeHeader {
-        expected: &'static str,
-    },
-
-    /// The resource does not exist.
-    ///
-    /// In case of a HEAD request, the response value is `None` (because the
-    /// server doesn't send response content for HEAD requests). For all other
-    /// request methods, the response value is `Some`.
-    ///
-    NotFound(Option<ErrorResponse>),
-
-    // Channel-receiver error with a compile-time description and thread-join
-    // error.
-    #[doc(hidden)]
-    ReceiveFromThread {
-        cause: std::sync::mpsc::RecvError,
-        description: &'static str,
-    },
-
-    // HTTP-transport error.
-    #[doc(hidden)]
-    Transport(TransportKind),
-
-    /// The client is unauthorized to carry out the operation.
-    ///
-    /// In case of a HEAD request, the response value is `None` (because the
-    /// server doesn't send response content for HEAD requests). For all other
-    /// request methods, the response value is `Some`.
-    ///
-    Unauthorized(Option<ErrorResponse>),
-
-    // The CouchDB server responded with a Content-Type header that the client
-    // didn't expect.
-    #[doc(hidden)]
-    UnexpectedContentTypeHeader {
-        expected: &'static str,
-        got: String,
-    },
-
-    // The CouchDB server responded with an HTTP status code that the client
-    // didn't expect.
-    #[doc(hidden)]
-    UnexpectedHttpStatus {
-        got: hyper::status::StatusCode,
-    },
-
-    // URI-parse error.
-    #[doc(hidden)]
-    UriParse {
-        cause: url::ParseError,
+    Regular {
+        description: String,
+        cause: Option<String>,
     },
 }
 
-impl std::error::Error for Error {
-    fn description(&self) -> &str {
-        use self::Error::*;
-        match *self {
-            BadDatabasePath(..) => "The database path is in an invalid format",
-            BadDesignDocumentPath(..) => "The design document path is in an invalid format",
-            BadDocumentPath(..) => "The document path is in an invalid format",
-            BadMd5Hash => "The MD5 hash is in an invalid format",
-            BadRequest(..) => "The client request is invalid",
-            BadRevision => "The revision is in an invalid format",
-            BadUuid => "The UUID is in an invalid format",
-            BadViewPath(..) => "The view path is in an invalid format",
-            DatabaseExists(..) => "The database already exists",
-            Decode(..) => "The client failed to decode a JSON response from the CouchDB server",
-            DocumentConflict(..) => "The client request conflicts with an existing document",
-            Encode(..) => "The client failed to encode a JSON request to the CouchDB server",
-            InternalServerError(..) => "An internal server error occurred",
-            InvalidPercentEncoding { .. } => "The string has an invalid percent-encoding",
-            Io{ ref description, .. } => description,
-            NoContentTypeHeader { .. } => {
-                "The CouchDB server responded without a Content-Type header"
-            }
-            NotFound(..) => "The resource does not exist",
-            ReceiveFromThread { ref description, .. } => description,
-            Transport(..) => "An HTTP transport error occurred",
-            Unauthorized(..) => "The client is unauthorized to carry out the operation",
-            UnexpectedContentTypeHeader { .. } => {
-                "The CouchDB server responded with a Content-Type header the client did not expect"
-            }
-            UnexpectedHttpStatus { .. } => {
-                "The CouchDB server responded with an HTTP status code the client did not expect"
-            }
-            UriParse { .. } => "Invalid URI argument",
+impl Error {
+    #[doc(hidden)]
+    pub fn new_server_response_error<R, S>(
+        category: Option<ServerResponseCategory>,
+        request_description: S,
+        response: &mut R,
+    ) -> Self
+    where
+        R: Response,
+        S: Into<String>,
+    {
+        Error {
+            inner: ErrorInner::ServerResponse {
+                category: category,
+                request_description: request_description.into(),
+                status_code: response.status_code(),
+                nok: response.decode_json_body().ok(),
+            },
         }
     }
 
-    fn cause(&self) -> std::option::Option<&std::error::Error> {
-        use self::Error::*;
-        match *self {
-            BadDatabasePath(ref kind) => kind.cause(),
-            BadDesignDocumentPath(ref kind) => kind.cause(),
-            BadDocumentPath(ref kind) => kind.cause(),
-            BadMd5Hash => None,
-            BadRequest(..) => None,
-            BadRevision => None,
-            BadUuid => None,
-            BadViewPath(ref kind) => kind.cause(),
-            DatabaseExists(..) => None,
-            Decode(ref kind) => kind.cause(),
-            DocumentConflict(..) => None,
-            Encode(ref kind) => kind.cause(),
-            InternalServerError(..) => None,
-            InvalidPercentEncoding { .. } => None,
-            Io{ref cause, ..} => Some(cause),
-            NoContentTypeHeader { .. } => None,
-            NotFound(..) => None,
-            ReceiveFromThread { ref cause, .. } => Some(cause),
-            Transport(ref kind) => kind.cause(),
-            Unauthorized(..) => None,
-            UnexpectedContentTypeHeader { .. } => None,
-            UnexpectedHttpStatus { .. } => None,
-            UriParse { ref cause } => Some(cause),
+    pub fn is_database_exists(&self) -> bool {
+        match self.inner {
+            ErrorInner::ServerResponse { category: Some(ServerResponseCategory::DatabaseExists), .. } => true,
+            _ => false,
+        }
+    }
+
+    pub fn is_unauthorized(&self) -> bool {
+        match self.inner {
+            ErrorInner::ServerResponse { category: Some(ServerResponseCategory::Unauthorized), .. } => true,
+            _ => false,
         }
     }
 }
 
 impl std::fmt::Display for Error {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> Result<(), std::fmt::Error> {
-        use self::Error::*;
-        let d = {
-            use std::error::Error;
-            self.description()
-        };
-        match *self {
-            BadDatabasePath(ref kind) => write!(f, "{}: {}", d, kind),
-            BadDesignDocumentPath(ref kind) => write!(f, "{}: {}", d, kind),
-            BadDocumentPath(ref kind) => write!(f, "{}: {}", d, kind),
-            BadMd5Hash => write!(f, "{}", d),
-            BadRequest(None) => write!(f, "{}", d),
-            BadRequest(Some(ref response)) => write!(f, "{}: {}", d, response),
-            BadRevision => write!(f, "{}", d),
-            BadUuid => write!(f, "{}", d),
-            BadViewPath(ref kind) => write!(f, "{}: {}", d, kind),
-            DatabaseExists(None) => write!(f, "{}", d),
-            DatabaseExists(Some(ref response)) => write!(f, "{}: {}", d, response),
-            Decode(ref kind) => write!(f, "{}: {}", d, kind),
-            DocumentConflict(None) => write!(f, "{}", d),
-            DocumentConflict(Some(ref response)) => write!(f, "{}: {}", d, response),
-            Encode(ref kind) => write!(f, "{}: {}", d, kind),
-            InternalServerError(None) => write!(f, "{}", d),
-            InternalServerError(Some(ref response)) => write!(f, "{}: {}", d, response),
-            InvalidPercentEncoding{ref encoding} => write!(f, "{}: Got '{}'", d, encoding),
-            Io{ref cause, ..} => write!(f, "{}: {}", d, cause),
-            NoContentTypeHeader{ref expected} => write!(f, "{}: Expected '{}'", d, expected),
-            NotFound(None) => write!(f, "{}", d),
-            NotFound(Some(ref response)) => write!(f, "{}: {}", d, response),
-            ReceiveFromThread{ref cause, ..} => write!(f, "{}: {}", d, cause),
-            Transport(ref kind) => write!(f, "{}: {}", d, kind),
-            Unauthorized(None) => write!(f, "{}", d),
-            Unauthorized(Some(ref response)) => write!(f, "{}: {}", d, response),
-            UnexpectedContentTypeHeader{ref expected, ref got} => {
-                write!(f, "{}: Expected '{}', got '{}'", d, expected, got)
+        let description = std::error::Error::description(self);
+        match self.inner {
+            ErrorInner::ServerResponse {
+                ref category,
+                ref request_description,
+                ref status_code,
+                ref nok,
+            } => {
+                write!(f, "{} (request: {:?}", description, request_description)?;
+                if let &Some(ref x) = category {
+                    write!(f, ", category: {:?}", x)?;
+                }
+                write!(f, ", status: {}", status_code)?;
+                if let &Some(ref x) = nok {
+                    write!(f, ", error: {:?}, reason: {:?}", x.error(), x.reason())?;
+                }
+                write!(f, ")")
             }
-            UnexpectedHttpStatus{ref got} => write!(f, "{}: Got {}", d, got),
-            UriParse{ref cause} => write!(f, "{}: {}", d, cause),
+            ErrorInner::Regular { cause: Some(ref cause), .. } => write!(f, "{}: {}", description, cause),
+            ErrorInner::Regular { .. } => write!(f, "{}", description),
         }
     }
 }
 
-#[derive(Debug)]
-pub enum BadPathKind {
-    // TODO: It would be helpful to say 'why' the percent-encoding is invalid.
-    BadPercentEncoding,
-    NoLeadingSlash,
-    NotDatabase,
-    NotDesignDocument,
-    NotDocument,
-    NotView,
-}
-
-impl BadPathKind {
-    fn cause(&self) -> Option<&std::error::Error> {
-        use self::BadPathKind::*;
-        match *self {
-            BadPercentEncoding => None,
-            NoLeadingSlash => None,
-            NotDatabase => None,
-            NotDesignDocument => None,
-            NotDocument => None,
-            NotView => None,
+impl std::error::Error for Error {
+    fn description(&self) -> &str {
+        match self.inner {
+            ErrorInner::ServerResponse { status_code, .. }
+                if status_code.is_client_error() || status_code.is_server_error() => "The CouchDB server responded with an error",
+            ErrorInner::ServerResponse { .. } => "The CouchDB responded with an unexpected status",
+            ErrorInner::Regular { ref description, .. } => &description,
         }
     }
 }
 
-impl std::fmt::Display for BadPathKind {
+// We implement From<'static str> and From<String> separately so that we don't
+// conflict with From<std::io::Error>.
+
+impl From<&'static str> for Error {
+    fn from(description: &'static str) -> Error {
+        Error {
+            inner: ErrorInner::Regular {
+                description: String::from(description),
+                cause: None,
+            },
+        }
+    }
+}
+
+impl From<String> for Error {
+    fn from(description: String) -> Error {
+        Error {
+            inner: ErrorInner::Regular {
+                description: description,
+                cause: None,
+            },
+        }
+    }
+}
+
+impl<E, R> From<(R, E)> for Error
+where
+    E: std::error::Error,
+    R: Into<String>,
+{
+    fn from((description, cause): (R, E)) -> Error {
+        Error {
+            inner: ErrorInner::Regular {
+                description: description.into(),
+                cause: Some(cause.to_string()),
+            },
+        }
+    }
+}
+
+impl From<std::io::Error> for Error {
+    fn from(cause: std::io::Error) -> Self {
+        Error {
+            inner: ErrorInner::Regular {
+                description: String::from("An I/O error occurred"),
+                cause: Some(cause.to_string()),
+            },
+        }
+    }
+}
+
+/// `Nok` contains error information from the CouchDB server for a request that
+/// failed.
+///
+/// # Examples
+///
+/// ```
+/// extern crate couchdb;
+/// extern crate serde_json;
+///
+/// let source = r#"{"error":"file_exists",
+///                  "reason":"The database could not be created, the file already exists."}"#;
+///
+/// let x: couchdb::Nok = serde_json::from_str(source).unwrap();
+///
+/// assert_eq!(x.error(), "file_exists");
+/// assert_eq!(x.reason(),
+///            "The database could not be created, the file already exists.");
+/// ```
+///
+#[derive(Clone, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd)]
+pub struct Nok {
+    error: String,
+    reason: String,
+}
+
+impl Nok {
+    #[doc(hidden)]
+    pub fn new<T, U>(error: T, reason: U) -> Self
+    where
+        T: Into<String>,
+        U: Into<String>,
+    {
+        Nok {
+            error: error.into(),
+            reason: reason.into(),
+        }
+    }
+
+    /// Returns the high-level name of the error—e.g., <q>file_exists</q>.
+    pub fn error(&self) -> &String {
+        &self.error
+    }
+
+    /// Returns the low-level description of the error—e.g., <q>The database could
+    /// not be created, the file already exists.</q>
+    pub fn reason(&self) -> &String {
+        &self.reason
+    }
+}
+
+impl std::fmt::Display for Nok {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> Result<(), std::fmt::Error> {
-        use self::BadPathKind::*;
-        match *self {
-            BadPercentEncoding => write!(f, "Path contains an invalid percent-encoding"),
-            NoLeadingSlash => write!(f, "No leading slash"),
-            NotDatabase => write!(f, "Path does not specify a database"),
-            NotDesignDocument => write!(f, "Path does not specify a design document"),
-            NotDocument => write!(f, "Path does not specify a document"),
-            NotView => write!(f, "Path does not specify a view"),
-        }
-    }
-}
-
-#[derive(Debug)]
-pub enum DecodeErrorKind {
-    Serde {
-        cause: serde_json::Error,
-    },
-    TrailingContent,
-}
-
-impl DecodeErrorKind {
-    fn cause(&self) -> Option<&std::error::Error> {
-        use self::DecodeErrorKind::*;
-        match *self {
-            Serde { ref cause } => Some(cause),
-            TrailingContent => None,
-        }
-    }
-}
-
-impl std::fmt::Display for DecodeErrorKind {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> Result<(), std::fmt::Error> {
-        use self::DecodeErrorKind::*;
-        match *self {
-            Serde { ref cause } => cause.fmt(f),
-            TrailingContent => write!(f, "Unexpected content at end of response body"),
-        }
-    }
-}
-
-#[derive(Debug)]
-pub enum EncodeErrorKind {
-    Serde {
-        cause: serde_json::Error,
-    },
-}
-
-impl EncodeErrorKind {
-    fn cause(&self) -> Option<&std::error::Error> {
-        use self::EncodeErrorKind::*;
-        match *self {
-            Serde { ref cause } => Some(cause),
-        }
-    }
-}
-
-impl std::fmt::Display for EncodeErrorKind {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> Result<(), std::fmt::Error> {
-        use self::EncodeErrorKind::*;
-        match *self {
-            Serde { ref cause } => cause.fmt(f),
-        }
-    }
-}
-
-#[derive(Debug)]
-pub enum TransportKind {
-    Hyper(hyper::error::Error),
-    Io(std::io::Error),
-}
-
-impl TransportKind {
-    fn cause(&self) -> std::option::Option<&std::error::Error> {
-        use self::TransportKind::*;
-        match *self {
-            Hyper(ref e) => Some(e),
-            Io(ref e) => Some(e),
-        }
-    }
-}
-
-impl std::fmt::Display for TransportKind {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> Result<(), std::fmt::Error> {
-        use self::TransportKind::*;
-        match *self {
-            Hyper(ref e) => e.fmt(f),
-            Io(ref e) => e.fmt(f),
-        }
+        write!(f, "{}: {}", self.error, self.reason)
     }
 }
