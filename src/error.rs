@@ -19,11 +19,15 @@ impl Display for ErrorCategory {
 
 /// `Error` contains information about an error originating in the client
 /// or server.
+///
+/// `Error` implements the `Sync` trait so that actions' futures may be sent
+/// between threads.
+///
 #[derive(Debug)]
 pub struct Error {
     description: String,
     category: Option<ErrorCategory>,
-    cause: Option<Box<std::error::Error>>,
+    cause: Option<String>,
 }
 
 impl Error {
@@ -49,14 +53,14 @@ impl Error {
 
     /// Constructs an `Error` with another `Error` as its cause, preserving the
     /// cause's error category, if any.
-    pub fn chain<D>(description: D, sub_error: Error) -> Self
+    pub fn chain<D>(description: D, cause: Error) -> Self
     where
         D: Into<String>,
     {
         Error {
             description: description.into(),
-            category: sub_error.category,
-            cause: Some(Box::new(sub_error)),
+            category: cause.category,
+            cause: Some(cause.to_string()),
         }
     }
 
@@ -88,10 +92,6 @@ impl Display for Error {
 impl std::error::Error for Error {
     fn description(&self) -> &str {
         &self.description
-    }
-
-    fn cause(&self) -> Option<&std::error::Error> {
-        self.cause.as_ref().map(|x| x.as_ref())
     }
 }
 
@@ -134,13 +134,13 @@ where
 impl<D, E> From<(D, E)> for Error
 where
     D: Into<String>,
-    E: Into<Box<std::error::Error>>,
+    E: std::error::Error,
 {
     fn from((description, cause): (D, E)) -> Self {
         Error {
             description: description.into(),
             category: None,
-            cause: Some(cause.into()),
+            cause: Some(cause.to_string()),
         }
     }
 }
@@ -148,13 +148,13 @@ where
 impl<D, E> From<(D, ErrorCategory, E)> for Error
 where
     D: Into<String>,
-    E: Into<Box<std::error::Error>>,
+    E: std::error::Error,
 {
     fn from((description, category, cause): (D, ErrorCategory, E)) -> Self {
         Error {
             description: description.into(),
             category: Some(category),
-            cause: Some(cause.into()),
+            cause: Some(cause.to_string()),
         }
     }
 }
@@ -178,5 +178,16 @@ impl Nok {
 
     pub fn reason(&self) -> &String {
         &self.reason
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn error_implements_send() {
+        fn requires_send<T: Send>() {}
+        requires_send::<Error>();
     }
 }
