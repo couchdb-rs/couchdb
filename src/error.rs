@@ -1,17 +1,18 @@
 use std;
-use transport::{Response, StatusCode};
+use std::fmt::Display;
+use transport::StatusCode;
 
 #[derive(Clone, Copy, Debug, PartialEq)]
-pub enum ServerResponseCategory {
+pub enum ErrorCategory {
     DatabaseExists,
     Unauthorized,
 }
 
-impl std::fmt::Display for ServerResponseCategory {
+impl Display for ErrorCategory {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> Result<(), std::fmt::Error> {
         match self {
-            &ServerResponseCategory::DatabaseExists => "The database already exists".fmt(f),
-            &ServerResponseCategory::Unauthorized => "CouchDB server administrator privileges required".fmt(f),
+            &ErrorCategory::DatabaseExists => "The database already exists".fmt(f),
+            &ErrorCategory::Unauthorized => "CouchDB server administrator privileges are required".fmt(f),
         }
     }
 }
@@ -20,93 +21,77 @@ impl std::fmt::Display for ServerResponseCategory {
 /// or server.
 #[derive(Debug)]
 pub struct Error {
-    inner: ErrorInner,
-}
-
-#[derive(Debug)]
-enum ErrorInner {
-    ServerResponse {
-        category: Option<ServerResponseCategory>,
-        request_description: String,
-        status_code: StatusCode,
-        nok: Option<Nok>,
-    },
-    Regular {
-        description: String,
-        cause: Option<String>,
-    },
+    description: String,
+    category: Option<ErrorCategory>,
+    cause: Option<Box<std::error::Error>>,
 }
 
 impl Error {
     #[doc(hidden)]
-    pub fn new_server_response_error<R, S>(
-        category: Option<ServerResponseCategory>,
-        request_description: S,
-        response: &mut R,
-    ) -> Self
+    pub fn from_server_response(status_code: StatusCode, nok: Option<Nok>, category: Option<ErrorCategory>) -> Self {
+        let mut s = format!(
+            "The server responded with an error or an unexpected status code (status: {}",
+            status_code
+        );
+        if let Some(nok) = nok {
+            s = format!(
+                "{}, error: {:?}, reason: {:?}",
+                s,
+                nok.error(),
+                nok.reason()
+            );
+        }
+        s = format!("{})", s);
+        let mut e = Error::from(s);
+        e.category = category;
+        e
+    }
+
+    /// Constructs an `Error` with another `Error` as its cause, preserving the
+    /// cause's error category, if any.
+    pub fn chain<D>(description: D, sub_error: Error) -> Self
     where
-        R: Response,
-        S: Into<String>,
+        D: Into<String>,
     {
         Error {
-            inner: ErrorInner::ServerResponse {
-                category: category,
-                request_description: request_description.into(),
-                status_code: response.status_code(),
-                nok: response.decode_json_body().ok(),
-            },
+            description: description.into(),
+            category: sub_error.category,
+            cause: Some(Box::new(sub_error)),
         }
     }
 
     pub fn is_database_exists(&self) -> bool {
-        match self.inner {
-            ErrorInner::ServerResponse { category: Some(ServerResponseCategory::DatabaseExists), .. } => true,
+        match self.category {
+            Some(ErrorCategory::DatabaseExists) => true,
             _ => false,
         }
     }
 
     pub fn is_unauthorized(&self) -> bool {
-        match self.inner {
-            ErrorInner::ServerResponse { category: Some(ServerResponseCategory::Unauthorized), .. } => true,
+        match self.category {
+            Some(ErrorCategory::Unauthorized) => true,
             _ => false,
         }
     }
 }
 
-impl std::fmt::Display for Error {
+impl Display for Error {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> Result<(), std::fmt::Error> {
-        let description = std::error::Error::description(self);
-        match self.inner {
-            ErrorInner::ServerResponse {
-                ref category,
-                ref request_description,
-                ref status_code,
-                ref nok,
-            } => {
-                write!(f, "{} (request: {:?}", description, request_description)?;
-                if let &Some(ref x) = category {
-                    write!(f, ", category: {:?}", x)?;
-                }
-                write!(f, ", status: {}", status_code)?;
-                if let &Some(ref x) = nok {
-                    write!(f, ", error: {:?}, reason: {:?}", x.error(), x.reason())?;
-                }
-                write!(f, ")")
-            }
-            ErrorInner::Regular { cause: Some(ref cause), .. } => write!(f, "{}: {}", description, cause),
-            ErrorInner::Regular { .. } => write!(f, "{}", description),
+        std::error::Error::description(self).fmt(f)?;
+        if let Some(ref cause) = self.cause {
+            write!(f, ": {}", cause)?;
         }
+        Ok(())
     }
 }
 
 impl std::error::Error for Error {
     fn description(&self) -> &str {
-        match self.inner {
-            ErrorInner::ServerResponse { status_code, .. }
-                if status_code.is_client_error() || status_code.is_server_error() => "The CouchDB server responded with an error",
-            ErrorInner::ServerResponse { .. } => "The CouchDB responded with an unexpected status",
-            ErrorInner::Regular { ref description, .. } => &description,
-        }
+        &self.description
+    }
+
+    fn cause(&self) -> Option<&std::error::Error> {
+        self.cause.as_ref().map(|x| x.as_ref())
     }
 }
 
@@ -116,10 +101,9 @@ impl std::error::Error for Error {
 impl From<&'static str> for Error {
     fn from(description: &'static str) -> Error {
         Error {
-            inner: ErrorInner::Regular {
-                description: String::from(description),
-                cause: None,
-            },
+            description: String::from(description),
+            category: None,
+            cause: None,
         }
     }
 }
@@ -127,59 +111,60 @@ impl From<&'static str> for Error {
 impl From<String> for Error {
     fn from(description: String) -> Error {
         Error {
-            inner: ErrorInner::Regular {
-                description: description,
-                cause: None,
-            },
+            description: description,
+            category: None,
+            cause: None,
         }
     }
 }
 
-impl<E, R> From<(R, E)> for Error
+impl<D> From<(D, ErrorCategory)> for Error
 where
-    E: std::error::Error,
-    R: Into<String>,
+    D: Into<String>,
 {
-    fn from((description, cause): (R, E)) -> Error {
+    fn from((description, category): (D, ErrorCategory)) -> Self {
         Error {
-            inner: ErrorInner::Regular {
-                description: description.into(),
-                cause: Some(cause.to_string()),
-            },
+            description: description.into(),
+            category: Some(category),
+            cause: None,
+        }
+    }
+}
+
+impl<D, E> From<(D, E)> for Error
+where
+    D: Into<String>,
+    E: Into<Box<std::error::Error>>,
+{
+    fn from((description, cause): (D, E)) -> Self {
+        Error {
+            description: description.into(),
+            category: None,
+            cause: Some(cause.into()),
+        }
+    }
+}
+
+impl<D, E> From<(D, ErrorCategory, E)> for Error
+where
+    D: Into<String>,
+    E: Into<Box<std::error::Error>>,
+{
+    fn from((description, category, cause): (D, ErrorCategory, E)) -> Self {
+        Error {
+            description: description.into(),
+            category: Some(category),
+            cause: Some(cause.into()),
         }
     }
 }
 
 impl From<std::io::Error> for Error {
     fn from(cause: std::io::Error) -> Self {
-        Error {
-            inner: ErrorInner::Regular {
-                description: String::from("An I/O error occurred"),
-                cause: Some(cause.to_string()),
-            },
-        }
+        Error::from(("An I/O error occurred", cause))
     }
 }
 
-/// `Nok` contains error information from the CouchDB server for a request that
-/// failed.
-///
-/// # Examples
-///
-/// ```
-/// extern crate couchdb;
-/// extern crate serde_json;
-///
-/// let source = r#"{"error":"file_exists",
-///                  "reason":"The database could not be created, the file already exists."}"#;
-///
-/// let x: couchdb::Nok = serde_json::from_str(source).unwrap();
-///
-/// assert_eq!(x.error(), "file_exists");
-/// assert_eq!(x.reason(),
-///            "The database could not be created, the file already exists.");
-/// ```
-///
 #[derive(Clone, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct Nok {
     error: String,
@@ -187,32 +172,11 @@ pub struct Nok {
 }
 
 impl Nok {
-    #[doc(hidden)]
-    pub fn new<T, U>(error: T, reason: U) -> Self
-    where
-        T: Into<String>,
-        U: Into<String>,
-    {
-        Nok {
-            error: error.into(),
-            reason: reason.into(),
-        }
-    }
-
-    /// Returns the high-level name of the error—e.g., <q>file_exists</q>.
     pub fn error(&self) -> &String {
         &self.error
     }
 
-    /// Returns the low-level description of the error—e.g., <q>The database could
-    /// not be created, the file already exists.</q>
     pub fn reason(&self) -> &String {
         &self.reason
-    }
-}
-
-impl std::fmt::Display for Nok {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> Result<(), std::fmt::Error> {
-        write!(f, "{}: {}", self.error, self.reason)
     }
 }

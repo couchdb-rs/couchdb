@@ -1,5 +1,5 @@
-use {Error, request};
-use transport::NetTransport;
+use {Error, action, tokio_core};
+use transport::Transport;
 use url::Url;
 
 /// `IntoUrl` is a trait for converting a type into a type into a URL.
@@ -35,24 +35,31 @@ impl<'a> IntoUrl for &'a String {
 
 #[derive(Debug)]
 pub struct Client {
-    server_url: Url,
-    transport: NetTransport,
+    transport: Transport,
 }
 
 impl Client {
-    pub fn new<U: IntoUrl>(server_url: U) -> Result<Self, Error> {
+    pub fn new<U: IntoUrl>(
+        server_url: U,
+        reactor_handle: &tokio_core::reactor::Handle,
+        _options: ClientOptions,
+    ) -> Result<Self, Error> {
         Ok(Client {
-            server_url: server_url.into_url()?,
-            transport: NetTransport::new()?,
+            transport: Transport::new(reactor_handle, server_url.into_url()?)?,
         })
     }
 
-    pub fn url(&self) -> &Url {
-        &self.server_url
+    pub fn put_database(&self, db_path: &str) -> action::PutDatabase {
+        action::PutDatabase::new(self.transport.clone(), db_path)
     }
+}
 
-    pub fn put_database(&self, db_path: &str) -> request::PutDatabase<NetTransport> {
-        request::PutDatabase::new(&self.transport, &self.server_url, db_path)
+#[derive(Debug, Default)]
+pub struct ClientOptions {}
+
+impl ClientOptions {
+    pub fn new() -> Self {
+        ClientOptions {}
     }
 }
 
