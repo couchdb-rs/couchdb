@@ -16,6 +16,6 @@ mod client;
 mod error;
 pub mod testing;
 
-pub use client::{Client, ClientOptions, IntoUrl};
+pub use client::{AsyncClient, Client, ClientOptions, IntoUrl, SyncClient};
 pub use error::{Error, Nok};
 pub use transport::ActionFuture;

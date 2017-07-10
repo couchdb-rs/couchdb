@@ -1,5 +1,5 @@
 use {Error, action, tokio_core};
-use transport::Transport;
+use transport::{AsyncTransport, SyncTransport, Transport};
 use url::Url;
 
 /// `IntoUrl` is a trait for converting a type into a type into a URL.
@@ -34,23 +34,36 @@ impl<'a> IntoUrl for &'a String {
 }
 
 #[derive(Debug)]
-pub struct Client {
-    transport: Transport,
+pub struct Client<T: Transport> {
+    transport: T,
 }
 
-impl Client {
+pub type AsyncClient = Client<AsyncTransport>;
+pub type SyncClient = Client<SyncTransport>;
+
+impl Client<AsyncTransport> {
     pub fn new<U: IntoUrl>(
         server_url: U,
         reactor_handle: &tokio_core::reactor::Handle,
         _options: ClientOptions,
     ) -> Result<Self, Error> {
         Ok(Client {
-            transport: Transport::new(reactor_handle, server_url.into_url()?)?,
+            transport: AsyncTransport::new(reactor_handle, server_url.into_url()?)?,
         })
     }
+}
 
-    pub fn put_database(&self, db_path: &str) -> action::PutDatabase {
-        action::PutDatabase::new(self.transport.clone(), db_path)
+impl Client<SyncTransport> {
+    pub fn new<U: IntoUrl>(server_url: U, _options: ClientOptions) -> Result<Self, Error> {
+        Ok(Client {
+            transport: SyncTransport::new(server_url.into_url()?)?,
+        })
+    }
+}
+
+impl<T: Transport> Client<T> {
+    pub fn put_database(&self, db_path: &str) -> action::PutDatabase<T> {
+        action::PutDatabase::new(&self.transport, db_path)
     }
 }
 
@@ -76,5 +89,11 @@ mod tests {
     #[test]
     fn into_url_fails_for_invalid_string() {
         "not_a_valid_url".into_url().unwrap_err();
+    }
+
+    #[test]
+    fn sync_client_implements_send() {
+        fn requires_send<T: Send>() {}
+        requires_send::<SyncClient>();
     }
 }
