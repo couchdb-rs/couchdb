@@ -112,5 +112,33 @@ mod tests {
         }
     }
 
-    // FIXME: Test Unauthorized.
+    #[test]
+    fn put_database_fails_on_401_unauthorized() {
+
+        let transport = MockTransport::new();
+        let action = PutDatabase::new(&transport, "/foo").send();
+        let result = transport.mock(action, |mock| {
+            mock.and_then(|request| {
+                let request = request.expect("Client did not send request");
+                assert_eq!(request.method(), Method::Put);
+                assert_eq!(request.url_path(), "/foo");
+                assert!(request.is_accept_application_json());
+                let mut response = request.response(StatusCode::Unauthorized);
+                response.set_json_body(&json!({
+                    "error": "unauthorized",
+                    "reason": "You are not a server admin."
+                }));
+                response.finish()
+            }).and_then(|request| {
+                    assert!(request.is_none());
+                    MockTransport::done()
+                })
+        });
+
+        match result {
+            Err(ref e) if e.is_unauthorized() => {}
+            x => panic!("Got unexpected result {:?}", x),
+        }
+    }
+
 }
