@@ -113,17 +113,22 @@ impl Client {
         Ok(Client { transport: transport })
     }
 
-    /// Constructs an action to check whether a database exists.
+    /// Constructs an action to GET the server's root resource (i.e., `/`).
+    pub fn get_root(&self) -> action::GetRoot<NetTransport> {
+        action::GetRoot::new(&self.transport)
+    }
+
+    /// Constructs an action to HEAD a database.
     pub fn head_database<P: IntoDatabasePath>(&self, db_path: P) -> action::HeadDatabase<NetTransport> {
         action::HeadDatabase::new(&self.transport, db_path)
     }
 
-    /// Constructs an action to create a database.
+    /// Constructs an action to PUT a database.
     pub fn put_database<P: IntoDatabasePath>(&self, db_path: P) -> action::PutDatabase<NetTransport> {
         action::PutDatabase::new(&self.transport, db_path)
     }
 
-    /// Constructs an action to delete a database.
+    /// Constructs an action to DELETE a database.
     pub fn delete_database<P: IntoDatabasePath>(&self, db_path: P) -> action::DeleteDatabase<NetTransport> {
         action::DeleteDatabase::new(&self.transport, db_path)
     }

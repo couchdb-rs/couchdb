@@ -21,8 +21,8 @@ mod net;
 #[cfg(test)]
 pub use self::mock::MockTransport;
 pub use self::net::NetTransport;
-use Error;
-use error::{ErrorCategory, Nok};
+use {Error, Nok};
+use error::ErrorCategory;
 use futures::{Async, Future, Poll};
 pub use reqwest::{Method, StatusCode, header};
 use serde::Deserialize;
@@ -34,7 +34,7 @@ pub trait Transport: Clone {
 }
 
 pub trait Request {
-    type Response: Response;
+    type Response: Response + 'static;
     type Future: Future<Item = Self::Response, Error = Error> + 'static;
     fn accept_application_json(&mut self);
     fn send_without_body(self) -> Self::Future;

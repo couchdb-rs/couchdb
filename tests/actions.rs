@@ -13,6 +13,12 @@ fn make_server_and_client() -> (couchdb::testing::FakeServer, couchdb::Client, t
 }
 
 #[test]
+fn get_root_ok() {
+    let (_server, client, mut reactor) = make_server_and_client();
+    reactor.run(client.get_root().send()).unwrap();
+}
+
+#[test]
 fn head_database_ok() {
     let (_server, client, mut reactor) = make_server_and_client();
     reactor.run(client.put_database("/foo").send()).unwrap();
@@ -66,12 +72,6 @@ fn delete_database_nok_database_does_not_exist() {
 }
 
 /*
-#[test]
-fn get_root_ok() {
-    let (_server, client) = make_server_and_client();
-    client.get_root().run().unwrap();
-}
-
 #[test]
 fn get_all_databases_ok() {
     let (_server, client) = make_server_and_client();
