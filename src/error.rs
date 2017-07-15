@@ -4,6 +4,7 @@ use transport::StatusCode;
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum ErrorCategory {
+    DatabaseDoesNotExist,
     DatabaseExists,
     Unauthorized,
 }
@@ -11,6 +12,7 @@ pub enum ErrorCategory {
 impl Display for ErrorCategory {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> Result<(), std::fmt::Error> {
         match self {
+            &ErrorCategory::DatabaseDoesNotExist => "The database does not exist".fmt(f),
             &ErrorCategory::DatabaseExists => "The database already exists".fmt(f),
             &ErrorCategory::Unauthorized => "CouchDB server administrator privileges are required".fmt(f),
         }
@@ -61,6 +63,13 @@ impl Error {
             description: description.into(),
             category: cause.category,
             cause: Some(cause.to_string()),
+        }
+    }
+
+    pub fn is_database_does_not_exist(&self) -> bool {
+        match self.category {
+            Some(ErrorCategory::DatabaseDoesNotExist) => true,
+            _ => false,
         }
     }
 

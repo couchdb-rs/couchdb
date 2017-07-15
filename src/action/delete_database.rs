@@ -5,7 +5,7 @@ use futures::Future;
 use transport::{ActionFuture, Method, Request, Response, ServerResponseFuture, StatusCode, Transport};
 
 #[derive(Debug)]
-pub struct PutDatabase<'a, T: Transport + 'a> {
+pub struct DeleteDatabase<'a, T: Transport + 'a> {
     transport: &'a T,
     inner: Option<Inner>,
 }
@@ -15,10 +15,10 @@ struct Inner {
     url_path: Result<String, Error>,
 }
 
-impl<'a, T: Transport> PutDatabase<'a, T> {
+impl<'a, T: Transport> DeleteDatabase<'a, T> {
     #[doc(hidden)]
     pub fn new<P: IntoDatabasePath>(transport: &'a T, db_path: P) -> Self {
-        PutDatabase {
+        DeleteDatabase {
             transport: transport,
             inner: Some(Inner {
                 url_path: db_path.into_database_path().map(|x| x.to_string()),
@@ -32,21 +32,21 @@ impl<'a, T: Transport> PutDatabase<'a, T> {
 
         ActionFuture::new(
             self.transport
-                .request(Method::Put, inner.url_path)
+                .request(Method::Delete, inner.url_path)
                 .and_then(|mut request| {
                     request.accept_application_json();
                     request.send_without_body()
                 })
                 .and_then(|response| {
                     let maybe_category = match response.status_code() {
-                        StatusCode::Created => return ServerResponseFuture::ok(()),
-                        StatusCode::PreconditionFailed => Some(ErrorCategory::DatabaseExists),
+                        StatusCode::Ok => return ServerResponseFuture::ok(()),
+                        StatusCode::NotFound => Some(ErrorCategory::DatabaseDoesNotExist),
                         StatusCode::Unauthorized => Some(ErrorCategory::Unauthorized),
                         _ => None,
                     };
                     ServerResponseFuture::err(response, maybe_category)
                 })
-                .map_err(|e| Error::chain("Failed to PUT database", e)),
+                .map_err(|e| Error::chain("Failed to DELETE database", e)),
         )
     }
 }
@@ -58,17 +58,17 @@ mod tests {
     use transport::MockTransport;
 
     #[test]
-    fn put_database_succeeds_on_201_created() {
+    fn delete_database_succeeds_on_200_ok() {
 
         let transport = MockTransport::new();
-        let action = PutDatabase::new(&transport, "/foo").send();
+        let action = DeleteDatabase::new(&transport, "/foo").send();
         let result = transport.mock(action, |mock| {
             mock.and_then(|request| {
                 let request = request.expect("Client did not send request");
-                assert_eq!(request.method(), Method::Put);
+                assert_eq!(request.method(), Method::Delete);
                 assert_eq!(request.url_path(), "/foo");
                 assert!(request.is_accept_application_json());
-                let mut response = request.response(StatusCode::Created);
+                let mut response = request.response(StatusCode::Ok);
                 response.set_json_body(&json!({"ok": true}));
                 response.finish()
             }).and_then(|request| {
@@ -84,20 +84,20 @@ mod tests {
     }
 
     #[test]
-    fn put_database_fails_on_412_precondition_failed() {
+    fn delete_database_fails_on_404_not_found() {
 
         let transport = MockTransport::new();
-        let action = PutDatabase::new(&transport, "/foo").send();
+        let action = DeleteDatabase::new(&transport, "/foo").send();
         let result = transport.mock(action, |mock| {
             mock.and_then(|request| {
                 let request = request.expect("Client did not send request");
-                assert_eq!(request.method(), Method::Put);
+                assert_eq!(request.method(), Method::Delete);
                 assert_eq!(request.url_path(), "/foo");
                 assert!(request.is_accept_application_json());
-                let mut response = request.response(StatusCode::PreconditionFailed);
+                let mut response = request.response(StatusCode::NotFound);
                 response.set_json_body(&json!({
-                    "error": "file_exists",
-                    "reason": "The database could not be created, the file already exists."
+                    "error": "not_found",
+                    "reason": "missing"
                 }));
                 response.finish()
             }).and_then(|request| {
@@ -107,7 +107,7 @@ mod tests {
         });
 
         match result {
-            Err(ref e) if e.is_database_exists() => {}
+            Err(ref e) if e.is_database_does_not_exist() => {}
             x => panic!("Got unexpected result {:?}", x),
         }
     }

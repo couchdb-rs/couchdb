@@ -1,48 +1,42 @@
 // The transport layer exists to isolate I/O logic away from the actions,
-// thereby allowing the actions to focus purely on HTTP in an abstract
-// sense--i.e., HTTP method, URL, HTTP headers, request body, and
-// response-handling.
+// thereby allowing the actions to generate abstract HTTP headers and handle
+// abstract HTTP responses.
 //
-// This is not as easy as it may sound. Transport goals are:
+// This is not as easy as it may sound. The goals for the transport layer are:
 //
-// 1. Support asynchronous and synchronous I/O while letting the actions to
-//    reuse all code for both modes.
-// 2. Shield the actions from the details of our HTTP dependency (i.e.,
-//    reqwest).
-// 3. Allow test code to inspect the HTTP request an action generates and to
-//    mock the response it will handle. I.e., allow full HTTP-round-trip testing
-//    without doing any actual networking.
+// 1. To support asynchronous and synchronous I/O while allowing the actions to
+//    completely reuse code for both modes,
+// 2. To shield the actions from the details of our HTTP dependency (i.e.,
+//    reqwest), and,
+// 3. To allow test code to inspect the HTTP request an action generates and to
+//    mock the response it will handle.
 //
 // And, of course, to do all this while adding only a minimal amount of
 // overhead.
 
-mod async;
 #[cfg(test)]
 mod mock;
-mod sync;
+mod net;
 
-pub use self::async::AsyncTransport;
 #[cfg(test)]
 pub use self::mock::MockTransport;
-pub use self::sync::SyncTransport;
+pub use self::net::NetTransport;
 use Error;
 use error::{ErrorCategory, Nok};
 use futures::{Async, Future, Poll};
 pub use reqwest::{Method, StatusCode, header};
 use serde::Deserialize;
 
-pub trait Transport {}
-
-pub trait RequestMaker {
+pub trait Transport: Clone {
     type Request: Request;
-    type Future: Future<Item = Self::Request, Error = Error> + 'static;
-    fn make_request(self, method: Method, url_path: &str) -> Self::Future;
+    type RequestFuture: Future<Item = Self::Request, Error = Error> + 'static;
+    fn request<P: AsRef<str>>(&self, method: Method, url_path: Result<P, Error>) -> Self::RequestFuture;
 }
 
 pub trait Request {
     type Response: Response;
     type Future: Future<Item = Self::Response, Error = Error> + 'static;
-    fn set_accept_application_json(&mut self);
+    fn accept_application_json(&mut self);
     fn send_without_body(self) -> Self::Future;
 }
 
@@ -56,11 +50,6 @@ pub trait Response {
     fn json_body<T>(&mut self) -> Box<Future<Item = T, Error = Error>>
     where
         for<'de> T: Deserialize<'de> + 'static;
-}
-
-pub trait Action {
-    type Item;
-    fn act<R: RequestMaker>(&self, request_maker: R) -> ActionFuture<Self::Item>;
 }
 
 pub struct ActionFuture<T>(Box<Future<Item = T, Error = Error>>);
@@ -94,6 +83,9 @@ impl<T> ServerResponseFuture<T> {
     }
 
     pub fn err<R: Response>(mut response: R, category: Option<ErrorCategory>) -> Self {
+        // TODO: If the JSON decoding fails then we throw away the error result,
+        // so it would be good to have an alternative method for decoding a JSON
+        // body whereby no error is returned on error.
         ServerResponseFuture::AwaitingErrorBody(response.status_code(), category, response.json_body())
     }
 }

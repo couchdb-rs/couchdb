@@ -1,5 +1,5 @@
-use {Error, action, tokio_core};
-use transport::{AsyncTransport, SyncTransport, Transport};
+use {Error, IntoDatabasePath, action, tokio_core};
+use transport::NetTransport;
 use url::Url;
 
 /// `IntoUrl` is a trait for converting a type into a type into a URL.
@@ -34,36 +34,31 @@ impl<'a> IntoUrl for &'a String {
 }
 
 #[derive(Debug)]
-pub struct Client<T: Transport> {
-    transport: T,
+pub struct Client {
+    transport: NetTransport,
 }
 
-pub type AsyncClient = Client<AsyncTransport>;
-pub type SyncClient = Client<SyncTransport>;
-
-impl Client<AsyncTransport> {
+impl Client {
     pub fn new<U: IntoUrl>(
         server_url: U,
         reactor_handle: &tokio_core::reactor::Handle,
         _options: ClientOptions,
     ) -> Result<Self, Error> {
-        Ok(Client {
-            transport: AsyncTransport::new(reactor_handle, server_url.into_url()?)?,
-        })
-    }
-}
 
-impl Client<SyncTransport> {
-    pub fn new<U: IntoUrl>(server_url: U, _options: ClientOptions) -> Result<Self, Error> {
-        Ok(Client {
-            transport: SyncTransport::new(server_url.into_url()?)?,
-        })
-    }
-}
+        let server_url = server_url.into_url()?;
+        let transport = NetTransport::new_with_external_executor(server_url, reactor_handle)?;
 
-impl<T: Transport> Client<T> {
-    pub fn put_database(&self, db_path: &str) -> action::PutDatabase<T> {
+        Ok(Client { transport: transport })
+    }
+
+    /// Constructs an action to create a database.
+    pub fn put_database<P: IntoDatabasePath>(&self, db_path: P) -> action::PutDatabase<NetTransport> {
         action::PutDatabase::new(&self.transport, db_path)
+    }
+
+    /// Constructs an action to delete a database.
+    pub fn delete_database<P: IntoDatabasePath>(&self, db_path: P) -> action::DeleteDatabase<NetTransport> {
+        action::DeleteDatabase::new(&self.transport, db_path)
     }
 }
 
@@ -89,11 +84,5 @@ mod tests {
     #[test]
     fn into_url_fails_for_invalid_string() {
         "not_a_valid_url".into_url().unwrap_err();
-    }
-
-    #[test]
-    fn sync_client_implements_send() {
-        fn requires_send<T: Send>() {}
-        requires_send::<SyncClient>();
     }
 }

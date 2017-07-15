@@ -1,109 +1,161 @@
-use {Error, futures, reqwest, serde_json, tokio_core, transport};
-use futures::Future;
+use {Error, futures, reqwest, serde_json, transport};
+use futures::{Future, Sink, Stream};
 use serde::{Deserialize, Serialize};
+use std::cell::RefCell;
+use std::rc::Rc;
 use transport::{Method, StatusCode};
 
-fn must_receive(canceled: futures::unsync::oneshot::Canceled) -> Error {
-    panic!("Mock transport channel canceled: {:?}", canceled);
+// There are two agents operating in a MockTransport: (1) the *action* being
+// tested and (2) the *mocker* that checks the action's requests and constructs
+// mock responses to be consumed by the action.
+//
+// The agents communicate with each other via a pair of channels. One channel is
+// for the requests, the other is for the responses.
+//
+// Everything is carried out via futures.
+
+#[derive(Clone, Debug)]
+pub struct MockTransport {
+    // The Rc wrapper allows us to derive the Clone trait, which is required by
+    // the Transport trait.
+    //
+    // The RefCell wrapper is needed because the Transport trait requires
+    // (external) immutability all over.
+    inner: Rc<RefCell<Inner>>,
 }
 
 #[derive(Debug)]
-pub struct MockTransport {}
+struct Inner {
+    mocker_channels: Option<MockerChannelPair>,
+    action_channels: Option<ActionChannelPair>,
+}
+
+#[derive(Debug)]
+struct MockerChannelPair(futures::unsync::mpsc::Receiver<MockRequest>, futures::unsync::mpsc::Sender<MockResponse>);
+
+#[derive(Debug)]
+struct ActionChannelPair(futures::unsync::mpsc::Sender<MockRequest>, futures::unsync::mpsc::Receiver<MockResponse>);
+
+pub type MockFuture = Box<Future<Item = Option<MockRequest>, Error = Error>>;
 
 impl MockTransport {
     pub fn new() -> Self {
-        MockTransport {}
-    }
 
-    pub fn mock<A, F>(&self, action: A, server_mocker: F) -> Result<A::Item, Error>
-    where
-        A: transport::Action,
-        F: FnOnce(MockRequest) -> MockResponse,
-    {
-        let (request_tx, request_rx) = futures::unsync::oneshot::channel();
-        let (response_tx, response_rx) = futures::unsync::oneshot::channel();
+        let (request_tx, request_rx) = futures::unsync::mpsc::channel(1);
+        let (response_tx, response_rx) = futures::unsync::mpsc::channel(1);
 
-        let request_maker = MockRequestMaker::new(request_tx, response_rx);
-        let action_future = action.act(request_maker);
+        let mocker_channels = MockerChannelPair(request_rx, response_tx);
+        let action_channels = ActionChannelPair(request_tx, response_rx);
 
-        let mock_future = request_rx.map_err(must_receive).and_then(|request| {
-            let response = server_mocker(request);
-            response_tx.send(response).unwrap();
-            Ok(())
-        });
-
-        let mut reactor = tokio_core::reactor::Core::new().unwrap();
-        reactor.run(action_future.join(mock_future)).map(
-            |(action_item, _)| action_item,
-        )
-    }
-
-    // Defined here instead of in MockResponse as a convenience for test code so
-    // that test code needn't import MockResponse.
-    pub fn new_response(status_code: StatusCode) -> MockResponse {
-        MockResponse {
-            status_code: status_code,
-            headers: reqwest::header::Headers::new(),
-            body: None,
+        MockTransport {
+            inner: Rc::new(RefCell::new(Inner {
+                mocker_channels: Some(mocker_channels),
+                action_channels: Some(action_channels),
+            })),
         }
+    }
+
+    pub fn mock<A, F, M, T>(self, action: A, mocker: M) -> Result<T, Error>
+    where
+        A: Future<Item = T, Error = Error>,
+        F: Future<Item = (), Error = Error>,
+        M: FnOnce(MockFuture) -> F,
+    {
+        let MockerChannelPair(request_rx, response_tx) = self.inner
+            .try_borrow_mut()
+            .unwrap()
+            .mocker_channels
+            .take()
+            .unwrap();
+
+        let maybe_request = {
+            let inner = self.inner.clone();
+            Box::new(
+                request_rx
+                    .into_future()
+                    .map_err(|_| {
+                        Error::from("MockTransport failed to receive on request channel")
+                    })
+                    .map(move |(maybe_request, request_rx)| {
+
+                        // Must move the channel back into the Inner state
+                        // *before* the mocker begins handling the request so
+                        // that the mocker can construct a response.
+                        inner.try_borrow_mut().unwrap().mocker_channels =
+                            Some(MockerChannelPair(request_rx, response_tx));
+
+                        maybe_request
+                    }),
+            )
+        };
+
+        // Unless an error occurs, the action future will finish first because
+        // the mocker only finishes *after* the request sender is closed, which
+        // we must do ourselves.
+
+        let action_result = match action.select2(mocker(maybe_request)).wait() {
+            Ok(futures::future::Either::A((action_item, _mocker_future))) => Ok(action_item),
+            Ok(futures::future::Either::B(_)) => unreachable!(),
+            Err(futures::future::Either::A((action_error, _mocker_future))) => Err(action_error),
+            Err(x) => panic!("MockTransport yielded an error: {}", x.split().0),
+        };
+
+        let ActionChannelPair(request_tx, _) = self.inner
+            .try_borrow_mut()
+            .unwrap() // cannot be called concurrently
+            .action_channels
+            .take()
+            .unwrap();
+
+        drop(request_tx);
+
+        action_result
+    }
+
+    pub fn done() -> futures::future::FutureResult<(), Error> {
+        futures::future::ok(())
     }
 }
 
-impl transport::Transport for MockTransport {}
+impl transport::Transport for MockTransport {
+    type Request = MockRequest;
+    type RequestFuture = futures::future::FutureResult<Self::Request, Error>;
+    fn request<P: AsRef<str>>(&self, method: Method, url_path: Result<P, Error>) -> Self::RequestFuture {
+        futures::future::result(match url_path {
+            Err(e) => Err(e),
+            Ok(p) => Ok(MockRequest::new(
+                self.inner.clone(),
+                method,
+                p.as_ref().to_string(),
+            )),
+        })
+    }
+}
 
 #[derive(Debug)]
-struct MockRequestMaker {
-    request_tx: futures::unsync::oneshot::Sender<MockRequest>,
-    response_rx: futures::unsync::oneshot::Receiver<MockResponse>,
-}
-
-impl MockRequestMaker {
-    fn new(
-        request_tx: futures::unsync::oneshot::Sender<MockRequest>,
-        response_rx: futures::unsync::oneshot::Receiver<MockResponse>,
-    ) -> Self {
-        MockRequestMaker {
-            request_tx: request_tx,
-            response_rx: response_rx,
-        }
-    }
-}
-
-impl transport::RequestMaker for MockRequestMaker {
-    type Request = MockRequest;
-    type Future = futures::future::FutureResult<Self::Request, Error>;
-    fn make_request(self, method: Method, url_path: &str) -> Self::Future {
-        futures::future::ok(MockRequest::new(
-            self.request_tx,
-            self.response_rx,
-            method,
-            url_path,
-        ))
-    }
-}
-
-#[derive(Default, Debug)]
 pub struct MockRequest {
-    request_tx: Option<futures::unsync::oneshot::Sender<MockRequest>>,
-    response_rx: Option<futures::unsync::oneshot::Receiver<MockResponse>>,
+    inner: Rc<RefCell<Inner>>,
     method: Method,
     url_path: String,
     headers: reqwest::header::Headers,
 }
 
 impl MockRequest {
-    fn new(
-        request_tx: futures::unsync::oneshot::Sender<MockRequest>,
-        response_rx: futures::unsync::oneshot::Receiver<MockResponse>,
-        method: Method,
-        url_path: &str,
-    ) -> Self {
+    fn new(inner: Rc<RefCell<Inner>>, method: Method, url_path: String) -> Self {
         MockRequest {
-            request_tx: Some(request_tx),
-            response_rx: Some(response_rx),
+            inner: inner,
             method: method,
-            url_path: String::from(url_path),
+            url_path: url_path,
             headers: reqwest::header::Headers::new(),
+        }
+    }
+
+    pub fn response(&self, status_code: StatusCode) -> MockResponse {
+        MockResponse {
+            inner: self.inner.clone(),
+            status_code: status_code,
+            headers: reqwest::header::Headers::new(),
+            body: None,
         }
     }
 
@@ -127,20 +179,53 @@ impl transport::Request for MockRequest {
     type Response = MockResponse;
     type Future = Box<Future<Item = Self::Response, Error = Error>>;
 
-    fn set_accept_application_json(&mut self) {
+    fn accept_application_json(&mut self) {
         self.headers.set(reqwest::header::Accept::json());
     }
 
-    fn send_without_body(mut self) -> Self::Future {
-        let request_tx = self.request_tx.take().unwrap();
-        let response_rx = self.response_rx.take().unwrap();
-        request_tx.send(self).unwrap();
-        Box::new(response_rx.map_err(must_receive))
+    fn send_without_body(self) -> Self::Future {
+
+        let ActionChannelPair(request_tx, response_rx) = self.inner
+            .try_borrow_mut()
+            .unwrap() // cannot be called concurrently
+            .action_channels
+            .take()
+            .expect(
+                "MockTransport cannot begin a request until the action receives the previous response",
+            );
+
+        let inner = self.inner.clone();
+
+        Box::new(
+            request_tx
+                .send(self)
+                .map_err(|_send_error| {
+                    Error::from("MockTransport failed to send on request channel")
+                })
+                .and_then(move |request_tx| {
+                    response_rx
+                        .into_future()
+                        .map_err(|_| {
+                            Error::from("MockTransport failed to receive on response channel")
+                        })
+                        .map(move |(response, response_rx)| {
+
+                            // Must move the channel back into the Inner state
+                            // *before* the action begins handling the response
+                            // so that the mocker can construct another request.
+                            inner.try_borrow_mut().unwrap().action_channels =
+                                Some(ActionChannelPair(request_tx, response_rx));
+
+                            response.expect("MockTransport exhausted the mock responses")
+                        })
+                }),
+        )
     }
 }
 
 #[derive(Debug)]
 pub struct MockResponse {
+    inner: Rc<RefCell<Inner>>,
     status_code: StatusCode,
     headers: reqwest::header::Headers,
     body: Option<Body>,
@@ -150,6 +235,42 @@ impl MockResponse {
     pub fn set_json_body<T: Serialize>(&mut self, content: &T) {
         self.headers.set(reqwest::header::ContentType::json());
         self.body = Some(Body::Json(serde_json::to_vec(content).unwrap()));
+    }
+
+    pub fn finish(self) -> MockFuture {
+
+        let MockerChannelPair(request_rx, response_tx) = self.inner
+            .try_borrow_mut()
+            .unwrap()
+            .mocker_channels
+            .take()
+            .unwrap();
+
+        let inner = self.inner.clone();
+
+        Box::new(
+            response_tx
+                .send(self)
+                .map_err(|_send_error| {
+                    Error::from("MockTransport failed to send on response channel")
+                })
+                .and_then(|response_tx| {
+                    request_rx
+                        .into_future()
+                        .map_err(|_| {
+                            Error::from("MockTransport failed to receive on request channel")
+                        })
+                        .map(move |(maybe_request, request_rx)| {
+
+                            // Must move the channel back into the Inner state
+                            // *before* the mocker maybe handles another request.
+                            inner.try_borrow_mut().unwrap().mocker_channels =
+                                Some(MockerChannelPair(request_rx, response_tx));
+
+                            maybe_request
+                        })
+                }),
+        )
     }
 }
 
