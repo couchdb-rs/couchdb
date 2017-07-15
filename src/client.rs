@@ -41,14 +41,19 @@ pub struct Client {
 impl Client {
     pub fn new<U: IntoUrl>(
         server_url: U,
-        reactor_handle: &tokio_core::reactor::Handle,
         _options: ClientOptions,
+        reactor_handle: &tokio_core::reactor::Handle,
     ) -> Result<Self, Error> {
 
         let server_url = server_url.into_url()?;
         let transport = NetTransport::new_with_external_executor(server_url, reactor_handle)?;
 
         Ok(Client { transport: transport })
+    }
+
+    /// Constructs an action to check whether a database exists.
+    pub fn head_database<P: IntoDatabasePath>(&self, db_path: P) -> action::HeadDatabase<NetTransport> {
+        action::HeadDatabase::new(&self.transport, db_path)
     }
 
     /// Constructs an action to create a database.

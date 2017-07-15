@@ -30,7 +30,7 @@ pub struct FakeServer {
 }
 
 impl FakeServer {
-    /// Spawns a CouchDB server process.
+    /// Spawns a CouchDB server process for testing.
     pub fn new() -> Result<FakeServer, Error> {
 
         let tmp_root = try!(tempdir::TempDir::new("couchdb_test").map_err(|e| {
