@@ -11,22 +11,60 @@ impl Drop for AutoKillProcess {
     }
 }
 
-/// `FakeServer` manages a CouchDB server process for application testing.
+/// `FakeServer` manages a CouchDB server process, for application testing.
 ///
-/// The `FakeServer` type is a RAII wrapper for a CouchDB server process. The
-/// server remains up and running until the `FakeServer` instance drops—or until
-/// a server error occurs.
+/// # Summary
 ///
-/// The CouchDB server's underlying storage persists to the system's default
-/// temporary directory (e.g., `/tmp`) and is deleted when the `FakeServer`
-/// instance drops.
+/// * `FakeServer` is an RAII-wrapper for an external CouchDB server process.
+///
+/// * The external CouchDB process's underlying storage persists to the system's
+///   default temporary directory (e.g., `/tmp`) and is deleted when the
+///   `FakeServer` instance drops.
+///
+/// # Remarks
+///
+/// `FakeServer` is a fake, not a mock, meaning an application may use it to
+/// send HTTP requests to a real CouchDB server and receive real responses.
+/// Consequently, this means that CouchDB must be installed on the local machine
+/// in order to use `FakeServer`.
+///
+/// The CouchDB server will open an unused port on the local machine. The
+/// application may obtain the server's exact address via the `FakeServer::url`
+/// method.
+///
+/// The CouchDB server remains up and running for the lifetime of the
+/// `FakeServer` instance. When the instance drops, the server shuts down and
+/// all of its data are deleted.
+///
+/// # Example
+///
+/// ```
+/// extern crate couchdb;
+/// extern crate tokio_core;
+///
+/// let server = couchdb::testing::FakeServer::new().unwrap();
+///
+/// let mut reactor = tokio_core::reactor::Core::new().unwrap();
+/// let client = couchdb::Client::new(
+///     server.url(),
+///     couchdb::ClientOptions::default(),
+///     &reactor.handle()
+/// ).unwrap();
+///
+/// reactor.run(client.put_database("/baseball").send()).unwrap();
+///
+/// match reactor.run(client.head_database("/baseball").send()) {
+///     Ok(_) => {}
+///     x => panic!("Got unexpected result {:?}", x),
+/// }
+/// ```
 ///
 pub struct FakeServer {
     // Rust drops structure fields in forward order, not reverse order. The
     // child process must exit before we remove the temporary directory.
     _process: AutoKillProcess,
     _tmp_root: tempdir::TempDir,
-    uri: String,
+    url: String,
 }
 
 impl FakeServer {
@@ -109,21 +147,21 @@ impl FakeServer {
         });
 
         // Wait for the CouchDB server to start its HTTP service.
-        let uri = try!(rx.recv().map_err(|e| {
+        let url = try!(rx.recv().map_err(|e| {
             t.join().unwrap_err();
-            Error::from(("Failed to extract URI from CouchDB server", e))
+            Error::from(("Failed to extract URL from CouchDB server", e))
         }));
 
         Ok(FakeServer {
             _process: process,
             _tmp_root: tmp_root,
-            uri: uri,
+            url: url,
         })
     }
 
-    /// Returns the CouchDB server URI.
-    pub fn uri(&self) -> &str {
-        &self.uri
+    /// Returns the CouchDB server's URL.
+    pub fn url(&self) -> &str {
+        &self.url
     }
 }
 

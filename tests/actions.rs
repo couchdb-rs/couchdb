@@ -5,7 +5,7 @@ fn make_server_and_client() -> (couchdb::testing::FakeServer, couchdb::Client, t
     let server = couchdb::testing::FakeServer::new().unwrap();
     let reactor = tokio_core::reactor::Core::new().unwrap();
     let client = couchdb::Client::new(
-        server.uri(),
+        server.url(),
         couchdb::ClientOptions::default(),
         &reactor.handle(),
     ).unwrap();
@@ -23,7 +23,7 @@ fn head_database_ok() {
 fn head_database_nok_database_does_not_exist() {
     let (_server, client, mut reactor) = make_server_and_client();
     match reactor.run(client.head_database("/foo").send()) {
-        Err(ref e) if e.is_database_does_not_exist() => {}
+        Err(ref e) if e.is_not_found() => {}
         x => panic!("Got unexpected result {:?}", x),
     }
 }
@@ -51,7 +51,7 @@ fn delete_database_ok() {
     reactor.run(client.put_database("/foo").send()).unwrap();
     reactor.run(client.delete_database("/foo").send()).unwrap();
     match reactor.run(client.head_database("/foo").send()) {
-        Err(ref e) if e.is_database_does_not_exist() => {}
+        Err(ref e) if e.is_not_found() => {}
         x => panic!("Got unexpected result {:?}", x),
     }
 }
@@ -60,7 +60,7 @@ fn delete_database_ok() {
 fn delete_database_nok_database_does_not_exist() {
     let (_server, client, mut reactor) = make_server_and_client();
     match reactor.run(client.delete_database("/foo").send()) {
-        Err(ref e) if e.is_database_does_not_exist() => {}
+        Err(ref e) if e.is_not_found() => {}
         x => panic!("Got unexpected result {:?}", x),
     }
 }

@@ -4,6 +4,7 @@ use error::ErrorCategory;
 use futures::Future;
 use transport::{ActionFuture, Method, Request, Response, ServerResponseFuture, StatusCode, Transport};
 
+/// `HeadDatabase` is an action to test whether a database exists.
 #[derive(Debug)]
 pub struct HeadDatabase<'a, T: Transport + 'a> {
     transport: &'a T,
@@ -26,6 +27,14 @@ impl<'a, T: Transport> HeadDatabase<'a, T> {
         }
     }
 
+    /// Sends the request and returns a future of the result.
+    ///
+    /// # Errors
+    ///
+    /// Some possible errors:
+    ///
+    /// * `Error::is_not_found`
+    ///
     pub fn send(&mut self) -> ActionFuture<()> {
 
         let inner = self.inner.take().expect(E_ACTION_USED);
@@ -37,7 +46,7 @@ impl<'a, T: Transport> HeadDatabase<'a, T> {
                 .and_then(|response| {
                     let maybe_category = match response.status_code() {
                         StatusCode::Ok => return ServerResponseFuture::ok(()),
-                        StatusCode::NotFound => Some(ErrorCategory::DatabaseDoesNotExist),
+                        StatusCode::NotFound => Some(ErrorCategory::NotFound),
                         _ => None,
                     };
                     ServerResponseFuture::err(response, maybe_category)
@@ -96,7 +105,7 @@ mod tests {
         });
 
         match result {
-            Err(ref e) if e.is_database_does_not_exist() => {}
+            Err(ref e) if e.is_not_found() => {}
             x => panic!("Got unexpected result {:?}", x),
         }
     }

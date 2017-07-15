@@ -4,6 +4,7 @@ use error::ErrorCategory;
 use futures::Future;
 use transport::{ActionFuture, Method, Request, Response, ServerResponseFuture, StatusCode, Transport};
 
+/// `PutDatabase` is an action to create a database.
 #[derive(Debug)]
 pub struct PutDatabase<'a, T: Transport + 'a> {
     transport: &'a T,
@@ -26,6 +27,15 @@ impl<'a, T: Transport> PutDatabase<'a, T> {
         }
     }
 
+    /// Sends the request and returns a future of the result.
+    ///
+    /// # Errors
+    ///
+    /// Some possible errors:
+    ///
+    /// * `Error::is_database_exists`
+    /// * `Error::is_unauthorized`
+    ///
     pub fn send(&mut self) -> ActionFuture<()> {
 
         let inner = self.inner.take().expect(E_ACTION_USED);

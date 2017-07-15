@@ -4,26 +4,30 @@ use transport::StatusCode;
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum ErrorCategory {
-    DatabaseDoesNotExist,
     DatabaseExists,
+    NotFound,
     Unauthorized,
 }
 
 impl Display for ErrorCategory {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> Result<(), std::fmt::Error> {
         match self {
-            &ErrorCategory::DatabaseDoesNotExist => "The database does not exist".fmt(f),
+            &ErrorCategory::NotFound => "The resource does not exist or is deleted".fmt(f),
             &ErrorCategory::DatabaseExists => "The database already exists".fmt(f),
-            &ErrorCategory::Unauthorized => "CouchDB server administrator privileges are required".fmt(f),
+            &ErrorCategory::Unauthorized => "The client is not authorized to complete the action".fmt(f),
         }
     }
 }
 
-/// `Error` contains information about an error originating in the client
-/// or server.
+/// `Error` is the `couchdb` crate's principal error type.
 ///
-/// `Error` implements the `Sync` trait so that actions' futures may be sent
-/// between threads.
+/// # Summary
+///
+/// * `Error` contains information about an error that originated in the client
+///   or the server.
+///
+/// * `Error` implements the `Sync` trait so that actions' futures may be sent
+///   between threads.
 ///
 #[derive(Debug)]
 pub struct Error {
@@ -66,13 +70,8 @@ impl Error {
         }
     }
 
-    pub fn is_database_does_not_exist(&self) -> bool {
-        match self.category {
-            Some(ErrorCategory::DatabaseDoesNotExist) => true,
-            _ => false,
-        }
-    }
-
+    /// Returns true if and only if the CouchDB server responded with an error
+    /// because the database already exists.
     pub fn is_database_exists(&self) -> bool {
         match self.category {
             Some(ErrorCategory::DatabaseExists) => true,
@@ -80,6 +79,18 @@ impl Error {
         }
     }
 
+    /// Returns true if and only if the CouchDB server responded with an error
+    /// because the target resource (e.g., database, document, etc.) does not
+    /// exist or is deleted.
+    pub fn is_not_found(&self) -> bool {
+        match self.category {
+            Some(ErrorCategory::NotFound) => true,
+            _ => false,
+        }
+    }
+
+    /// Returns true if and only if the CouchDB server responded with an error
+    /// because the client is unauthorized to complete the action.
     pub fn is_unauthorized(&self) -> bool {
         match self.category {
             Some(ErrorCategory::Unauthorized) => true,
@@ -174,6 +185,51 @@ impl From<std::io::Error> for Error {
     }
 }
 
+/// `Nok` stores the content of an error response from the CouchDB server.
+///
+/// # Summary
+///
+/// * Applications normally **do not** need to use `Nok` because actions already
+///   return this information via [`Error`](struct.Error.html), if available.
+///
+/// * `Nok` stores the “error” and “reason” strings that the CouchDB server
+///   responds with in case of an error.
+///
+/// # Remarks
+///
+/// `Nok` could be useful to an application if the application communicates
+/// directly with the CouchDB server using some other HTTP transport, such as
+/// the [`hyper`](https://crates.io/crates/hyper) crate.
+///
+/// When the CouchDB server responds with a 4xx- or 5xx status code, the
+/// response usually has a body containing a JSON object with an “error” string
+/// and a “reason” string. For example:
+///
+/// ```text
+/// {
+///   "error": "file_exists",
+///   "reason": "The database could not be created, the file already exists."
+/// }
+/// ```
+///
+/// The `Nok` type stores the information from the response body.
+///
+/// ```
+/// extern crate couchdb;
+/// extern crate serde_json;
+///
+/// # let body = br#"{
+/// # "error": "file_exists",
+/// # "reason": "The database could not be created, the file already exists."
+/// # }"#;
+/// #
+/// let nok: couchdb::Nok = serde_json::from_slice(body).unwrap();
+///
+/// assert_eq!(nok.error(), "file_exists");
+/// assert_eq!(nok.reason(),
+///            "The database could not be created, the file already exists.");
+/// ```
+///
 #[derive(Clone, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct Nok {
     error: String,
@@ -181,11 +237,31 @@ pub struct Nok {
 }
 
 impl Nok {
-    pub fn error(&self) -> &String {
+    // Exposed only for the Nok doc test. Would it make sense to expose this
+    // method or some other means of construction?
+    #[doc(hidden)]
+    pub fn new(error: String, reason: String) -> Self {
+        Nok {
+            error: error,
+            reason: reason,
+        }
+    }
+
+    /// Returns the “error” string from the response body.
+    ///
+    /// The “error” string is the high-level name of the error—e.g.,
+    /// “file_exists”.
+    ///
+    pub fn error(&self) -> &str {
         &self.error
     }
 
-    pub fn reason(&self) -> &String {
+    /// Returns the ”reason” string from the response body.
+    ///
+    /// The “reason” string is the low-level description of the error—e.g., “The
+    /// database could not be created, the file already exists.”
+    ///
+    pub fn reason(&self) -> &str {
         &self.reason
     }
 }

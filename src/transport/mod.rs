@@ -52,9 +52,20 @@ pub trait Response {
         for<'de> T: Deserialize<'de> + 'static;
 }
 
+/// `ActionFuture` holds the future result of an [action](action/index.html).
+///
+/// # Summary
+///
+/// * `ActionFuture` implements `Future<Item = T, Error = Error>`.
+///
+/// * `ActionFuture` is a workaround for Rust not yet having a stable “impl
+///   Trait” feature. As such, this type may go away in a future release, when
+///   Rust lands that feature.
+///
 pub struct ActionFuture<T>(Box<Future<Item = T, Error = Error>>);
 
 impl<T> ActionFuture<T> {
+    #[doc(hidden)]
     pub fn new<F>(future: F) -> Self
     where
         F: Future<Item = T, Error = Error> + 'static,
