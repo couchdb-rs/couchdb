@@ -47,6 +47,13 @@
 //!   </tr>
 //!
 //!   <tr>
+//!    <td><code>/_all_dbs</code></td>
+//!    <td>GET</td>
+//!    <td><a href="../struct.Client.html#method.get_all_dbs"><code>get_all_dbs</code></a></td>
+//!    <td>Get a list of all databases on the server.</td>
+//!   </tr>
+//!
+//!   <tr>
 //!    <td rowspan="3"><code>/{db}</code></td>
 //!    <td>HEAD</td>
 //!    <td><a href="../struct.Client.html#method.head_database"><code>head_database</code></a></td>
@@ -70,11 +77,13 @@
 
 
 mod delete_database;
+mod get_all_dbs;
 mod get_root;
 mod head_database;
 mod put_database;
 
 pub use self::delete_database::DeleteDatabase;
+pub use self::get_all_dbs::GetAllDbs;
 pub use self::get_root::GetRoot;
 pub use self::head_database::HeadDatabase;
 pub use self::put_database::PutDatabase;

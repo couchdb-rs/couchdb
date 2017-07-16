@@ -1,6 +1,9 @@
 extern crate couchdb;
 extern crate tokio_core;
 
+use couchdb::DatabaseName;
+use std::collections::HashSet;
+
 fn make_server_and_client() -> (couchdb::testing::FakeServer, couchdb::Client, tokio_core::reactor::Core) {
     let server = couchdb::testing::FakeServer::new().unwrap();
     let reactor = tokio_core::reactor::Core::new().unwrap();
@@ -16,6 +19,30 @@ fn make_server_and_client() -> (couchdb::testing::FakeServer, couchdb::Client, t
 fn get_root_ok() {
     let (_server, client, mut reactor) = make_server_and_client();
     reactor.run(client.get_root().send()).unwrap();
+}
+
+#[test]
+fn get_all_dbs_ok() {
+    let (_server, client, mut reactor) = make_server_and_client();
+    let pre = reactor
+        .run(client.get_all_dbs().send())
+        .unwrap()
+        .into_iter()
+        .collect::<HashSet<_>>();
+    reactor.run(client.put_database("/alpha").send()).unwrap();
+    let post = reactor
+        .run(client.get_all_dbs().send())
+        .unwrap()
+        .into_iter()
+        .collect::<HashSet<_>>();
+
+    let diff = post.difference(&pre).map(|x| x.clone()).collect::<Vec<_>>();
+    let expected = vec![DatabaseName::from("alpha")];
+    assert_eq!(diff, expected);
+
+    let diff = pre.difference(&post).map(|x| x.clone()).collect::<Vec<_>>();
+    let expected = vec![];
+    assert_eq!(diff, expected);
 }
 
 #[test]
@@ -72,22 +99,6 @@ fn delete_database_nok_database_does_not_exist() {
 }
 
 /*
-#[test]
-fn get_all_databases_ok() {
-    let (_server, client) = make_server_and_client();
-    let expected = vec!["_replicator", "_users"]
-                       .into_iter()
-                       .map(|x| String::from(x))
-                       .collect::<HashSet<_>>();
-    let got = client.get_all_databases()
-                    .run()
-                    .unwrap()
-                    .into_iter()
-                    .map(|x| String::from(x))
-                    .collect::<HashSet<_>>();
-    assert_eq!(expected, got);
-}
-
 #[test]
 fn get_database_ok() {
     let (_server, client) = make_server_and_client();
