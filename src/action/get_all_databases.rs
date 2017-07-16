@@ -2,16 +2,17 @@ use {DatabaseName, Error};
 use futures::Future;
 use transport::{ActionFuture, Method, Request, Response, ServerResponseFuture, StatusCode, Transport};
 
-/// `GetAllDbs` is an action to get a list of all databases on a CouchDB server.
+/// `GetAllDatabases` is an action to get a list of all databases on a CouchDB
+/// server.
 #[derive(Debug)]
-pub struct GetAllDbs<'a, T: Transport + 'a> {
+pub struct GetAllDatabases<'a, T: Transport + 'a> {
     transport: &'a T,
 }
 
-impl<'a, T: Transport> GetAllDbs<'a, T> {
+impl<'a, T: Transport> GetAllDatabases<'a, T> {
     #[doc(hidden)]
     pub fn new(transport: &'a T) -> Self {
-        GetAllDbs { transport: transport }
+        GetAllDatabases { transport: transport }
     }
 
     /// Sends the request and returns a future of the result.
@@ -30,18 +31,14 @@ impl<'a, T: Transport> GetAllDbs<'a, T> {
                     request.accept_application_json();
                     request.send_without_body()
                 })
-                .and_then(|mut response| {
-                    response.json_body::<Vec<DatabaseName>>().map(move |x| {
-                        (response, x)
-                    })
-                })
-                .and_then(|(response, dbs)| {
+                .and_then(|response| {
                     let maybe_category = match response.status_code() {
-                        StatusCode::Ok => return ServerResponseFuture::ok(dbs),
+                        StatusCode::Ok => return ServerResponseFuture::ok(response),
                         _ => None,
                     };
                     ServerResponseFuture::err(response, maybe_category)
                 })
+                .and_then(|mut response| response.json_body())
                 .map_err(|e| {
                     Error::chain("Failed to GET all databases (/_all_dbs)", e)
                 }),
@@ -56,12 +53,12 @@ mod tests {
     use transport::MockTransport;
 
     #[test]
-    fn get_all_dbs_succeeds_on_200_ok() {
+    fn get_all_databases_succeeds_on_200_ok() {
 
         use std::collections::HashSet;
 
         let transport = MockTransport::new();
-        let action = GetAllDbs::new(&transport).send();
+        let action = GetAllDatabases::new(&transport).send();
         let result = transport.mock(action, |mock| {
             mock.and_then(|request| {
                 let request = request.expect("Client did not send request");
@@ -77,13 +74,17 @@ mod tests {
                 })
         });
 
-        let expected = ["_replicator", "_users", "alpha", "bravo"]
-            .iter()
-            .map(|&x| DatabaseName::from(x))
-            .collect::<HashSet<_>>();
+        fn is_expected(dbs: &Vec<DatabaseName>) -> bool {
+            let got = dbs.into_iter().map(|x| x.clone()).collect::<HashSet<_>>();
+            let expected = ["_replicator", "_users", "alpha", "bravo"]
+                .iter()
+                .map(|&x| DatabaseName::from(x))
+                .collect::<HashSet<_>>();
+            got == expected
+        }
 
         match result {
-            Ok(ref x) if x.into_iter().map(|x| x.clone()).collect::<HashSet<_>>() == expected => {}
+            Ok(ref x) if is_expected(x) => {}
             x => panic!("Got unexpected result {:?}", x),
         }
     }

@@ -20,7 +20,7 @@ pub mod path;
 pub mod testing;
 
 pub use client::{Client, ClientOptions, IntoUrl};
-pub use db::{Nok, Root};
+pub use db::{Database, Nok, Root};
 pub use error::Error;
 pub use path::{AttachmentName, AttachmentPath, DatabaseName, DatabasePath, DesignDocumentId, DesignDocumentPath,
                DocumentId, DocumentPath, IntoAttachmentPath, IntoDatabasePath, IntoDesignDocumentPath,

@@ -31,16 +31,14 @@ impl<'a, T: Transport> GetRoot<'a, T> {
                     request.accept_application_json();
                     request.send_without_body()
                 })
-                .and_then(|mut response| {
-                    response.json_body::<Root>().map(move |x| (response, x))
-                })
-                .and_then(|(response, root)| {
+                .and_then(|response| {
                     let maybe_category = match response.status_code() {
-                        StatusCode::Ok => return ServerResponseFuture::ok(root),
+                        StatusCode::Ok => return ServerResponseFuture::ok(response),
                         _ => None,
                     };
                     ServerResponseFuture::err(response, maybe_category)
                 })
+                .and_then(|mut response| response.json_body())
                 .map_err(|e| Error::chain("Failed to GET root (/)", e)),
         )
     }
@@ -82,8 +80,8 @@ mod tests {
         });
 
         fn is_expected(x: &Root) -> bool {
-            x.welcome() == "Welcome" && x.uuid() == &Uuid::parse_str("85fb71bf700c17267fef77535820e371").unwrap() &&
-                x.version() == "1.3.1" && x.version_triple() == Some((1, 3, 1))
+            x.couchdb == "Welcome" && x.uuid == Uuid::parse_str("85fb71bf700c17267fef77535820e371").unwrap() &&
+                x.version == "1.3.1" && x.version_triple() == Some((1, 3, 1))
         }
 
         match result {

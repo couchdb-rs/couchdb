@@ -270,7 +270,7 @@ impl<'a> PathDecoder<'a> {
 /// For more information about path-related types, see the [module-level
 /// documentation](index.html).
 ///
-#[derive(Clone, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
+#[derive(Clone, Debug, Default, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
 pub struct DatabaseName(String);
 
 impl DatabaseName {
@@ -331,7 +331,7 @@ impl From<String> for DatabaseName {
 /// For more information about path-related types, see the [module-level
 /// documentation](index.html).
 ///
-#[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+#[derive(Clone, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct DatabasePath {
     db_name: DatabaseName,
 }
@@ -421,7 +421,7 @@ impl<'a> IntoDatabasePath for &'a str {
 /// For more information about path-related types, see the [module-level
 /// documentation](index.html).
 ///
-#[derive(Clone, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
+#[derive(Clone, Debug, Default, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
 pub struct DocumentId(String);
 
 impl DocumentId {
@@ -507,7 +507,7 @@ impl From<DesignDocumentId> for DocumentId {
 /// For more information about path-related types, see the [module-level
 /// documentation](index.html).
 ///
-#[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+#[derive(Clone, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct DocumentPath {
     db_name: DatabaseName,
     doc_id: DocumentId,
@@ -603,7 +603,7 @@ impl<'a> IntoDocumentPath for &'a str {
 /// For more information about path-related types, see the [module-level
 /// documentation](index.html).
 ///
-#[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
+#[derive(Clone, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
 pub struct DesignDocumentId(DocumentId);
 
 impl DesignDocumentId {
@@ -705,7 +705,7 @@ impl PathDecodable for DesignDocumentId {
 /// For more information about path-related types, see the [module-level
 /// documentation](index.html).
 ///
-#[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+#[derive(Clone, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct DesignDocumentPath {
     db_name: DatabaseName,
     ddoc_id: DesignDocumentId,
@@ -803,7 +803,7 @@ impl<'a> IntoDesignDocumentPath for &'a str {
 /// For more information about path-related types, see the [module-level
 /// documentation](index.html).
 ///
-#[derive(Clone, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
+#[derive(Clone, Debug, Default, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
 pub struct AttachmentName(String);
 
 impl AttachmentName {
@@ -847,7 +847,7 @@ impl From<String> for AttachmentName {
 /// For more information about path-related types, see the [module-level
 /// documentation](index.html).
 ///
-#[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+#[derive(Clone, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct AttachmentPath {
     db_name: DatabaseName,
     doc_id: DocumentId,
@@ -944,7 +944,7 @@ impl<'a> IntoAttachmentPath for &'a str {
 /// For more information about path-related types, see the [module-level
 /// documentation](index.html).
 ///
-#[derive(Clone, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
+#[derive(Clone, Debug, Default, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
 pub struct ViewName(String);
 
 impl ViewName {
@@ -988,7 +988,7 @@ impl From<String> for ViewName {
 /// For more information about path-related types, see the [module-level
 /// documentation](index.html).
 ///
-#[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+#[derive(Clone, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct ViewPath {
     db_name: DatabaseName,
     ddoc_id: DesignDocumentId,

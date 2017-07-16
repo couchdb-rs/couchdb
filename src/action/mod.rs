@@ -49,12 +49,18 @@
 //!   <tr>
 //!    <td><code>/_all_dbs</code></td>
 //!    <td>GET</td>
-//!    <td><a href="../struct.Client.html#method.get_all_dbs"><code>get_all_dbs</code></a></td>
+//!    <td><a href="../struct.Client.html#method.get_all_databases"><code>get_all_databases</code></a></td>
 //!    <td>Get a list of all databases on the server.</td>
 //!   </tr>
 //!
 //!   <tr>
-//!    <td rowspan="3"><code>/{db}</code></td>
+//!    <td rowspan="4"><code>/{db}</code></td>
+//!    <td>GET</td>
+//!    <td><a href="../struct.Client.html#method.get_database"><code>get_database</code></a></td>
+//!    <td>Get meta-information about a database.</td>
+//!   </tr>
+//!
+//!   <tr>
 //!    <td>HEAD</td>
 //!    <td><a href="../struct.Client.html#method.head_database"><code>head_database</code></a></td>
 //!    <td>Test whether a database exists.</td>
@@ -77,13 +83,15 @@
 
 
 mod delete_database;
-mod get_all_dbs;
+mod get_all_databases;
+mod get_database;
 mod get_root;
 mod head_database;
 mod put_database;
 
 pub use self::delete_database::DeleteDatabase;
-pub use self::get_all_dbs::GetAllDbs;
+pub use self::get_all_databases::GetAllDatabases;
+pub use self::get_database::GetDatabase;
 pub use self::get_root::GetRoot;
 pub use self::head_database::HeadDatabase;
 pub use self::put_database::PutDatabase;

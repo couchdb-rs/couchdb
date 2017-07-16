@@ -119,8 +119,13 @@ impl Client {
     }
 
     /// Constructs an action to GET a list of all databases.
-    pub fn get_all_dbs(&self) -> action::GetAllDbs<NetTransport> {
-        action::GetAllDbs::new(&self.transport)
+    pub fn get_all_databases(&self) -> action::GetAllDatabases<NetTransport> {
+        action::GetAllDatabases::new(&self.transport)
+    }
+
+    /// Constructs an action to GET a database.
+    pub fn get_database<P: IntoDatabasePath>(&self, db_path: P) -> action::GetDatabase<NetTransport> {
+        action::GetDatabase::new(&self.transport, db_path)
     }
 
     /// Constructs an action to HEAD a database.

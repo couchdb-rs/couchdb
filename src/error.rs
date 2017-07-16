@@ -44,12 +44,7 @@ impl Error {
             status_code
         );
         if let Some(nok) = nok {
-            s = format!(
-                "{}, error: {:?}, reason: {:?}",
-                s,
-                nok.error(),
-                nok.reason()
-            );
+            s = format!("{}, error: {:?}, reason: {:?}", s, nok.error, nok.reason);
         }
         s = format!("{})", s);
         let mut e = Error::from(s);

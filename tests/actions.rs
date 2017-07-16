@@ -22,16 +22,16 @@ fn get_root_ok() {
 }
 
 #[test]
-fn get_all_dbs_ok() {
+fn get_all_databases_ok() {
     let (_server, client, mut reactor) = make_server_and_client();
     let pre = reactor
-        .run(client.get_all_dbs().send())
+        .run(client.get_all_databases().send())
         .unwrap()
         .into_iter()
         .collect::<HashSet<_>>();
     reactor.run(client.put_database("/alpha").send()).unwrap();
     let post = reactor
-        .run(client.get_all_dbs().send())
+        .run(client.get_all_databases().send())
         .unwrap()
         .into_iter()
         .collect::<HashSet<_>>();
@@ -43,6 +43,30 @@ fn get_all_dbs_ok() {
     let diff = pre.difference(&post).map(|x| x.clone()).collect::<Vec<_>>();
     let expected = vec![];
     assert_eq!(diff, expected);
+}
+
+#[test]
+fn get_database_ok() {
+    let (_server, client, mut reactor) = make_server_and_client();
+    reactor.run(client.put_database("/foo").send()).unwrap();
+    let got = reactor.run(client.get_database("/foo").send()).unwrap();
+    assert_eq!(couchdb::DatabaseName::from("foo"), got.db_name);
+    assert_eq!(0, got.update_seq);
+    assert_eq!(0, got.committed_update_seq);
+    assert_eq!(0, got.doc_count);
+    assert_eq!(0, got.doc_del_count);
+    assert_eq!(0, got.data_size);
+    assert_eq!(0, got.purge_seq);
+    assert_eq!(false, got.compact_running);
+}
+
+#[test]
+fn get_database_nok_database_does_not_exist() {
+    let (_server, client, mut reactor) = make_server_and_client();
+    match reactor.run(client.get_database("/foo").send()) {
+        Err(ref e) if e.is_not_found() => {}
+        x => panic!("Got unexpected result {:?}", x),
+    }
 }
 
 #[test]
@@ -99,28 +123,6 @@ fn delete_database_nok_database_does_not_exist() {
 }
 
 /*
-#[test]
-fn get_database_ok() {
-    let (_server, client) = make_server_and_client();
-    client.put_database("/foo").run().unwrap();
-    let got = client.get_database("/foo").run().unwrap();
-    assert_eq!(couchdb::DatabaseName::from("foo"), got.db_name);
-    assert_eq!(0, got.update_seq);
-    assert_eq!(0, got.committed_update_seq);
-    assert_eq!(0, got.doc_count);
-    assert_eq!(0, got.doc_del_count);
-    assert_eq!(0, got.data_size);
-    assert_eq!(0, got.purge_seq);
-    assert_eq!(false, got.compact_running);
-}
-
-#[test]
-fn get_database_nok_database_does_not_exist() {
-    let (_server, client) = make_server_and_client();
-    let got = client.get_database("/foo").run();
-    expect_couchdb_error!(got, couchdb::Error::NotFound(Some(..)));
-}
-
 #[test]
 fn post_database_ok() {
     let (_server, client) = make_server_and_client();

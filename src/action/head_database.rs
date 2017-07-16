@@ -94,8 +94,6 @@ mod tests {
         let result = transport.mock(action, |mock| {
             mock.and_then(|request| {
                 let request = request.expect("Client did not send request");
-                assert_eq!(request.method(), Method::Head);
-                assert_eq!(request.url_path(), "/foo");
                 let response = request.response(StatusCode::NotFound);
                 response.finish()
             }).and_then(|request| {

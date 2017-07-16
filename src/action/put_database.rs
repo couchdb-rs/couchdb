@@ -94,35 +94,6 @@ mod tests {
     }
 
     #[test]
-    fn put_database_fails_on_412_precondition_failed() {
-
-        let transport = MockTransport::new();
-        let action = PutDatabase::new(&transport, "/foo").send();
-        let result = transport.mock(action, |mock| {
-            mock.and_then(|request| {
-                let request = request.expect("Client did not send request");
-                assert_eq!(request.method(), Method::Put);
-                assert_eq!(request.url_path(), "/foo");
-                assert!(request.is_accept_application_json());
-                let mut response = request.response(StatusCode::PreconditionFailed);
-                response.set_json_body(&json!({
-                    "error": "file_exists",
-                    "reason": "The database could not be created, the file already exists."
-                }));
-                response.finish()
-            }).and_then(|request| {
-                    assert!(request.is_none());
-                    MockTransport::done()
-                })
-        });
-
-        match result {
-            Err(ref e) if e.is_database_exists() => {}
-            x => panic!("Got unexpected result {:?}", x),
-        }
-    }
-
-    #[test]
     fn put_database_fails_on_401_unauthorized() {
 
         let transport = MockTransport::new();
@@ -130,9 +101,6 @@ mod tests {
         let result = transport.mock(action, |mock| {
             mock.and_then(|request| {
                 let request = request.expect("Client did not send request");
-                assert_eq!(request.method(), Method::Put);
-                assert_eq!(request.url_path(), "/foo");
-                assert!(request.is_accept_application_json());
                 let mut response = request.response(StatusCode::Unauthorized);
                 response.set_json_body(&json!({
                     "error": "unauthorized",
@@ -151,4 +119,29 @@ mod tests {
         }
     }
 
+    #[test]
+    fn put_database_fails_on_412_precondition_failed() {
+
+        let transport = MockTransport::new();
+        let action = PutDatabase::new(&transport, "/foo").send();
+        let result = transport.mock(action, |mock| {
+            mock.and_then(|request| {
+                let request = request.expect("Client did not send request");
+                let mut response = request.response(StatusCode::PreconditionFailed);
+                response.set_json_body(&json!({
+                    "error": "file_exists",
+                    "reason": "The database could not be created, the file already exists."
+                }));
+                response.finish()
+            }).and_then(|request| {
+                    assert!(request.is_none());
+                    MockTransport::done()
+                })
+        });
+
+        match result {
+            Err(ref e) if e.is_database_exists() => {}
+            x => panic!("Got unexpected result {:?}", x),
+        }
+    }
 }
