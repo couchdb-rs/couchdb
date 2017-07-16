@@ -19,3 +19,6 @@ tempdir = "0.3.5"
 tokio-core = "0.1.8"
 url = "1.5"
 uuid = { version = "0.5.1", features = ["serde"] }
+
+[dev-dependencies]
+serde_test = "1.0"
