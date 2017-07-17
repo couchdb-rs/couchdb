@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="generator" content="rustdoc">
+    <meta name="description" content="API documentation for the Rust `path` mod in crate `couchdb`.">
+    <meta name="keywords" content="rust, rustlang, rust-lang, path">
+
+    <title>couchdb::path - Rust</title>
+
+    <link rel="stylesheet" type="text/css" href="../../normalize.css">
+    <link rel="stylesheet" type="text/css" href="../../rustdoc.css">
+    <link rel="stylesheet" type="text/css" href="../../main.css">
+    
+
+    
+    
+</head>
+<body class="rustdoc mod">
+    <!--[if lte IE 8]>
+    <div class="warning">
+        This old browser is unsupported and will most likely display funky
+        things.
+    </div>
+    <![endif]-->
+
+    
+
+    <nav class="sidebar">
+        
+        <p class='location'>Module path</p><div class="block items"><ul><li><a href="#structs">Structs</a></li></ul></div><p class='location'><a href='../index.html'>couchdb</a></p><script>window.sidebarCurrent = {name: 'path', ty: 'mod', relpath: '../'};</script><script defer src="../sidebar-items.js"></script>
+    </nav>
+
+    <nav class="sub">
+        <form class="search-form js-only">
+            <div class="search-container">
+                <input class="search-input" name="search"
+                       autocomplete="off"
+                       placeholder="Click or press ‘S’ to search, ‘?’ for more options…"
+                       type="search">
+            </div>
+        </form>
+    </nav>
+
+    <section id='main' class="content">
+<h1 class='fqn'><span class='in-band'>Module <a href='../index.html'>couchdb</a>::<wbr><a class="mod" href=''>path</a></span><span class='out-of-band'><span id='render-detail'>
+                   <a id="toggle-all-docs" href="javascript:void(0)" title="collapse all docs">
+                       [<span class='inner'>&#x2212;</span>]
+                   </a>
+               </span><a class='srclink' href='../../src/couchdb/path.rs.html#1-1559' title='goto source code'>[src]</a></span></h1>
+<div class='docblock'><p>The <code>path</code> module provides types for identifying databases, documents, etc.</p>
+
+<h1 id='summary' class='section-header'><a href='#summary'>Summary</a></h1>
+<ul>
+<li><p>The <code>path</code> module provides a suite of types for names, ids, and paths—all
+of which are used to specify the location of CouchDB resources, such as
+databases, documents, and views.</p></li>
+<li><p>Both <strong>names</strong> and <strong>ids</strong> are percent-decoded, but whereas a name
+comprises exactly one path segment, an id may comprise more.</p></li>
+<li><p>Both names and ids are useful for constructing query parameters, headers,
+and capturing CouchDB response data.</p></li>
+<li><p>A <strong>path</strong> is a full percent-encoded URL path and is most useful when
+constructing a URL for an HTTP request. It implements neither <code>Serialize</code>
+nor <code>Deserialize</code>.</p></li>
+</ul>
+
+<h1 id='remarks' class='section-header'><a href='#remarks'>Remarks</a></h1>
+<p>The CouchDB API uses strings for specifying the locations of resources, and
+using these strings “in the raw” can be error-prone. The <code>path</code> module
+provides safer alternatives by way of stronger types.</p>
+
+<p>There are two chief kinds of errors that stronger types help eliminate:</p>
+
+<ul>
+<li><p><strong>Incorrect percent-encoding.</strong> For example, document names and attachment
+names may contain slashes (<code>/</code>) and other non-standard characters, and
+neglect to percent-encode these characters can cause obscure bugs.</p></li>
+<li><p><strong>Type mismatches.</strong> For example, mistakenly using a database path to
+delete a document could cause massive data loss.</p></li>
+</ul>
+
+<p>Note, however, that the <code>path</code> module merely makes these types available. It
+is up to the application programmer to make use of them.</p>
+
+<h1 id='example' class='section-header'><a href='#example'>Example</a></h1>
+<pre class="rust rust-example-rendered">
+<span class="kw">extern</span> <span class="kw">crate</span> <span class="ident">couchdb</span>;
+
+<span class="comment">// Construct view path: &#39;/alpha/_design/bravo/_view/charlie delta&#39;:</span>
+
+<span class="kw">let</span> <span class="ident">view_path</span> <span class="op">=</span> <span class="ident">couchdb</span>::<span class="ident">DatabaseName</span>::<span class="ident">new</span>(<span class="string">&quot;alpha&quot;</span>)
+    .<span class="ident">with_design_document_id</span>(<span class="ident">couchdb</span>::<span class="ident">DesignDocumentName</span>::<span class="ident">new</span>(<span class="string">&quot;bravo&quot;</span>))
+    .<span class="ident">with_view_name</span>(<span class="string">&quot;charlie delta&quot;</span>);
+
+<span class="comment">// Paths are percent-encoded and thus well suited for building URLs.</span>
+
+<span class="kw">let</span> <span class="ident">s</span> <span class="op">=</span> <span class="ident">view_path</span>.<span class="ident">to_string</span>();
+<span class="macro">assert_eq</span><span class="macro">!</span>(<span class="ident">s</span>, <span class="string">&quot;/alpha/_design/bravo/_view/charlie%20delta&quot;</span>);
+
+<span class="comment">// Alternatively, paths can be parsed from string.</span>
+
+<span class="kw">let</span> <span class="ident">v2</span> <span class="op">=</span> <span class="ident">couchdb</span>::<span class="ident">ViewPath</span>::<span class="ident">parse</span>(<span class="kw-2">&amp;</span><span class="ident">s</span>).<span class="ident">unwrap</span>();
+<span class="macro">assert_eq</span><span class="macro">!</span>(<span class="ident">view_path</span>, <span class="ident">v2</span>);</pre>
+</div><h2 id='structs' class='section-header'><a href="#structs">Structs</a></h2>
+<table>
+                       <tr class=' module-item'>
+                           <td><a class="struct" href="struct.AttachmentName.html"
+                                  title='struct couchdb::path::AttachmentName'>AttachmentName</a></td>
+                           <td class='docblock-short'>
+                                <p><code>AttachmentName</code> is a single URL path segment that specifies the name of
+an attachment.</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="struct" href="struct.AttachmentPath.html"
+                                  title='struct couchdb::path::AttachmentPath'>AttachmentPath</a></td>
+                           <td class='docblock-short'>
+                                <p><code>AttachmentPath</code> is the full URL path of an attachment.</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="struct" href="struct.DatabaseName.html"
+                                  title='struct couchdb::path::DatabaseName'>DatabaseName</a></td>
+                           <td class='docblock-short'>
+                                <p><code>DatabaseName</code> is a single URL path segment that specifies the name of a
+database.</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="struct" href="struct.DatabasePath.html"
+                                  title='struct couchdb::path::DatabasePath'>DatabasePath</a></td>
+                           <td class='docblock-short'>
+                                <p><code>DatabasePath</code> is the full URL path of a database.</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="struct" href="struct.DesignDocumentId.html"
+                                  title='struct couchdb::path::DesignDocumentId'>DesignDocumentId</a></td>
+                           <td class='docblock-short'>
+                                <p><code>DesignDocumentId</code> comprises URL path segments that, together, identify a
+design document.</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="struct" href="struct.DesignDocumentName.html"
+                                  title='struct couchdb::path::DesignDocumentName'>DesignDocumentName</a></td>
+                           <td class='docblock-short'>
+                                <p><code>DesignDocumentName</code> is a single URL path segment that specifies the name
+of a design document.</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="struct" href="struct.DesignDocumentPath.html"
+                                  title='struct couchdb::path::DesignDocumentPath'>DesignDocumentPath</a></td>
+                           <td class='docblock-short'>
+                                <p><code>DesignDocumentPath</code> is the full URL path of a design document.</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="struct" href="struct.DocumentId.html"
+                                  title='struct couchdb::path::DocumentId'>DocumentId</a></td>
+                           <td class='docblock-short'>
+                                <p><code>DocumentId</code> comprises one or more URL path segments that, together,
+identify a document.</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="struct" href="struct.DocumentPath.html"
+                                  title='struct couchdb::path::DocumentPath'>DocumentPath</a></td>
+                           <td class='docblock-short'>
+                                <p><code>DocumentPath</code> is the full URL path of a document.</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="struct" href="struct.LocalDocumentName.html"
+                                  title='struct couchdb::path::LocalDocumentName'>LocalDocumentName</a></td>
+                           <td class='docblock-short'>
+                                <p><code>LocalDocumentName</code> is a single URL path segment that specifies the name
+of a local document.</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="struct" href="struct.NormalDocumentName.html"
+                                  title='struct couchdb::path::NormalDocumentName'>NormalDocumentName</a></td>
+                           <td class='docblock-short'>
+                                <p><code>NormalDocumentName</code> is a single URL path segment that specifies the name
+of a document that is neither a design document nor a local document.</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="struct" href="struct.ViewId.html"
+                                  title='struct couchdb::path::ViewId'>ViewId</a></td>
+                           <td class='docblock-short'>
+                                <p><code>ViewId</code> comprises URL path segments that combine a design document name and
+a view name.</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="struct" href="struct.ViewName.html"
+                                  title='struct couchdb::path::ViewName'>ViewName</a></td>
+                           <td class='docblock-short'>
+                                <p><code>ViewName</code> is a
+single URL path segment that specifies the name of a view.</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="struct" href="struct.ViewPath.html"
+                                  title='struct couchdb::path::ViewPath'>ViewPath</a></td>
+                           <td class='docblock-short'>
+                                <p><code>ViewPath</code> is the full URL path of a view.</p>
+                           </td>
+                       </tr></table></section>
+    <section id='search' class="content hidden"></section>
+
+    <section class="footer"></section>
+
+    <aside id="help" class="hidden">
+        <div>
+            <h1 class="hidden">Help</h1>
+
+            <div class="shortcuts">
+                <h2>Keyboard Shortcuts</h2>
+
+                <dl>
+                    <dt>?</dt>
+                    <dd>Show this help dialog</dd>
+                    <dt>S</dt>
+                    <dd>Focus the search field</dd>
+                    <dt>&larrb;</dt>
+                    <dd>Move up in search results</dd>
+                    <dt>&rarrb;</dt>
+                    <dd>Move down in search results</dd>
+                    <dt>&#9166;</dt>
+                    <dd>Go to active search result</dd>
+                    <dt>+</dt>
+                    <dd>Collapse/expand all sections</dd>
+                </dl>
+            </div>
+
+            <div class="infos">
+                <h2>Search Tricks</h2>
+
+                <p>
+                    Prefix searches with a type followed by a colon (e.g.
+                    <code>fn:</code>) to restrict the search to a given type.
+                </p>
+
+                <p>
+                    Accepted types are: <code>fn</code>, <code>mod</code>,
+                    <code>struct</code>, <code>enum</code>,
+                    <code>trait</code>, <code>type</code>, <code>macro</code>,
+                    and <code>const</code>.
+                </p>
+
+                <p>
+                    Search functions by type signature (e.g.
+                    <code>vec -> usize</code> or <code>* -> vec</code>)
+                </p>
+            </div>
+        </div>
+    </aside>
+
+    
+
+    <script>
+        window.rootPath = "../../";
+        window.currentCrate = "couchdb";
+    </script>
+    <script src="../../jquery.js"></script>
+    <script src="../../main.js"></script>
+    <script defer src="../../search-index.js"></script>
+</body>
+</html>

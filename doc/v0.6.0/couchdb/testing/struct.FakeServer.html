@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="generator" content="rustdoc">
+    <meta name="description" content="API documentation for the Rust `FakeServer` struct in crate `couchdb`.">
+    <meta name="keywords" content="rust, rustlang, rust-lang, FakeServer">
+
+    <title>couchdb::testing::FakeServer - Rust</title>
+
+    <link rel="stylesheet" type="text/css" href="../../normalize.css">
+    <link rel="stylesheet" type="text/css" href="../../rustdoc.css">
+    <link rel="stylesheet" type="text/css" href="../../main.css">
+    
+
+    
+    
+</head>
+<body class="rustdoc struct">
+    <!--[if lte IE 8]>
+    <div class="warning">
+        This old browser is unsupported and will most likely display funky
+        things.
+    </div>
+    <![endif]-->
+
+    
+
+    <nav class="sidebar">
+        
+        <p class='location'>Struct FakeServer</p><div class="block items"><ul><li><a href="#methods">Methods</a></li></ul></div><p class='location'><a href='../index.html'>couchdb</a>::<wbr><a href='index.html'>testing</a></p><script>window.sidebarCurrent = {name: 'FakeServer', ty: 'struct', relpath: ''};</script><script defer src="sidebar-items.js"></script>
+    </nav>
+
+    <nav class="sub">
+        <form class="search-form js-only">
+            <div class="search-container">
+                <input class="search-input" name="search"
+                       autocomplete="off"
+                       placeholder="Click or press ‘S’ to search, ‘?’ for more options…"
+                       type="search">
+            </div>
+        </form>
+    </nav>
+
+    <section id='main' class="content">
+<h1 class='fqn'><span class='in-band'>Struct <a href='../index.html'>couchdb</a>::<wbr><a href='index.html'>testing</a>::<wbr><a class="struct" href=''>FakeServer</a></span><span class='out-of-band'><span id='render-detail'>
+                   <a id="toggle-all-docs" href="javascript:void(0)" title="collapse all docs">
+                       [<span class='inner'>&#x2212;</span>]
+                   </a>
+               </span><a class='srclink' href='../../src/couchdb/testing/fake_server.rs.html#70-76' title='goto source code'>[src]</a></span></h1>
+<pre class='rust struct'>pub struct FakeServer { /* fields omitted */ }</pre><div class='docblock'><p><code>FakeServer</code> manages a CouchDB server process for application testing.</p>
+
+<h1 id='summary' class='section-header'><a href='#summary'>Summary</a></h1>
+<ul>
+<li><p><code>FakeServer</code> is an RAII-wrapper for an external CouchDB server process
+useful for testing.</p></li>
+<li><p>The external CouchDB process&#39;s underlying storage persists to the system&#39;s
+default temporary directory (e.g., <code>/tmp</code>) and is deleted when the
+<code>FakeServer</code> instance drops.</p></li>
+</ul>
+
+<h1 id='remarks' class='section-header'><a href='#remarks'>Remarks</a></h1>
+<p><code>FakeServer</code> is a fake, not a mock, meaning an application may use it to
+send HTTP requests to a real CouchDB server and receive real responses.
+Consequently, this means that CouchDB must be installed on the local machine
+in order to use <code>FakeServer</code>.</p>
+
+<p>The CouchDB server will open an unused port on the local machine. The
+application may obtain the server&#39;s exact address via the <code>FakeServer::url</code>
+method.</p>
+
+<p>The CouchDB server remains up and running for the lifetime of the
+<code>FakeServer</code> instance. When the instance drops, the server shuts down and
+all of its data are deleted.</p>
+
+<h1 id='example' class='section-header'><a href='#example'>Example</a></h1>
+<pre class="rust rust-example-rendered">
+<span class="kw">extern</span> <span class="kw">crate</span> <span class="ident">couchdb</span>;
+<span class="kw">extern</span> <span class="kw">crate</span> <span class="ident">reqwest</span>;
+
+<span class="kw">let</span> <span class="ident">server_url</span> <span class="op">=</span> {
+    <span class="kw">let</span> <span class="ident">server</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">couchdb</span>::<span class="ident">testing</span>::<span class="ident">FakeServer</span>::<span class="ident">new</span>() {
+        <span class="prelude-val">Ok</span>(<span class="ident">x</span>) <span class="op">=&gt;</span> <span class="ident">x</span>,
+        <span class="prelude-val">Err</span>(<span class="ident">e</span>) <span class="op">=&gt;</span> {
+            <span class="macro">println</span><span class="macro">!</span>(<span class="string">&quot;Is CouchDB installed locally? ({})&quot;</span>, <span class="ident">e</span>);
+            <span class="kw">return</span>;
+        }
+    };
+
+    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">response</span> <span class="op">=</span> <span class="ident">reqwest</span>::<span class="ident">get</span>(<span class="ident">server</span>.<span class="ident">url</span>()).<span class="ident">unwrap</span>();
+    <span class="macro">assert</span><span class="macro">!</span>(<span class="ident">response</span>.<span class="ident">status</span>().<span class="ident">is_success</span>());
+
+    <span class="kw">let</span> <span class="ident">root</span>: <span class="ident">couchdb</span>::<span class="ident">Root</span> <span class="op">=</span> <span class="ident">response</span>.<span class="ident">json</span>().<span class="ident">unwrap</span>();
+    <span class="macro">println</span><span class="macro">!</span>(<span class="string">&quot;CouchDB welcome message: {}&quot;</span>, <span class="ident">root</span>.<span class="ident">couchdb</span>);
+
+    <span class="ident">server</span>.<span class="ident">url</span>().<span class="ident">to_string</span>()
+
+    <span class="comment">// Server shuts down when `server` goes out of scope.</span>
+};
+
+<span class="comment">// The server is now shut down, so the client request fails.</span>
+<span class="ident">reqwest</span>::<span class="ident">get</span>(<span class="kw-2">&amp;</span><span class="ident">server_url</span>).<span class="ident">unwrap_err</span>();</pre>
+</div><h2 id='methods'>Methods</h2><h3 class='impl'><span class='in-band'><code>impl <a class="struct" href="../../couchdb/testing/struct.FakeServer.html" title="struct couchdb::testing::FakeServer">FakeServer</a></code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../src/couchdb/testing/fake_server.rs.html#78-181' title='goto source code'>[src]</a></span></h3>
+<div class='impl-items'><h4 id='method.new' class="method"><span id='new.v' class='invisible'><code>fn <a href='#method.new' class='fnname'>new</a>() -&gt; <a class="enum" href="https://doc.rust-lang.org/nightly/core/result/enum.Result.html" title="enum core::result::Result">Result</a>&lt;<a class="struct" href="../../couchdb/testing/struct.FakeServer.html" title="struct couchdb::testing::FakeServer">FakeServer</a>, <a class="enum" href="../../couchdb/enum.Error.html" title="enum couchdb::Error">Error</a>&gt;</code></span></h4>
+<div class='docblock'><p>Spawns a CouchDB server process for testing.</p>
+</div><h4 id='method.url' class="method"><span id='url.v' class='invisible'><code>fn <a href='#method.url' class='fnname'>url</a>(&amp;self) -&gt; &amp;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.str.html">str</a></code></span></h4>
+<div class='docblock'><p>Returns the CouchDB server&#39;s URL.</p>
+</div></div></section>
+    <section id='search' class="content hidden"></section>
+
+    <section class="footer"></section>
+
+    <aside id="help" class="hidden">
+        <div>
+            <h1 class="hidden">Help</h1>
+
+            <div class="shortcuts">
+                <h2>Keyboard Shortcuts</h2>
+
+                <dl>
+                    <dt>?</dt>
+                    <dd>Show this help dialog</dd>
+                    <dt>S</dt>
+                    <dd>Focus the search field</dd>
+                    <dt>&larrb;</dt>
+                    <dd>Move up in search results</dd>
+                    <dt>&rarrb;</dt>
+                    <dd>Move down in search results</dd>
+                    <dt>&#9166;</dt>
+                    <dd>Go to active search result</dd>
+                    <dt>+</dt>
+                    <dd>Collapse/expand all sections</dd>
+                </dl>
+            </div>
+
+            <div class="infos">
+                <h2>Search Tricks</h2>
+
+                <p>
+                    Prefix searches with a type followed by a colon (e.g.
+                    <code>fn:</code>) to restrict the search to a given type.
+                </p>
+
+                <p>
+                    Accepted types are: <code>fn</code>, <code>mod</code>,
+                    <code>struct</code>, <code>enum</code>,
+                    <code>trait</code>, <code>type</code>, <code>macro</code>,
+                    and <code>const</code>.
+                </p>
+
+                <p>
+                    Search functions by type signature (e.g.
+                    <code>vec -> usize</code> or <code>* -> vec</code>)
+                </p>
+            </div>
+        </div>
+    </aside>
+
+    
+
+    <script>
+        window.rootPath = "../../";
+        window.currentCrate = "couchdb";
+    </script>
+    <script src="../../jquery.js"></script>
+    <script src="../../main.js"></script>
+    <script defer src="../../search-index.js"></script>
+</body>
+</html>

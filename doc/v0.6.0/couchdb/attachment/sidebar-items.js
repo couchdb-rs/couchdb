@@ -1,0 +1,1 @@
+initSidebarItems({"enum":[["Digest","`Digest` is a hashed sum of an attachment's content."]],"struct":[["Attachment","`Attachment` is a state-aware representation of a CouchDB document attachment."],["Encoding","`Encoding` contains information about the compression the CouchDB server uses to store an attachment's content."]]});
