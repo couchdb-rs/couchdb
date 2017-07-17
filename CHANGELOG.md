@@ -1,5 +1,9 @@
 # CouchDB-rs Change Log
 
+## v0.6.1 (unreleased)
+
+No changes yet!
+
 ## v0.6.0 (2017-07-17)
 
 This release is a total rewrite owing to a change in project goals. The
