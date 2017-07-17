@@ -1,8 +1,22 @@
 # CouchDB-rs Change Log
 
-## v0.6.0 (unreleased)
+## v0.6.0 (2017-07-17)
 
-No changes yet!
+This release is a total rewrite owing to a change in project goals. The
+library now less ambitiously provides a set of passive types and does
+_not_ provide an HTTP client.
+
+Here's what the library supports so far:
+
+* There's an `Attachment` type for intelligently working with document
+  attachments.
+* There's a suite of path-related types (in the `path` submodule) for
+  specifying the locations of CouchDB resources in a type-safe way.
+* There are a few other types for deserializing specific CouchDB JSON
+  objects. For example, the `Nok` type can capture information from a
+  CouchDB error response.
+
+Also, all project dependencies are now up-to-date.
 
 ## v0.5.2 (2017-05-26)
 

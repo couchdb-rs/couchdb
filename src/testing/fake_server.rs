@@ -1,10 +1,6 @@
-use regex;
-use std;
-use tempdir;
+use {Error, regex, std, tempdir};
 
-use Error;
-
-/// RAII wrapper for a child process that kills the process when dropped.
+// RAII wrapper for a child process that kills the process when dropped.
 struct AutoKillProcess(std::process::Child);
 
 impl Drop for AutoKillProcess {
@@ -15,41 +11,90 @@ impl Drop for AutoKillProcess {
     }
 }
 
-/// RAII wrapper for running a CouchDB server process.
+/// `FakeServer` manages a CouchDB server process for application testing.
 ///
-/// The `FakeServer` type is provided for testing purposes. The database
-/// persists to the system's default temporary directory (e.g., `/tmp`) and is
-/// deleted when the `FakeServer` instance drops.
+/// # Summary
+///
+/// * `FakeServer` is an RAII-wrapper for an external CouchDB server process
+///   useful for testing.
+///
+/// * The external CouchDB process's underlying storage persists to the system's
+///   default temporary directory (e.g., `/tmp`) and is deleted when the
+///   `FakeServer` instance drops.
+///
+/// # Remarks
+///
+/// `FakeServer` is a fake, not a mock, meaning an application may use it to
+/// send HTTP requests to a real CouchDB server and receive real responses.
+/// Consequently, this means that CouchDB must be installed on the local machine
+/// in order to use `FakeServer`.
+///
+/// The CouchDB server will open an unused port on the local machine. The
+/// application may obtain the server's exact address via the `FakeServer::url`
+/// method.
+///
+/// The CouchDB server remains up and running for the lifetime of the
+/// `FakeServer` instance. When the instance drops, the server shuts down and
+/// all of its data are deleted.
+///
+/// # Example
+///
+/// ```rust
+/// extern crate couchdb;
+/// extern crate reqwest;
+///
+/// let server_url = {
+///     let server = match couchdb::testing::FakeServer::new() {
+///         Ok(x) => x,
+///         Err(e) => {
+///             println!("Is CouchDB installed locally? ({})", e);
+///             return;
+///         }
+///     };
+///
+///     let mut response = reqwest::get(server.url()).unwrap();
+///     assert!(response.status().is_success());
+///
+///     let root: couchdb::Root = response.json().unwrap();
+///     println!("CouchDB welcome message: {}", root.couchdb);
+///
+///     server.url().to_string()
+///
+///     // Server shuts down when `server` goes out of scope.
+/// };
+///
+/// // The server is now shut down, so the client request fails.
+/// reqwest::get(&server_url).unwrap_err();
+/// ```
 ///
 pub struct FakeServer {
-    // Rust drops structure fields in forward order, not reverse order. The child process must exit
-    // before we remove the temporary directory.
+    // Rust drops structure fields in forward order, not reverse order. The
+    // child process must exit before we remove the temporary directory.
     _process: AutoKillProcess,
     _tmp_root: tempdir::TempDir,
-    uri: String,
+    url: String,
 }
 
 impl FakeServer {
-    /// Spawns a CouchDB server process.
+    /// Spawns a CouchDB server process for testing.
     pub fn new() -> Result<FakeServer, Error> {
 
-        let tmp_root = try!(tempdir::TempDir::new("couchdb_client_test").map_err(|e| {
-            Error::Io {
-                cause: e,
-                description: "Failed to create temporary directory for CouchDB server",
-            }
+        let tmp_root = try!(tempdir::TempDir::new("couchdb_test").map_err(|e| {
+            Error::from((
+                "Failed to create temporary directory for CouchDB server",
+                e,
+            ))
         }));
 
         {
             use std::io::Write;
             let path = tmp_root.path().join("couchdb.conf");
             let mut f = try!(std::fs::File::create(&path).map_err(|e| {
-                Error::Io {
-                    cause: e,
-                    description: "Failed to open CouchDB server configuration file",
-                }
+                Error::from(("Failed to open CouchDB server configuration file", e))
             }));
-            try!(f.write_all(b"[couchdb]\n\
+            try!(
+                f.write_all(
+                    b"[couchdb]\n\
                 database_dir = var\n\
                 uri_file = couchdb.uri\n\
                 view_index_dir = view\n\
@@ -59,24 +104,17 @@ impl FakeServer {
                 \n\
                 [httpd]\n\
                 port = 0\n\
-                ")
-                  .map_err(|e| {
-                      Error::Io {
-                          cause: e,
-                          description: "Failed to write CouchDB server configuration file",
-                      }
-                  }));
+                ",
+                ).map_err(|e| {
+                        Error::from(("Failed to write CouchDB server configuration file", e))
+                    })
+            );
         }
 
-        let mut process = AutoKillProcess(try!(new_test_server_command(&tmp_root)
-                                                   .spawn()
-                                                   .map_err(|e| {
-                                                       Error::Io {
-                                                           cause: e,
-                                                           description: "Failed to spawn CouchDB \
-                                                                         server process",
-                                                       }
-                                                   })));
+        let child = try!(new_test_server_command(&tmp_root).spawn().map_err(|e| {
+            Error::from(("Failed to spawn CouchDB server process", e))
+        }));
+        let mut process = AutoKillProcess(child);
 
         let (tx, rx) = std::sync::mpsc::channel();
         let mut process_out;
@@ -99,7 +137,11 @@ impl FakeServer {
                 match re.captures(line) {
                     None => (),
                     Some(caps) => {
-                        tx.send(caps.at(1).unwrap().to_string()).unwrap();
+                        tx.send(caps.get(1).unwrap().as_str().to_owned()).unwrap();
+
+                        // TODO: Instead of breaking out of the loop, continue
+                        // looking for URL updates due to `POST /_restart`.
+
                         break;
                     }
                 }
@@ -116,40 +158,46 @@ impl FakeServer {
             }
         });
 
-        // Wait for CouchDB server to start its HTTP service.
-        let uri = try!(rx.recv()
-                         .map_err(|e| {
-                             t.join().unwrap_err();
-                             Error::ReceiveFromThread {
-                                 cause: e,
-                                 description: "Failed to extract URI from CouchDB server",
-                             }
-                         }));
+        // Wait for the CouchDB server to start its HTTP service.
+        let url = try!(rx.recv().map_err(|e| {
+            t.join().unwrap_err();
+            Error::from((
+                "Failed to obtain URL from CouchDB server",
+                std::io::Error::new(std::io::ErrorKind::Other, e),
+            ))
+        }));
 
         Ok(FakeServer {
             _process: process,
             _tmp_root: tmp_root,
-            uri: uri,
+            url: url,
         })
     }
 
-    /// Gets the CouchDB server URI.
-    pub fn uri(&self) -> &str {
-        &self.uri
+    /// Returns the CouchDB server's URL.
+    pub fn url(&self) -> &str {
+        &self.url
     }
 }
 
 #[cfg(any(windows))]
 fn new_test_server_command(tmp_root: &tempdir::TempDir) -> std::process::Command {
+
     // Getting a one-shot CouchDB server running on Windows is tricky:
     // http://stackoverflow.com/questions/11812365/how-to-use-a-custom-couch-ini-on-windows
     //
     // TODO: Support CouchDB being installed in a non-default directory.
 
-    let mut c = std::process::Command::new("erl");
+    let couchdb_dir = "c:/program files (x86)/apache software foundation/couchdb";
+
+    let erl = format!("{}/bin/erl", couchdb_dir);
+    let default_ini = format!("{}/etc/couchdb/default.ini", couchdb_dir);
+    let local_ini = format!("{}/etc/couchdb/local.ini", couchdb_dir);
+
+    let mut c = std::process::Command::new(erl);
     c.arg("-couch_ini");
-    c.arg("c:/program files (x86)/apache software foundation/couchdb/etc/couchdb/default.ini");
-    c.arg("c:/program files (x86)/apache software foundation/couchdb/etc/couchdb/local.ini");
+    c.arg(default_ini);
+    c.arg(local_ini);
     c.arg("couchdb.conf");
     c.arg("-s");
     c.arg("couch");

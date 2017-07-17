@@ -1,4 +1,5 @@
-//! Test utilities.
+//! The `testing` module provides tools for applications to test their use of
+//! CouchDB.
 
 mod fake_server;
 

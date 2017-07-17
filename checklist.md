@@ -26,7 +26,7 @@
     1. Edit `Cargo.toml` to declare the correct version for this
        crate.
 
-        1. E.g., remove the `+master` suffix.
+        1. E.g., remove the `-master` suffix.
 
         1. Ensure the documentation link is correct.
 
@@ -49,16 +49,18 @@
 
             $ cargo clean &&
               cargo doc --no-deps &&
-              ver=$(grep '^version' Cargo.toml | sed -e 's/.*\([[:digit:]]\+\.[[:digit:]]\+\.[[:digit:]]\+\).*/\1/') &&
+              ver=$(grep '^version' Cargo.toml | sed -E -e 's/.*\"([0-9]+\.[0-9]+\.[0-9]+)".*/\1/') &&
+              test -n "$ver" &&
               git checkout gh-pages &&
-              cp -a target/doc doc/v$ver &&
+              cp -R target/doc doc/v$ver &&
               git add doc/v$ver
 
     1. Review `doc/v$ver/couchdb/index.html`.
 
     1. Publish.
 
-            $ git commit -a -m "Add v$ver documentation" &&
+            $ test -n "$ver" &&
+              git commit -m "Add v$ver documentation" &&
               git push origin &&
               git checkout release_prep
 
@@ -74,12 +76,13 @@
 
 1. Create Git tag.
 
-        $ git tag -a v$ver -m "Release of v$ver" &&
+        $ test -n "$ver" &&
+          git tag -a v$ver -m "Release of v$ver" &&
           git push --tags
 
 1. Prep for new work.
 
-    1. Edit `Cargo.toml` to increment the version, adding the `+master`
+    1. Edit `Cargo.toml` to increment the version, adding the `-master`
        suffix.
 
     1. Edit `CHANGELOG.md` to add the new “unreleased” section for the
